@@ -1,2 +1,5 @@
 /blamedns
+/Docker/blamedns
 /config.toml
+/.image-stamp
+/.install-*

@@ -18,14 +18,13 @@ import (
 )
 
 const (
-	name                    = "blamedns"
-	version                 = "0.1.0"
 	defaultDNSListenAddress = "[::]:53"
 	defaultConfigFile       = "/etc/blamedns/config.toml"
 	defaultBlockTTL         = 1 * time.Hour
 )
 
 var (
+	name, version     string
 	forwardDNSServers = newStringSlice(
 		"8.8.8.8",
 		"8.8.4.4",
@@ -206,7 +205,10 @@ func setup(c *cli.Context) error {
 	if file := c.String("config"); len(file) > 0 {
 		md, err := toml.DecodeFile(file, &cfg)
 		if err != nil {
-			return err
+			perr, ok := err.(*os.PathError)
+			if !ok || perr.Err != syscall.ENOENT {
+				log.WithError(err).Warn("error reading config file")
+			}
 		}
 
 		if undecoded := md.Undecoded(); len(undecoded) > 0 {
