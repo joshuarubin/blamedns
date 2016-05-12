@@ -5,11 +5,13 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"reflect"
 	"syscall"
 	"time"
 
 	"jrubin.io/blamedns/dnsserver"
 
+	"github.com/BurntSushi/toml"
 	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/miekg/dns"
@@ -19,22 +21,30 @@ const (
 	name                    = "blamedns"
 	version                 = "0.1.0"
 	defaultDNSListenAddress = "[::]:53"
+	defaultConfigFile       = "/etc/blamedns/config.toml"
+	defaultBlockTTL         = 1 * time.Hour
 )
 
 var (
-	defaultForwardDNSServers = cli.StringSlice{
+	forwardDNSServers = newStringSlice(
 		"8.8.8.8",
 		"8.8.4.4",
+	)
+
+	hostsFiles = newStringSlice(
+		"http://someonewhocares.org/hosts/hosts",
+	)
+
+	stringSlices = []*stringSlice{
+		&forwardDNSServers,
+		&hostsFiles,
 	}
-	forwardDNSServers cli.StringSlice
-	dnsServer         *dnsserver.DNSServer
-	app               = cli.NewApp()
+
+	dnsServer *dnsserver.DNSServer
+	app       = cli.NewApp()
 )
 
 func init() {
-	forwardDNSServers = make(cli.StringSlice, len(defaultForwardDNSServers))
-	copy(forwardDNSServers, defaultForwardDNSServers)
-
 	app.Name = name
 	app.Version = version
 	app.Usage = "" // TODO(jrubin)
@@ -44,8 +54,13 @@ func init() {
 	}}
 	app.Before = setup
 	app.Action = run
-	app.Flags = []cli.Flag{
-		logFlag,
+	app.Flags = append(logFlags, []cli.Flag{
+		cli.StringFlag{
+			Name:   "config",
+			EnvVar: "BLAMEDNS_CONFIG",
+			Value:  defaultConfigFile,
+			Usage:  "config file",
+		},
 		cli.StringFlag{
 			Name:   "dns-udp-listen-address",
 			EnvVar: "DNS_UDP_LISTEN_ADDRESS",
@@ -58,12 +73,11 @@ func init() {
 			Value:  defaultDNSListenAddress,
 			Usage:  "ip_address:port that the dns server will listen for tcp requests on",
 		},
-		cli.StringSliceFlag{
+		forwardDNSServers.Flag(flag{
 			Name:   "forward",
 			EnvVar: "FORWARD_DNS_SERVERS",
-			Value:  &forwardDNSServers,
 			Usage:  "dns server(s) to forward requests to",
-		},
+		}),
 		cli.StringFlag{
 			Name:   "block-ip",
 			EnvVar: "BLOCK_IP",
@@ -72,10 +86,15 @@ func init() {
 		cli.DurationFlag{
 			Name:   "block-ttl",
 			EnvVar: "BLOCK_TTL",
-			Value:  3600 * time.Second,
+			Value:  defaultBlockTTL,
 			Usage:  "ttl to return for blocked requests",
 		},
-	}
+		hostsFiles.Flag(flag{
+			Name:   "hosts",
+			EnvVar: "HOSTS_FILES",
+			Usage:  "files in \"/etc/hosts\" format from which to derive blocked hostnames",
+		}),
+	}...)
 }
 
 func main() {
@@ -84,59 +103,103 @@ func main() {
 	}
 }
 
-func stripEmpty(s []string) []string {
-	var ret []string
-
-	for _, v := range s {
-		if len(v) > 0 {
-			ret = append(ret, v)
+func parseFlags(c *cli.Context, cfg *config) error {
+	for _, ss := range stringSlices {
+		if err := ss.parseFlag(c); err != nil {
+			return err
 		}
 	}
 
-	return ret
+	// logConfig
+	cfg.Log.parseFlags(c)
+
+	// dnsConfig
+	setCfg(&cfg.DNS.Forward, forwardDNSServers.Values, forwardDNSServers.IsDefault())
+
+	if len(cfg.DNS.Forward) == 0 {
+		return fmt.Errorf("at least one %s value required", forwardDNSServers.Name)
+	}
+
+	if cfg.DNS.Servers == nil {
+		cfg.DNS.Servers = map[string]*dns.Server{}
+	}
+
+	for _, net := range []string{"udp", "tcp"} {
+		if addr := c.String("dns-" + net + "-listen-address"); len(addr) > 0 {
+			if _, exists := cfg.DNS.Servers[net]; !exists || addr != defaultDNSListenAddress {
+				cfg.DNS.Servers[net] = &dns.Server{
+					Addr: addr,
+					Net:  net,
+				}
+			}
+		}
+	}
+
+	// if len(dnsUDPListenAddress) == 0 && len(dnsTCPListenAddress) == 0 {
+	// 	return fmt.Errorf("at least one of dns-udp-listen-address or dns-tcp-listen-address is required")
+	// }
+	//
+	// if len(dnsUDPListenAddress) == 0 {
+	// 	log.Warn("no udp dns server defined")
+	// }
+	//
+	// if len(dnsTCPListenAddress) == 0 {
+	// 	log.Info("no tcp dns server defined")
+	// }
+
+	// blockConfig
+	setCfg(&cfg.DNS.Block.IP, ip(net.ParseIP(c.String("block-ip"))), false)
+
+	i := c.Duration("block-ttl")
+	setCfg(&cfg.DNS.Block.TTL, duration(i), i == defaultBlockTTL)
+
+	setCfg(&cfg.DNS.Block.Hosts, hostsFiles.Values, hostsFiles.IsDefault())
+
+	return nil
+}
+
+func isInitial(v reflect.Value) bool {
+	return reflect.DeepEqual(v.Interface(), reflect.Zero(v.Type()).Interface())
+}
+
+func setCfg(cfgValue, value interface{}, isDefault bool) {
+	v := reflect.ValueOf(value)
+
+	// if value is go's "initial value, don't write it
+	if isInitial(v) {
+		return
+	}
+
+	cfg := reflect.Indirect(reflect.ValueOf(cfgValue))
+
+	// if the value in cfg is go's "initial" value or isDefault is false it is
+	// safe to overwrite
+	if !isDefault || isInitial(cfg) {
+		cfg.Set(v)
+	}
 }
 
 func setup(c *cli.Context) error {
-	setLogLevel(c)
+	var cfg config
+	if file := c.String("config"); len(file) > 0 {
+		md, err := toml.DecodeFile(file, &cfg)
+		if err != nil {
+			return err
+		}
 
-	forwardDNSServers = c.StringSlice("forward")
-
-	// strip out the default values if the user supplied any
-	if len(forwardDNSServers) > len(defaultForwardDNSServers) {
-		forwardDNSServers = forwardDNSServers[len(defaultForwardDNSServers):]
+		if undecoded := md.Undecoded(); len(undecoded) > 0 {
+			log.Warnf("undecoded keys: %q", undecoded)
+		}
 	}
 
-	dnsUDPListenAddress := c.String("dns-udp-listen-address")
-	dnsTCPListenAddress := c.String("dns-tcp-listen-address")
-
-	if len(dnsUDPListenAddress) == 0 && len(dnsTCPListenAddress) == 0 {
-		return fmt.Errorf("at least one of dns-udp-listen-address or dns-tcp-listen-address is required")
+	if err := parseFlags(c, &cfg); err != nil {
+		return err
 	}
 
-	if len(dnsUDPListenAddress) == 0 {
-		log.Warn("no udp dns server defined")
-	}
+	cfg.Write(os.Stderr)
 
-	if len(dnsTCPListenAddress) == 0 {
-		log.Info("no tcp dns server defined")
-	}
-
-	forwardDNSServers = stripEmpty(forwardDNSServers)
-	if len(forwardDNSServers) == 0 {
-		return fmt.Errorf("at least one forward dns server is required")
-	}
-
-	dnsServer = &dnsserver.DNSServer{
-		Servers: []*dns.Server{
-			{Addr: dnsUDPListenAddress, Net: "udp"},
-			{Addr: dnsTCPListenAddress, Net: "tcp"},
-		},
-		Forward: forwardDNSServers,
-		Block: dnsserver.Block{
-			IP:  net.ParseIP(c.String("block-ip")),
-			TTL: c.Duration("block-ttl"),
-		},
-	}
+	cfg.Log.init()
+	dnsServer = cfg.DNS.Server()
 
 	return nil
 }
