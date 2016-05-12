@@ -40,6 +40,7 @@ var (
 		&hostsFiles,
 	}
 
+	cfg       config
 	dnsServer *dnsserver.DNSServer
 	app       = cli.NewApp()
 )
@@ -95,6 +96,12 @@ func init() {
 			Usage:  "files in \"/etc/hosts\" format from which to derive blocked hostnames",
 		}),
 	}...)
+
+	app.Commands = []cli.Command{{
+		Name:   "config",
+		Usage:  "write the config to stdout",
+		Action: writeConfig,
+	}}
 }
 
 func main() {
@@ -103,7 +110,7 @@ func main() {
 	}
 }
 
-func parseFlags(c *cli.Context, cfg *config) error {
+func parseFlags(c *cli.Context) error {
 	for _, ss := range stringSlices {
 		if err := ss.parseFlag(c); err != nil {
 			return err
@@ -111,7 +118,9 @@ func parseFlags(c *cli.Context, cfg *config) error {
 	}
 
 	// logConfig
-	cfg.Log.parseFlags(c)
+	if err := cfg.Log.parseFlags(c); err != nil {
+		return err
+	}
 
 	// dnsConfig
 	setCfg(&cfg.DNS.Forward, forwardDNSServers.Values, forwardDNSServers.IsDefault())
@@ -134,6 +143,8 @@ func parseFlags(c *cli.Context, cfg *config) error {
 			}
 		}
 	}
+
+	cfg.DNS.SetDefaults()
 
 	// if len(dnsUDPListenAddress) == 0 && len(dnsTCPListenAddress) == 0 {
 	// 	return fmt.Errorf("at least one of dns-udp-listen-address or dns-tcp-listen-address is required")
@@ -170,17 +181,16 @@ func setCfg(cfgValue, value interface{}, isDefault bool) {
 		return
 	}
 
-	cfg := reflect.Indirect(reflect.ValueOf(cfgValue))
+	cur := reflect.Indirect(reflect.ValueOf(cfgValue))
 
-	// if the value in cfg is go's "initial" value or isDefault is false it is
+	// if the value in cur is go's "initial" value or isDefault is false it is
 	// safe to overwrite
-	if !isDefault || isInitial(cfg) {
-		cfg.Set(v)
+	if !isDefault || isInitial(cur) {
+		cur.Set(v)
 	}
 }
 
 func setup(c *cli.Context) error {
-	var cfg config
 	if file := c.String("config"); len(file) > 0 {
 		md, err := toml.DecodeFile(file, &cfg)
 		if err != nil {
@@ -192,11 +202,9 @@ func setup(c *cli.Context) error {
 		}
 	}
 
-	if err := parseFlags(c, &cfg); err != nil {
+	if err := parseFlags(c); err != nil {
 		return err
 	}
-
-	cfg.Write(os.Stderr)
 
 	cfg.Log.init()
 	dnsServer = cfg.DNS.Server()
@@ -223,4 +231,9 @@ func run(c *cli.Context) error {
 	}
 
 	return dnsServer.Shutdown()
+}
+
+func writeConfig(c *cli.Context) error {
+	cfg.Write(os.Stdout)
+	return nil
 }

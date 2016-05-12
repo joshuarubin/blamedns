@@ -18,25 +18,42 @@ const (
 )
 
 type logConfig struct {
-	Level string
-	File  string
+	Level logLevel
+	File  logFile
+}
+
+type logLevel log.Level
+
+func (l *logLevel) UnmarshalText(text []byte) error {
+	*l = logLevel(parseLogLevel(string(text)))
+	return nil
+}
+
+type logFile struct {
+	io.Writer
+	Name   string
+	IsFile bool
+}
+
+func (l *logFile) UnmarshalText(text []byte) error {
+	t, err := parseLogFileName(string(text))
+	if err != nil {
+		return err
+	}
+	*l = *t
+	return nil
 }
 
 func (cfg logConfig) Write(w io.Writer) {
 	w.Write([]byte("[log]\n"))
 
-	if len(cfg.Level) > 0 {
-		w.Write([]byte(fmt.Sprintf(
-			"level = \"%s\"\n",
-			cfg.Level,
-		)))
+	l := log.Level(cfg.Level).String()
+	if l != "unknown" {
+		w.Write([]byte(fmt.Sprintf("level = \"%s\"\n", l)))
 	}
 
-	if len(cfg.File) > 0 {
-		w.Write([]byte(fmt.Sprintf(
-			"file  = \"%s\"\n",
-			cfg.File,
-		)))
+	if len(cfg.File.Name) > 0 {
+		w.Write([]byte(fmt.Sprintf("file  = \"%s\"\n", cfg.File.Name)))
 	}
 }
 
@@ -55,47 +72,51 @@ var logFlags = []cli.Flag{
 	},
 }
 
-func parseLogFileName(file string) (io.Writer, string, bool) {
+func parseLogFileName(file string) (*logFile, error) {
 	switch file {
 	case "stderr", "STDERR":
-		return os.Stderr, "stderr", false
+		return &logFile{
+			Writer: os.Stderr,
+			Name:   "stderr",
+			IsFile: false,
+		}, nil
 	case "stdout", "STDOUT":
-		return os.Stdout, "stdout", false
+		return &logFile{
+			Writer: os.Stdout,
+			Name:   "stdout",
+			IsFile: false,
+		}, nil
 	default:
 		f, err := os.OpenFile(file, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0660)
 		// file is only closed on os.Exit
 		if err != nil {
-			log.WithFields(log.Fields{
-				"file": file,
-				"err":  err,
-			}).Fatal("could not open file")
+			return nil, err
 		}
-		return f, file, true
+
+		return &logFile{
+			Writer: f,
+			Name:   file,
+			IsFile: true,
+		}, nil
 	}
 }
 
-func (cfg *logConfig) parseFlags(c *cli.Context) {
-	level := c.String("log-level")
-	setCfg(&cfg.Level, level, level == defaultLogLevelString)
+func (cfg *logConfig) parseFlags(c *cli.Context) error {
+	level := parseLogLevel(c.String("log-level"))
+	setCfg(&cfg.Level, logLevel(level), level == defaultLogLevel)
 
-	file := c.String("log-file")
-	setCfg(&cfg.File, file, file == defaultLogFile)
-}
-
-func (cfg logConfig) init() {
-	w, name, isFile := parseLogFileName(cfg.File)
-	log.WithField("name", name).Info("log location")
-	log.SetOutput(w)
-
-	if isFile {
-		log.SetFormatter(&log.TextFormatter{
-			DisableColors: true,
-		})
+	file, err := parseLogFileName(c.String("log-file"))
+	if err != nil {
+		return err
 	}
 
-	level := cfg.Level
+	setCfg(&cfg.File, *file, file.Name == defaultLogFile)
 
-	l := defaultLogLevel
+	return nil
+}
+
+func parseLogLevel(level string) log.Level {
+	ret := defaultLogLevel
 
 	if len(level) > 0 {
 		r, _ := utf8.DecodeRuneInString(level)
@@ -103,14 +124,28 @@ func (cfg logConfig) init() {
 
 		switch r {
 		case 'e':
-			l = log.ErrorLevel
+			return log.ErrorLevel
 		case 'i':
-			l = log.InfoLevel
+			return log.InfoLevel
 		case 'd':
-			l = log.DebugLevel
+			return log.DebugLevel
 		}
 	}
 
+	return ret
+}
+
+func (cfg logConfig) init() {
+	log.WithField("name", cfg.File.Name).Info("log location")
+	log.SetOutput(cfg.File)
+
+	if cfg.File.IsFile {
+		log.SetFormatter(&log.TextFormatter{
+			DisableColors: true,
+		})
+	}
+
+	l := log.Level(cfg.Level)
 	log.SetLevel(l)
 	log.WithField("level", l).Debug("log level set")
 }

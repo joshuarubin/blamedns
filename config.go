@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"strings"
 	"time"
 
 	"jrubin.io/blamedns/dnsserver"
@@ -28,31 +27,29 @@ type dnsConfig struct {
 	Block   blockConfig
 }
 
+func (d *dnsConfig) SetDefaults() {
+	for _, server := range d.Servers {
+		if len(server.Addr) > 0 && len(server.Net) == 0 {
+			server.Net = "udp"
+		}
+	}
+}
+
 func (d dnsConfig) Write(w io.Writer) {
 	w.Write([]byte("[dns]\n"))
 
-	if len(d.Forward) > 0 {
-		w.Write([]byte(fmt.Sprintf(
-			"forward = [\n"+
-				"  \"%s\"\n"+
-				"]\n",
-			strings.Join(d.Forward, "\",\n  \""),
-		)))
-	}
+	writeSS(w, "forward", d.Forward)
 
 	for k, v := range d.Servers {
-		if len(k) == 0 || len(v.Addr) == 0 || len(v.Net) == 0 {
-			continue
+		w.Write([]byte(fmt.Sprintf("[dns.servers.%s]\n", k)))
+
+		if len(v.Addr) > 0 {
+			w.Write([]byte(fmt.Sprintf("addr = \"%s\"\n", v.Addr)))
 		}
 
-		w.Write([]byte(fmt.Sprintf(
-			"[dns.servers.%s]\n"+
-				"addr = \"%s\"\n"+
-				"net  = \"%s\"\n",
-			k,
-			v.Addr,
-			v.Net,
-		)))
+		if len(v.Net) > 0 && v.Net != "udp" {
+			w.Write([]byte(fmt.Sprintf("net  = \"%s\"\n", v.Net)))
+		}
 	}
 
 	d.Block.Write(w)
@@ -85,6 +82,20 @@ type blockConfig struct {
 	Hosts []string
 }
 
+func writeSS(w io.Writer, name string, ss []string) {
+	if len(ss) == 0 {
+		return
+	}
+
+	w.Write([]byte(fmt.Sprintf("%s = [\n", name)))
+
+	for _, h := range ss {
+		w.Write([]byte(fmt.Sprintf("  \"%s\",\n", h)))
+	}
+
+	w.Write([]byte("]\n"))
+}
+
 func (b blockConfig) Write(w io.Writer) {
 	w.Write([]byte("[dns.block]\n"))
 
@@ -102,14 +113,7 @@ func (b blockConfig) Write(w io.Writer) {
 		)))
 	}
 
-	if len(b.Hosts) > 0 {
-		w.Write([]byte(fmt.Sprintf(
-			"hosts = [\n"+
-				"  \"%s\"\n"+
-				"]\n",
-			strings.Join(b.Hosts, "\",\n  \""),
-		)))
-	}
+	writeSS(w, "hosts", b.Hosts)
 }
 
 type duration time.Duration
