@@ -80,9 +80,19 @@ func init() {
 			Usage:  "dns server(s) to forward requests to",
 		}),
 		cli.StringFlag{
-			Name:   "block-ip",
-			EnvVar: "BLOCK_IP",
-			Usage:  "ip address to return to clients for blocked requests",
+			Name:   "block-ipv4",
+			EnvVar: "BLOCK_IPV4",
+			Usage:  "ipv4 address to return to clients for blocked a requests",
+		},
+		cli.StringFlag{
+			Name:   "block-ipv6",
+			EnvVar: "BLOCK_IPV6",
+			Usage:  "ipv6 address to return to clients for blocked aaaa requests",
+		},
+		cli.StringFlag{
+			Name:   "block-host",
+			EnvVar: "BLOCK_HOST",
+			Usage:  "host name to return to clients for blocked cname requests",
 		},
 		cli.DurationFlag{
 			Name:   "block-ttl",
@@ -159,7 +169,9 @@ func parseFlags(c *cli.Context) error {
 	// }
 
 	// blockConfig
-	setCfg(&cfg.DNS.Block.IP, ip(net.ParseIP(c.String("block-ip"))), false)
+	setCfg(&cfg.DNS.Block.IPv4, ip(net.ParseIP(c.String("block-ipv4"))), false)
+	setCfg(&cfg.DNS.Block.IPv6, ip(net.ParseIP(c.String("block-ipv6"))), false)
+	setCfg(&cfg.DNS.Block.Host, c.String("block-host"), false)
 
 	i := c.Duration("block-ttl")
 	setCfg(&cfg.DNS.Block.TTL, duration(i), i == defaultBlockTTL)
@@ -234,6 +246,6 @@ func run(c *cli.Context) error {
 }
 
 func writeConfig(c *cli.Context) error {
-	cfg.Write(os.Stdout)
-	return nil
+	_, err := cfg.Write(os.Stdout)
+	return err
 }

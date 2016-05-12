@@ -16,9 +16,14 @@ type config struct {
 	DNS dnsConfig
 }
 
-func (c config) Write(w io.Writer) {
-	c.Log.Write(w)
-	c.DNS.Write(w)
+func (c config) Write(w io.Writer) (int, error) {
+	n, err := c.Log.Write(w)
+	if err != nil {
+		return n, err
+	}
+
+	o, err := c.DNS.Write(w)
+	return n + o, err
 }
 
 type dnsConfig struct {
@@ -35,24 +40,44 @@ func (d *dnsConfig) SetDefaults() {
 	}
 }
 
-func (d dnsConfig) Write(w io.Writer) {
-	w.Write([]byte("[dns]\n"))
+func (d dnsConfig) Write(w io.Writer) (int, error) {
+	n, err := fmt.Fprintf(w, "[dns]\n")
+	if err != nil {
+		return n, err
+	}
 
-	writeSS(w, "forward", d.Forward)
+	o, err := writeSS(w, "forward", d.Forward)
+	n += o
+	if err != nil {
+		return n, err
+	}
 
 	for k, v := range d.Servers {
-		w.Write([]byte(fmt.Sprintf("[dns.servers.%s]\n", k)))
+		o, err = fmt.Fprintf(w, "[dns.servers.%s]\n", k)
+		n += o
+		if err != nil {
+			return n, err
+		}
 
 		if len(v.Addr) > 0 {
-			w.Write([]byte(fmt.Sprintf("addr = \"%s\"\n", v.Addr)))
+			o, err = fmt.Fprintf(w, "addr = \"%s\"\n", v.Addr)
+			n += o
+			if err != nil {
+				return n, err
+			}
 		}
 
 		if len(v.Net) > 0 && v.Net != "udp" {
-			w.Write([]byte(fmt.Sprintf("net  = \"%s\"\n", v.Net)))
+			o, err = fmt.Fprintf(w, "net  = \"%s\"\n", v.Net)
+			n += o
+			if err != nil {
+				return n, err
+			}
 		}
 	}
 
-	d.Block.Write(w)
+	o, err = d.Block.Write(w)
+	return n + o, err
 }
 
 func (d dnsConfig) ServersSlice() []*dns.Server {
@@ -70,50 +95,85 @@ func (d dnsConfig) Server() *dnsserver.DNSServer {
 		Servers: d.ServersSlice(),
 		Forward: d.Forward,
 		Block: dnsserver.Block{
-			IP:  net.IP(d.Block.IP),
-			TTL: time.Duration(d.Block.TTL),
+			IPv4: net.IP(d.Block.IPv4),
+			IPv6: net.IP(d.Block.IPv6),
+			Host: d.Block.Host,
+			TTL:  time.Duration(d.Block.TTL),
 		},
 	}
 }
 
 type blockConfig struct {
-	IP    ip
-	TTL   duration
-	Hosts []string
+	IPv4, IPv6 ip
+	Host       string
+	TTL        duration
+	Hosts      []string
 }
 
-func writeSS(w io.Writer, name string, ss []string) {
+func writeSS(w io.Writer, name string, ss []string) (int, error) {
 	if len(ss) == 0 {
-		return
+		return 0, nil
 	}
 
-	w.Write([]byte(fmt.Sprintf("%s = [\n", name)))
+	n, err := fmt.Fprintf(w, "%s = [\n", name)
+	if err != nil {
+		return n, err
+	}
 
 	for _, h := range ss {
-		w.Write([]byte(fmt.Sprintf("  \"%s\",\n", h)))
+		var o int
+		o, err = fmt.Fprintf(w, "  \"%s\",\n", h)
+		n += o
+		if err != nil {
+			return n, err
+		}
 	}
 
-	w.Write([]byte("]\n"))
+	o, err := fmt.Fprintf(w, "]\n")
+	return n + o, err
 }
 
-func (b blockConfig) Write(w io.Writer) {
-	w.Write([]byte("[dns.block]\n"))
+func (b blockConfig) Write(w io.Writer) (int, error) {
+	n, err := fmt.Fprintf(w, "[dns.block]\n")
+	if err != nil {
+		return n, err
+	}
 
-	if b.IP != nil {
-		w.Write([]byte(fmt.Sprintf(
-			"ip = \"%s\"\n",
-			net.IP(b.IP).String(),
-		)))
+	var o int
+	if b.IPv4 != nil {
+		o, err = fmt.Fprintf(w, "ipv4 = \"%s\"\n", net.IP(b.IPv4).String())
+		n += o
+		if err != nil {
+			return n, err
+		}
+	}
+
+	if b.IPv6 != nil {
+		o, err = fmt.Fprintf(w, "ipv6 = \"%s\"\n", net.IP(b.IPv6).String())
+		n += o
+		if err != nil {
+			return n, err
+		}
+	}
+
+	if len(b.Host) > 0 {
+		o, err = fmt.Fprintf(w, "host = \"%s\"\n", b.Host)
+		n += o
+		if err != nil {
+			return n, err
+		}
 	}
 
 	if b.TTL != 0 {
-		w.Write([]byte(fmt.Sprintf(
-			"ttl = \"%s\"\n",
-			time.Duration(b.TTL).String(),
-		)))
+		o, err = fmt.Fprintf(w, "ttl = \"%s\"\n", time.Duration(b.TTL).String())
+		n += o
+		if err != nil {
+			return n, err
+		}
 	}
 
-	writeSS(w, "hosts", b.Hosts)
+	o, err = writeSS(w, "hosts", b.Hosts)
+	return n + o, err
 }
 
 type duration time.Duration

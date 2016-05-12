@@ -18,8 +18,8 @@ const (
 )
 
 type logConfig struct {
-	Level logLevel
 	File  logFile
+	Level logLevel
 }
 
 type logLevel log.Level
@@ -44,17 +44,31 @@ func (l *logFile) UnmarshalText(text []byte) error {
 	return nil
 }
 
-func (cfg logConfig) Write(w io.Writer) {
-	w.Write([]byte("[log]\n"))
+func (cfg logConfig) Write(w io.Writer) (int, error) {
+	n, err := fmt.Fprintf(w, "[log]\n")
+	if err != nil {
+		return n, err
+	}
 
+	var o int
 	l := log.Level(cfg.Level).String()
 	if l != "unknown" {
-		w.Write([]byte(fmt.Sprintf("level = \"%s\"\n", l)))
+		o, err = fmt.Fprintf(w, "level = \"%s\"\n", l)
+		n += o
+		if err != nil {
+			return n, err
+		}
 	}
 
 	if len(cfg.File.Name) > 0 {
-		w.Write([]byte(fmt.Sprintf("file  = \"%s\"\n", cfg.File.Name)))
+		o, err = fmt.Fprintf(w, "file  = \"%s\"\n", cfg.File.Name)
+		n += o
+		if err != nil {
+			return n, err
+		}
 	}
+
+	return n, nil
 }
 
 var logFlags = []cli.Flag{

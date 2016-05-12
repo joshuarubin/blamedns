@@ -11,8 +11,9 @@ import (
 )
 
 type Block struct {
-	IP  net.IP
-	TTL time.Duration
+	IPv4, IPv6 net.IP
+	Host       string
+	TTL        time.Duration
 }
 
 type DNSServer struct {
@@ -23,10 +24,8 @@ type DNSServer struct {
 
 const defaultDNSPort = 53
 
-// TODO(jrubin) does CNAME need to be handled?
-// TODO(jrubin) does AAAA need to be handled?
 // TODO(jrubin) handle other question types?
-var respondToQtypes = []uint16{dns.TypeA}
+var respondToQtypes = []uint16{dns.TypeA, dns.TypeAAAA, dns.TypeCNAME}
 
 func shouldRespondToQtype(q uint16) bool {
 	for _, t := range respondToQtypes {
@@ -125,31 +124,80 @@ func (d DNSServer) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 }
 
 func shouldBlock(req *dns.Msg) bool {
-	if !shouldRespondToQtype(req.Question[0].Qtype) {
+	q := req.Question[0]
+
+	if !shouldRespondToQtype(q.Qtype) {
 		return false
 	}
 
 	// TODO(jrubin) check if req.Question[0].Name should be blocked
-	return req.Question[0].Name == "blamedns.com."
+	switch q.Name {
+	case "blamedns.com.", "smtp.blamedns.com.":
+		return true
+	}
+
+	return false
+}
+
+func newHdr(name string, qtype uint16, ttl uint32) dns.RR_Header {
+	return dns.RR_Header{
+		Name:   name,
+		Rrtype: qtype,
+		Class:  dns.ClassINET,
+		Ttl:    ttl,
+	}
+}
+
+func newA(ipv4 net.IP, hdr dns.RR_Header) *dns.Msg {
+	return &dns.Msg{
+		Answer: []dns.RR{
+			&dns.A{Hdr: hdr, A: ipv4},
+		},
+	}
+}
+
+func newAAAA(ipv6 net.IP, hdr dns.RR_Header) *dns.Msg {
+	return &dns.Msg{
+		Answer: []dns.RR{
+			&dns.AAAA{Hdr: hdr, AAAA: ipv6},
+		},
+	}
+}
+
+func newCNAME(host string, ipv4, ipv6 net.IP, hdr dns.RR_Header) *dns.Msg {
+	return &dns.Msg{
+		Answer: []dns.RR{
+			&dns.CNAME{Hdr: hdr, Target: host},
+		},
+		Extra: []dns.RR{
+			&dns.A{Hdr: newHdr(host, dns.TypeA, hdr.Ttl), A: ipv4},
+			&dns.AAAA{Hdr: newHdr(host, dns.TypeAAAA, hdr.Ttl), AAAA: ipv6},
+		},
+	}
+}
+
+func (d DNSServer) newReply(req *dns.Msg) *dns.Msg {
+	q := req.Question[0]
+	qType := q.Qtype
+	hdr := newHdr(q.Name, qType, uint32(d.Block.TTL.Seconds()))
+
+	var msg *dns.Msg
+	switch qType {
+	case dns.TypeA:
+		msg = newA(d.Block.IPv4, hdr)
+	case dns.TypeAAAA:
+		msg = newAAAA(d.Block.IPv6, hdr)
+	case dns.TypeCNAME:
+		msg = newCNAME(d.Block.Host, d.Block.IPv4, d.Block.IPv6, hdr)
+	default:
+		panic(fmt.Sprintf("unexpected question type: %d", qType))
+	}
+
+	return msg.SetReply(req)
 }
 
 func (d DNSServer) block(w dns.ResponseWriter, req *dns.Msg) error {
-	resp := &dns.Msg{}
-	resp.SetReply(req)
-
-	resp.Answer = []dns.RR{
-		&dns.A{
-			Hdr: dns.RR_Header{
-				Name:   req.Question[0].Name,
-				Rrtype: req.Question[0].Qtype,
-				Class:  dns.ClassINET,
-				Ttl:    uint32(d.Block.TTL.Seconds()),
-			},
-			A: d.Block.IP,
-		},
-	}
-
-	return w.WriteMsg(resp)
+	return w.WriteMsg(d.newReply(req))
 }
 
 func (d DNSServer) forward(w dns.ResponseWriter, req *dns.Msg) error {
