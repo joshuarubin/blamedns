@@ -24,10 +24,10 @@ func (c config) Write(w io.Writer) (int, error) {
 	}
 
 	o, err := c.Log.Write(w)
+	n += o
 	if err != nil {
 		return n, err
 	}
-	n += o
 
 	o, err = c.DNS.Write(w)
 	return n + o, err
@@ -111,10 +111,11 @@ func (d dnsConfig) Server() *dnsserver.DNSServer {
 }
 
 type blockConfig struct {
-	IPv4, IPv6 ip
-	Host       string
-	TTL        duration
-	Hosts      []string
+	IPv4, IPv6     ip
+	Host           string
+	TTL            duration
+	Hosts          []string
+	UpdateInterval duration `toml:"update_interval"`
 }
 
 func writeSS(w io.Writer, name string, ss []string) (int, error) {
@@ -174,6 +175,14 @@ func (b blockConfig) Write(w io.Writer) (int, error) {
 	if b.TTL != 0 {
 		o, err = fmt.Fprintf(w, "ttl = \"%s\"\n", time.Duration(b.TTL).String())
 		n += o
+		if err != nil {
+			return n, err
+		}
+	}
+
+	if b.UpdateInterval != 0 {
+		o, err = fmt.Fprintf(w, "update_interval = \"%s\"\n", time.Duration(b.UpdateInterval).String())
+		n += 0
 		if err != nil {
 			return n, err
 		}

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"jrubin.io/blamedns/dnsserver"
+	"jrubin.io/blamedns/hosts"
 
 	"github.com/BurntSushi/toml"
 	log "github.com/Sirupsen/logrus"
@@ -22,6 +23,7 @@ const (
 	defaultConfigFile       = "/etc/blamedns/config.toml"
 	defaultBlockTTL         = 1 * time.Hour
 	defaultCacheDir         = "cache"
+	defaultUpdateInterval   = 24 * time.Hour
 )
 
 var (
@@ -34,6 +36,8 @@ var (
 	hostsFiles = newStringSlice(
 		"http://someonewhocares.org/hosts/hosts",
 	)
+
+	h []hosts.Hosts
 
 	stringSlices = []*stringSlice{
 		&forwardDNSServers,
@@ -111,6 +115,12 @@ func init() {
 			EnvVar: "HOSTS_FILES",
 			Usage:  "files in \"/etc/hosts\" format from which to derive blocked hostnames",
 		}),
+		cli.DurationFlag{
+			Name:   "update-interval",
+			EnvVar: "UPDATE_INTERVAL",
+			Usage:  "update the hosts files at this interval",
+			Value:  defaultUpdateInterval,
+		},
 	}...)
 
 	app.Commands = []cli.Command{{
@@ -187,6 +197,9 @@ func parseFlags(c *cli.Context) error {
 
 	setCfg(&cfg.DNS.Block.Hosts, hostsFiles.Values, hostsFiles.IsDefault())
 
+	ui := c.Duration("update-interval")
+	setCfg(&cfg.DNS.Block.UpdateInterval, duration(ui), ui == defaultUpdateInterval)
+
 	return nil
 }
 
@@ -238,6 +251,28 @@ func setup(c *cli.Context) error {
 	}
 
 	cfg.Log.init()
+
+	for _, i := range hostsFiles.Values {
+		f, err := hosts.New(i, cfg.CacheDir, time.Duration(cfg.DNS.Block.UpdateInterval))
+		if err != nil {
+			return err
+		}
+
+		if err = f.Update(); err != nil {
+			return err
+		}
+
+		hs, err := f.Hosts()
+		if err != nil {
+			return err
+
+		}
+
+		for _, hn := range hs {
+			fmt.Println(hn)
+		}
+	}
+
 	dnsServer = cfg.DNS.Server()
 
 	return nil
