@@ -211,20 +211,27 @@ func setCfg(cfgValue, value interface{}, isDefault bool) {
 	}
 }
 
-func setup(c *cli.Context) error {
-	if file := c.String("config"); len(file) > 0 {
-		md, err := toml.DecodeFile(file, &cfg)
-		if err != nil {
-			perr, ok := err.(*os.PathError)
-			if !ok || perr.Err != syscall.ENOENT {
-				log.WithError(err).Warn("error reading config file")
-			}
-		}
-
-		if undecoded := md.Undecoded(); len(undecoded) > 0 {
-			log.Warnf("undecoded keys: %q", undecoded)
-		}
+func parseConfigFile(file string) {
+	if len(file) == 0 {
+		return
 	}
+
+	md, err := toml.DecodeFile(file, &cfg)
+	if err != nil {
+		perr, ok := err.(*os.PathError)
+		if !ok || perr.Err != syscall.ENOENT {
+			log.WithError(err).Warn("error reading config file")
+		}
+		return
+	}
+
+	if undecoded := md.Undecoded(); len(undecoded) > 0 {
+		log.Warnf("undecoded keys: %q", undecoded)
+	}
+}
+
+func setup(c *cli.Context) error {
+	parseConfigFile(c.String("config"))
 
 	if err := parseFlags(c); err != nil {
 		return err
