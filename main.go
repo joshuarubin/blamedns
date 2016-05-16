@@ -21,6 +21,7 @@ const (
 	defaultDNSListenAddress = "[::]:53"
 	defaultConfigFile       = "/etc/blamedns/config.toml"
 	defaultBlockTTL         = 1 * time.Hour
+	defaultCacheDir         = "cache"
 )
 
 var (
@@ -60,6 +61,12 @@ func init() {
 			EnvVar: "BLAMEDNS_CONFIG",
 			Value:  defaultConfigFile,
 			Usage:  "config file",
+		},
+		cli.StringFlag{
+			Name:   "cache-dir",
+			EnvVar: "CACHE_DIR",
+			Value:  defaultCacheDir,
+			Usage:  "directory in which to store cached data",
 		},
 		cli.StringFlag{
 			Name:   "dns-udp-listen-address",
@@ -125,6 +132,9 @@ func parseFlags(c *cli.Context) error {
 			return err
 		}
 	}
+
+	cd := c.String("cache-dir")
+	setCfg(&cfg.CacheDir, cd, cd == defaultCacheDir)
 
 	// logConfig
 	if err := cfg.Log.parseFlags(c); err != nil {

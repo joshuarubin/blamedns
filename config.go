@@ -12,17 +12,24 @@ import (
 )
 
 type config struct {
-	Log logConfig
-	DNS dnsConfig
+	CacheDir string `toml:"cache_dir"`
+	Log      logConfig
+	DNS      dnsConfig
 }
 
 func (c config) Write(w io.Writer) (int, error) {
-	n, err := c.Log.Write(w)
+	n, err := fmt.Fprintf(w, "cache_dir = \"%s\"\n", c.CacheDir)
 	if err != nil {
 		return n, err
 	}
 
-	o, err := c.DNS.Write(w)
+	o, err := c.Log.Write(w)
+	if err != nil {
+		return n, err
+	}
+	n += o
+
+	o, err = c.DNS.Write(w)
 	return n + o, err
 }
 
