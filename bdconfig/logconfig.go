@@ -4,18 +4,20 @@ import (
 	"fmt"
 	"io"
 
+	"jrubin.io/blamedns/bdconfig/bdtype"
+
 	log "github.com/Sirupsen/logrus"
 )
 
 type LogConfig struct {
-	File  logFile  `cli:",set log filename (stderr, stdout or any file name)"`
-	Level logLevel `cli:",set log level (DEBUG, INFO, WARN, ERR)"`
+	File  bdtype.LogFile  `cli:",set log filename (stderr, stdout or any file name)"`
+	Level bdtype.LogLevel `cli:",set log level (DEBUG, INFO, WARN, ERR)"`
 }
 
 func defaultLogConfig() LogConfig {
 	return LogConfig{
-		File:  *defaultLogFile(),
-		Level: defaultLogLevel(),
+		File:  bdtype.DefaultLogFile(),
+		Level: bdtype.DefaultLogLevel(),
 	}
 }
 

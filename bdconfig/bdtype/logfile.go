@@ -1,4 +1,4 @@
-package bdconfig
+package bdtype
 
 import (
 	"io"
@@ -7,37 +7,37 @@ import (
 
 const defaultLogFileName = "stderr"
 
-type logFile struct {
+type LogFile struct {
 	io.Writer
 	Name   string
 	IsFile bool
 }
 
-func defaultLogFile() *logFile {
+func DefaultLogFile() LogFile {
 	file, _ := parseLogFileName(defaultLogFileName)
-	return file
+	return *file
 }
 
-func (l logFile) Default(name string) interface{} {
+func (l LogFile) Default(name string) interface{} {
 	return defaultLogFileName
 }
 
-func (l logFile) Equal(val interface{}) bool {
+func (l LogFile) Equal(val interface{}) bool {
 	if sval, ok := val.(string); ok {
 		return l.Name == sval
 	}
 	return false
 }
 
-func (l logFile) UnmarshalCLIConfig(text string) (interface{}, error) {
-	var ret logFile
+func (l LogFile) UnmarshalCLIConfig(text string) (interface{}, error) {
+	var ret LogFile
 	if err := ret.UnmarshalText([]byte(text)); err != nil {
 		return nil, err
 	}
 	return ret, nil
 }
 
-func (l *logFile) UnmarshalText(text []byte) error {
+func (l *LogFile) UnmarshalText(text []byte) error {
 	tmp, err := parseLogFileName(string(text))
 	if err != nil {
 		return err
@@ -48,16 +48,16 @@ func (l *logFile) UnmarshalText(text []byte) error {
 	return nil
 }
 
-func parseLogFileName(file string) (*logFile, error) {
+func parseLogFileName(file string) (*LogFile, error) {
 	switch file {
 	case "stderr", "STDERR":
-		return &logFile{
+		return &LogFile{
 			Writer: os.Stderr,
 			Name:   "stderr",
 			IsFile: false,
 		}, nil
 	case "stdout", "STDOUT":
-		return &logFile{
+		return &LogFile{
 			Writer: os.Stdout,
 			Name:   "stdout",
 			IsFile: false,
@@ -69,7 +69,7 @@ func parseLogFileName(file string) (*logFile, error) {
 			return nil, err
 		}
 
-		return &logFile{
+		return &LogFile{
 			Writer: f,
 			Name:   file,
 			IsFile: true,

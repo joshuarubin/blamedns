@@ -1,4 +1,4 @@
-package bdconfig
+package bdtype
 
 import "time"
 
@@ -7,11 +7,11 @@ const (
 	defaultUpdateInterval = 24 * time.Hour
 )
 
-type duration struct {
+type Duration struct {
 	time.Duration
 }
 
-func (d duration) Default(name string) interface{} {
+func (d Duration) Default(name string) interface{} {
 	switch name {
 	case "TTL":
 		return defaultBlockTTL
@@ -21,20 +21,20 @@ func (d duration) Default(name string) interface{} {
 	return d
 }
 
-func (d duration) UnmarshalCLIConfig(text string) (interface{}, error) {
-	var ret duration
+func (d Duration) UnmarshalCLIConfig(text string) (interface{}, error) {
+	var ret Duration
 	err := ret.UnmarshalText([]byte(text))
 	return ret, err
 }
 
-func (d duration) Equal(val interface{}) bool {
+func (d Duration) Equal(val interface{}) bool {
 	if tval, ok := val.(time.Duration); ok {
 		return d.Duration == tval
 	}
 	return false
 }
 
-func (d *duration) UnmarshalText(text []byte) error {
+func (d *Duration) UnmarshalText(text []byte) error {
 	tmp, err := time.ParseDuration(string(text))
 	if err != nil {
 		return err

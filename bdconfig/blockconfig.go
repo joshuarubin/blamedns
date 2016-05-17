@@ -4,18 +4,19 @@ import (
 	"fmt"
 	"io"
 
+	"jrubin.io/blamedns/bdconfig/bdtype"
 	"jrubin.io/blamedns/bdconfig/stringslice"
 	"jrubin.io/blamedns/dnsserver"
 	"jrubin.io/blamedns/hosts"
 )
 
 type BlockConfig struct {
-	IPv4           ip       `cli:"ipv4,ipv4 address to return to clients for blocked a requests"`
-	IPv6           ip       `cli:"ipv6,ipv6 address to return to clients for blocked aaaa requests"`
-	Host           string   `cli:",host name to return to clients for blocked cname requests"`
-	TTL            duration `cli:",ttl to return for blocked requests"`
-	UpdateInterval duration `toml:"update_interval" cli:",update the hosts files at this interval"`
-	Hosts          []string `cli:",files in \"/etc/hosts\" format from which to derive blocked hostnames"`
+	IPv4           bdtype.IP       `cli:"ipv4,ipv4 address to return to clients for blocked a requests"`
+	IPv6           bdtype.IP       `cli:"ipv6,ipv6 address to return to clients for blocked aaaa requests"`
+	Host           string          `cli:",host name to return to clients for blocked cname requests"`
+	TTL            bdtype.Duration `cli:",ttl to return for blocked requests"`
+	UpdateInterval bdtype.Duration `toml:"update_interval" cli:",update the hosts files at this interval"`
+	Hosts          []string        `cli:",files in \"/etc/hosts\" format from which to derive blocked hostnames"`
 }
 
 func defaultBlockConfig() BlockConfig {

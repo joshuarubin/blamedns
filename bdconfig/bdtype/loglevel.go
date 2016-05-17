@@ -1,4 +1,4 @@
-package bdconfig
+package bdtype
 
 import (
 	"unicode"
@@ -7,39 +7,39 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-const defaultLogLevelValue = logLevel(log.WarnLevel)
+const defaultLogLevelValue = LogLevel(log.WarnLevel)
 
-type logLevel log.Level
+type LogLevel log.Level
 
-func defaultLogLevel() logLevel {
-	return logLevel(defaultLogLevelValue)
+func DefaultLogLevel() LogLevel {
+	return LogLevel(defaultLogLevelValue)
 }
 
-func (l logLevel) UnmarshalCLIConfig(text string) (interface{}, error) {
-	var ret logLevel
+func (l LogLevel) UnmarshalCLIConfig(text string) (interface{}, error) {
+	var ret LogLevel
 	if err := ret.UnmarshalText([]byte(text)); err != nil {
 		return nil, err
 	}
 	return ret, nil
 }
 
-func (l logLevel) Equal(val interface{}) bool {
+func (l LogLevel) Equal(val interface{}) bool {
 	if sval, ok := val.(string); ok {
 		return l == parseLogLevel(sval)
 	}
 	return false
 }
 
-func (l *logLevel) UnmarshalText(text []byte) error {
+func (l *LogLevel) UnmarshalText(text []byte) error {
 	*l = parseLogLevel(string(text))
 	return nil
 }
 
-func (l logLevel) Default(name string) interface{} {
+func (l LogLevel) Default(name string) interface{} {
 	return log.Level(defaultLogLevelValue).String()
 }
 
-func parseLogLevel(level string) logLevel {
+func parseLogLevel(level string) LogLevel {
 	ret := defaultLogLevelValue
 
 	if len(level) > 0 {
@@ -48,13 +48,13 @@ func parseLogLevel(level string) logLevel {
 
 		switch r {
 		case 'e':
-			return logLevel(log.ErrorLevel)
+			return LogLevel(log.ErrorLevel)
 		case 'i':
-			return logLevel(log.InfoLevel)
+			return LogLevel(log.InfoLevel)
 		case 'd':
-			return logLevel(log.DebugLevel)
+			return LogLevel(log.DebugLevel)
 		}
 	}
 
-	return logLevel(ret)
+	return LogLevel(ret)
 }
