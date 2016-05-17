@@ -11,7 +11,7 @@ import (
 
 type LogConfig struct {
 	File  bdtype.LogFile  `cli:",set log filename (stderr, stdout or any file name)"`
-	Level bdtype.LogLevel `cli:",set log level (DEBUG, INFO, WARN, ERR)"`
+	Level bdtype.LogLevel `cli:",set log level (debug, info, warning, error)"`
 }
 
 func defaultLogConfig() LogConfig {
