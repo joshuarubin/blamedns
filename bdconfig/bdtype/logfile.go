@@ -3,6 +3,8 @@ package bdtype
 import (
 	"io"
 	"os"
+
+	"jrubin.io/cliconfig"
 )
 
 const defaultLogFileName = "stderr"
@@ -12,6 +14,8 @@ type LogFile struct {
 	Name   string
 	IsFile bool
 }
+
+var _ cliconfig.CustomType = LogFile{}
 
 func DefaultLogFile() LogFile {
 	file, _ := parseLogFileName(defaultLogFileName)

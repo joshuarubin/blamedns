@@ -1,6 +1,10 @@
 package bdtype
 
-import "time"
+import (
+	"time"
+
+	"jrubin.io/cliconfig"
+)
 
 const (
 	defaultBlockTTL       = 1 * time.Hour
@@ -8,6 +12,8 @@ const (
 )
 
 type Duration time.Duration
+
+var _ cliconfig.CustomType = Duration(0)
 
 func (d Duration) Default(name string) interface{} {
 	switch name {

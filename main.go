@@ -79,15 +79,14 @@ func parseConfigFile(file string) {
 
 func setup(c *cli.Context) error {
 	parseConfigFile(c.String("config"))
-
-	if err := cc.Parse(c, &cfg); err != nil {
-		return err
-	}
-
-	return cfg.Init()
+	return cc.Parse(c, &cfg)
 }
 
 func run(c *cli.Context) error {
+	if err := cfg.Init(); err != nil {
+		return err
+	}
+
 	errCh := make(chan error, 1)
 	go func() {
 		errCh <- cfg.DNS.Server.ListenAndServe()

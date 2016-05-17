@@ -53,7 +53,7 @@ func structForEach(prefix string, structure reflect.Value, fn structFn) error {
 
 		dflt := fieldValue
 
-		dfn, hasDefault := fieldValue.Interface().(Defaulter)
+		dfn, hasDefault := fieldValue.Interface().(CustomType)
 		if hasDefault {
 			dflt = reflect.ValueOf(dfn.Default(typ.Field(i).Name))
 		}

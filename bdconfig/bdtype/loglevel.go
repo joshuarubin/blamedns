@@ -4,12 +4,16 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"jrubin.io/cliconfig"
+
 	log "github.com/Sirupsen/logrus"
 )
 
 const defaultLogLevelValue = LogLevel(log.WarnLevel)
 
 type LogLevel log.Level
+
+var _ cliconfig.CustomType = LogLevel(0)
 
 func DefaultLogLevel() LogLevel {
 	return LogLevel(defaultLogLevelValue)

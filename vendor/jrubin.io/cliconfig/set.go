@@ -20,7 +20,7 @@ func (cc CLIConfig) set(dest, value interface{}, fieldName string) {
 
 	var isDefault bool
 	if hasDefault {
-		if eq, ok := value.(Equaler); ok {
+		if eq, ok := value.(CustomType); ok {
 			isDefault = eq.Equal(dflt)
 		} else {
 			isDefault = reflect.DeepEqual(value, dflt)

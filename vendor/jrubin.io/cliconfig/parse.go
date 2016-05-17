@@ -12,7 +12,7 @@ func (cc CLIConfig) Parse(c *cli.Context, dest interface{}) error {
 	return structForEach("", reflect.ValueOf(dest), func(fieldName string, _, fieldValue reflect.Value, envVar, usage string, hidden bool) error {
 		fai := fieldValue.Addr().Interface()
 
-		if um, ok := fai.(Unmarshaler); ok {
+		if um, ok := fai.(CustomType); ok {
 			val, err := um.UnmarshalCLIConfig(c.String(fieldName))
 			if err != nil {
 				return err

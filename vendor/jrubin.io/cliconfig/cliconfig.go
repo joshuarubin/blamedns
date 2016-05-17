@@ -11,15 +11,9 @@ var (
 	intSliceType     = reflect.TypeOf([]int{})
 )
 
-type Defaulter interface {
+type CustomType interface {
 	Default(string) interface{}
-}
-
-type Unmarshaler interface {
 	UnmarshalCLIConfig(string) (interface{}, error)
-}
-
-type Equaler interface {
 	Equal(interface{}) bool
 }
 

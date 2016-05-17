@@ -1,8 +1,14 @@
 package bdtype
 
-import "net"
+import (
+	"net"
+
+	"jrubin.io/cliconfig"
+)
 
 type IP net.IP
+
+var _ cliconfig.CustomType = IP{}
 
 func (i IP) Default(name string) interface{} {
 	return ""

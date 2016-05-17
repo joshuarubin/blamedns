@@ -53,6 +53,13 @@ func New(u, cacheDir string, update time.Duration) (*Hosts, error) {
 }
 
 func (h *Hosts) Update() (updated bool, err error) {
+	res, err := http.Get(h.url)
+	if err != nil {
+		return false, err
+	}
+
+	defer res.Body.Close()
+
 	info, err := os.Stat(h.fileName)
 	if err != nil && !os.IsNotExist(err) {
 		return false, err
@@ -80,13 +87,6 @@ func (h *Hosts) Update() (updated bool, err error) {
 		return false, nil
 	}
 	defer func() { _ = f.Close() }()
-
-	res, err := http.Get(h.url)
-	if err != nil {
-		return false, err
-	}
-
-	defer res.Body.Close()
 
 	_, err = io.Copy(f, res.Body)
 	return true, err
