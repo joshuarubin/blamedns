@@ -3,7 +3,7 @@ package hosts
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -52,21 +52,21 @@ func New(u, cacheDir string, update time.Duration) (*Hosts, error) {
 	}, nil
 }
 
-func (h *Hosts) Update() error {
+func (h *Hosts) Update() (updated bool, err error) {
 	info, err := os.Stat(h.fileName)
 	if err != nil && !os.IsNotExist(err) {
-		return err
+		return false, err
 	}
 
 	if !os.IsNotExist(err) {
 		if info.IsDir() {
-			return fmt.Errorf("%s is a directory", h.fileName)
+			return false, fmt.Errorf("%s is a directory", h.fileName)
 		}
 
 		if info.ModTime().After(time.Now().Add(-h.update)) {
 			// file exists and does not need to be updated
 			log.Infof("%s does not need to be updated yet", h.fileName)
-			return nil
+			return false, nil
 		}
 
 		// file exists and needs to be updated
@@ -77,23 +77,19 @@ func (h *Hosts) Update() error {
 	// open the file and truncate it if it already exists
 	f, err := os.Create(h.fileName)
 	if err != nil {
-		return nil
+		return false, nil
 	}
 	defer func() { _ = f.Close() }()
 
 	res, err := http.Get(h.url)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	data, err := ioutil.ReadAll(res.Body)
-	res.Body.Close()
-	if err != nil {
-		return err
-	}
+	defer res.Body.Close()
 
-	_, err = f.Write(data)
-	return err
+	_, err = io.Copy(f, res.Body)
+	return true, err
 }
 
 var re *regexp.Regexp
