@@ -2,9 +2,7 @@ package bdtype
 
 import "net"
 
-type IP struct {
-	net.IP
-}
+type IP net.IP
 
 func (i IP) Default(name string) interface{} {
 	return ""
@@ -18,7 +16,22 @@ func (i IP) UnmarshalCLIConfig(text string) (interface{}, error) {
 	return ret, nil
 }
 
+func (i IP) Equal(val interface{}) bool {
+	if sval, ok := val.(string); ok {
+		return i.String() == sval
+	}
+	return false
+}
+
+func (i IP) IP() net.IP {
+	return net.IP(i)
+}
+
+func (i IP) String() string {
+	return i.IP().String()
+}
+
 func (i *IP) UnmarshalText(text []byte) error {
-	i.IP = net.ParseIP(string(text))
+	*i = IP(net.ParseIP(string(text)))
 	return nil
 }

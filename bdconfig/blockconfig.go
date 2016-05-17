@@ -29,16 +29,16 @@ func defaultBlockConfig() BlockConfig {
 
 func (b BlockConfig) Block() dnsserver.Block {
 	return dnsserver.Block{
-		IPv4: b.IPv4.IP,
-		IPv6: b.IPv6.IP,
+		IPv4: b.IPv4.IP(),
+		IPv6: b.IPv6.IP(),
 		Host: b.Host,
-		TTL:  b.TTL.Duration,
+		TTL:  b.TTL.Duration(),
 	}
 }
 
 func (b BlockConfig) Init(cacheDir string) error {
 	for _, i := range b.Hosts {
-		f, err := hosts.New(i, cacheDir, b.UpdateInterval.Duration)
+		f, err := hosts.New(i, cacheDir, b.UpdateInterval.Duration())
 		if err != nil {
 			return err
 		}
@@ -58,7 +58,7 @@ func (b BlockConfig) Write(w io.Writer) (int, error) {
 	}
 
 	var o int
-	if b.IPv4.IP != nil {
+	if b.IPv4.IP() != nil {
 		o, err = fmt.Fprintf(w, "ipv4 = \"%s\"\n", b.IPv4)
 		n += o
 		if err != nil {
@@ -66,7 +66,7 @@ func (b BlockConfig) Write(w io.Writer) (int, error) {
 		}
 	}
 
-	if b.IPv6.IP != nil {
+	if b.IPv6.IP() != nil {
 		o, err = fmt.Fprintf(w, "ipv6 = \"%s\"\n", b.IPv6)
 		n += o
 		if err != nil {
@@ -82,7 +82,7 @@ func (b BlockConfig) Write(w io.Writer) (int, error) {
 		}
 	}
 
-	if b.TTL.Duration > 0 {
+	if b.TTL.Duration() > 0 {
 		o, err = fmt.Fprintf(w, "ttl = \"%s\"\n", b.TTL)
 		n += o
 		if err != nil {
@@ -90,7 +90,7 @@ func (b BlockConfig) Write(w io.Writer) (int, error) {
 		}
 	}
 
-	if b.UpdateInterval.Duration > 0 {
+	if b.UpdateInterval.Duration() > 0 {
 		o, err = fmt.Fprintf(w, "update_interval = \"%s\"\n", b.UpdateInterval)
 		n += o
 		if err != nil {

@@ -7,9 +7,7 @@ const (
 	defaultUpdateInterval = 24 * time.Hour
 )
 
-type Duration struct {
-	time.Duration
-}
+type Duration time.Duration
 
 func (d Duration) Default(name string) interface{} {
 	switch name {
@@ -18,7 +16,15 @@ func (d Duration) Default(name string) interface{} {
 	case "UpdateInterval":
 		return defaultUpdateInterval
 	}
-	return d
+	return d.Duration()
+}
+
+func (d Duration) Duration() time.Duration {
+	return time.Duration(d)
+}
+
+func (d Duration) String() string {
+	return d.Duration().String()
 }
 
 func (d Duration) UnmarshalCLIConfig(text string) (interface{}, error) {
@@ -29,7 +35,7 @@ func (d Duration) UnmarshalCLIConfig(text string) (interface{}, error) {
 
 func (d Duration) Equal(val interface{}) bool {
 	if tval, ok := val.(time.Duration); ok {
-		return d.Duration == tval
+		return d.Duration() == tval
 	}
 	return false
 }
@@ -39,6 +45,6 @@ func (d *Duration) UnmarshalText(text []byte) error {
 	if err != nil {
 		return err
 	}
-	d.Duration = tmp
+	*d = Duration(tmp)
 	return nil
 }

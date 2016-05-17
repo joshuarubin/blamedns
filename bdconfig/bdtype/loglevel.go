@@ -30,13 +30,21 @@ func (l LogLevel) Equal(val interface{}) bool {
 	return false
 }
 
+func (l LogLevel) Level() log.Level {
+	return log.Level(l)
+}
+
+func (l LogLevel) String() string {
+	return l.Level().String()
+}
+
 func (l *LogLevel) UnmarshalText(text []byte) error {
 	*l = parseLogLevel(string(text))
 	return nil
 }
 
 func (l LogLevel) Default(name string) interface{} {
-	return log.Level(defaultLogLevelValue).String()
+	return defaultLogLevelValue.String()
 }
 
 func parseLogLevel(level string) LogLevel {
