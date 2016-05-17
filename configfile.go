@@ -5,7 +5,7 @@ import (
 	"syscall"
 
 	"github.com/BurntSushi/toml"
-	"github.com/apex/log"
+	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 )
 

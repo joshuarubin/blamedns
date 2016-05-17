@@ -82,7 +82,7 @@ func (b BlockConfig) Write(w io.Writer) (int, error) {
 		}
 	}
 
-	if b.TTL.Duration() > 0 {
+	if b.TTL > 0 {
 		o, err = fmt.Fprintf(w, "ttl = \"%s\"\n", b.TTL)
 		n += o
 		if err != nil {
@@ -90,7 +90,7 @@ func (b BlockConfig) Write(w io.Writer) (int, error) {
 		}
 	}
 
-	if b.UpdateInterval.Duration() > 0 {
+	if b.UpdateInterval > 0 {
 		o, err = fmt.Fprintf(w, "update_interval = \"%s\"\n", b.UpdateInterval)
 		n += o
 		if err != nil {
