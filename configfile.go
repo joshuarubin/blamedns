@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"syscall"
 
@@ -10,20 +11,32 @@ import (
 
 const defaultConfigFile = "/etc/blamedns/config.toml"
 
-var configFileFlags = []cli.Flag{
-	cli.StringFlag{
-		Name:   "config",
-		EnvVar: "BLAMEDNS_CONFIG",
-		Value:  defaultConfigFile,
-		Usage:  "config file",
-	},
-}
+var (
+	configFileFlags = []cli.Flag{
+		cli.StringFlag{
+			Name:   "config",
+			EnvVar: "BLAMEDNS_CONFIG",
+			Value:  defaultConfigFile,
+			Usage:  "config file",
+		},
+	}
+	configOut io.Writer
+)
 
 func init() {
 	app.Commands = append(app.Commands, cli.Command{
 		Name:   "config",
 		Usage:  "write the config to stdout",
+		Before: setupWriteConfig,
 		Action: writeConfig,
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:   "config-out",
+				EnvVar: "BLAMEDNS_CONFIG_OUT",
+				Usage:  "file to write config to",
+				Value:  "stdout",
+			},
+		},
 	})
 }
 
@@ -48,6 +61,21 @@ func parseConfigFile(c *cli.Context) {
 	}
 }
 
+func setupWriteConfig(c *cli.Context) error {
+	switch file := c.String("config-out"); file {
+	case "stdout", "STDOUT":
+		configOut = os.Stdout
+	case "stderr", "STDERR":
+		configOut = os.Stderr
+	default:
+		var err error
+		if configOut, err = os.Create(file); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func writeConfig(c *cli.Context) error {
-	return toml.NewEncoder(os.Stdout).Encode(cfg)
+	return toml.NewEncoder(configOut).Encode(cfg)
 }
