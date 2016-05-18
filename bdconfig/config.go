@@ -3,12 +3,25 @@ package bdconfig
 import (
 	"fmt"
 	"io"
+
+	"github.com/Sirupsen/logrus"
 )
 
 type Config struct {
-	CacheDir string `toml:"cache_dir" cli:",directory in which to store cached data"`
-	Log      LogConfig
-	DNS      DNSConfig
+	CacheDir   string `toml:"cache_dir" cli:",directory in which to store cached data"`
+	Log        LogConfig
+	DNS        DNSConfig
+	Logger     *logrus.Logger `cli:"-"`
+	AppName    string         `cli:"-"`
+	AppVersion string         `cli:"-"`
+}
+
+func New(appName, appVersion string) *Config {
+	return &Config{
+		Logger:     logrus.New(),
+		AppName:    appName,
+		AppVersion: appVersion,
+	}
 }
 
 const defaultCacheDir = "cache"
@@ -40,8 +53,8 @@ func Default() Config {
 }
 
 func (m *Config) Init() error {
-	m.Log.Init()
-	return m.DNS.Init(m.CacheDir)
+	m.Log.Init(m)
+	return m.DNS.Init(m)
 }
 
 func (m Config) Start() error {

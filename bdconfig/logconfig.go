@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io"
 
-	"jrubin.io/blamedns/bdconfig/bdtype"
+	"github.com/Sirupsen/logrus"
 
-	log "github.com/Sirupsen/logrus"
+	"jrubin.io/blamedns/bdconfig/bdtype"
 )
 
 type LogConfig struct {
@@ -28,7 +28,7 @@ func (cfg LogConfig) Write(w io.Writer) (int, error) {
 	}
 
 	var o int
-	l := log.Level(cfg.Level).String()
+	l := logrus.Level(cfg.Level).String()
 	if l != "unknown" {
 		o, err = fmt.Fprintf(w, "level = \"%s\"\n", l)
 		n += o
@@ -38,7 +38,7 @@ func (cfg LogConfig) Write(w io.Writer) (int, error) {
 	}
 
 	if len(cfg.File.Name) > 0 {
-		o, err = fmt.Fprintf(w, "file  = \"%s\"\n", cfg.File.Name)
+		o, err = fmt.Fprintf(w, "file = \"%s\"\n", cfg.File.Name)
 		n += o
 		if err != nil {
 			return n, err
@@ -48,17 +48,18 @@ func (cfg LogConfig) Write(w io.Writer) (int, error) {
 	return n, nil
 }
 
-func (cfg LogConfig) Init() {
-	log.WithField("name", cfg.File.Name).Info("log location")
-	log.SetOutput(cfg.File)
+func (cfg LogConfig) Init(root *Config) {
+	logger := root.Logger
+	logger.WithField("name", cfg.File.Name).Info("log location")
+	logger.Out = cfg.File
 
 	if cfg.File.IsFile {
-		log.SetFormatter(&log.TextFormatter{
+		logger.Formatter = &logrus.TextFormatter{
 			DisableColors: true,
-		})
+		}
 	}
 
-	l := log.Level(cfg.Level)
-	log.SetLevel(l)
-	log.WithField("level", l).Debug("log level set")
+	l := logrus.Level(cfg.Level)
+	logger.Level = l
+	logger.WithField("level", l).Debug("log level set")
 }

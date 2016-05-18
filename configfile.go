@@ -5,7 +5,6 @@ import (
 	"syscall"
 
 	"github.com/BurntSushi/toml"
-	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 )
 
@@ -31,12 +30,12 @@ func parseConfigFile(c *cli.Context) {
 	if err != nil {
 		perr, ok := err.(*os.PathError)
 		if !ok || perr.Err != syscall.ENOENT {
-			log.WithError(err).Warn("error reading config file")
+			logger.WithError(err).Warn("error reading config file")
 		}
 		return
 	}
 
 	if undecoded := md.Undecoded(); len(undecoded) > 0 {
-		log.Warnf("undecoded keys: %q", undecoded)
+		logger.Warnf("undecoded keys: %q", undecoded)
 	}
 }

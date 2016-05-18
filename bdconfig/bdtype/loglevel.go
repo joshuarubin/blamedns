@@ -6,12 +6,12 @@ import (
 
 	"jrubin.io/cliconfig"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 )
 
-const defaultLogLevelValue = LogLevel(log.WarnLevel)
+const defaultLogLevelValue = LogLevel(logrus.WarnLevel)
 
-type LogLevel log.Level
+type LogLevel logrus.Level
 
 var _ cliconfig.CustomType = LogLevel(0)
 
@@ -34,8 +34,8 @@ func (l LogLevel) Equal(val interface{}) bool {
 	return false
 }
 
-func (l LogLevel) Level() log.Level {
-	return log.Level(l)
+func (l LogLevel) Level() logrus.Level {
+	return logrus.Level(l)
 }
 
 func (l LogLevel) String() string {
@@ -60,11 +60,11 @@ func parseLogLevel(level string) LogLevel {
 
 		switch r {
 		case 'e':
-			return LogLevel(log.ErrorLevel)
+			return LogLevel(logrus.ErrorLevel)
 		case 'i':
-			return LogLevel(log.InfoLevel)
+			return LogLevel(logrus.InfoLevel)
 		case 'd':
-			return LogLevel(log.DebugLevel)
+			return LogLevel(logrus.DebugLevel)
 		}
 	}
 

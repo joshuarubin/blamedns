@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 )
 
@@ -14,17 +14,23 @@ type Blocker interface {
 	Block(host string) bool
 }
 
+type Passer interface {
+	Pass(host string) bool
+}
+
 type Block struct {
 	IPv4, IPv6 net.IP
 	Host       string
 	TTL        time.Duration
 	Blockers   []Blocker
+	Passers    []Passer
 }
 
 type DNSServer struct {
 	Forward []string
 	Servers []*dns.Server
 	Block   Block
+	Logger  *logrus.Logger
 }
 
 const defaultDNSPort = 53
@@ -70,14 +76,14 @@ func (d *DNSServer) ListenAndServe() error {
 		return err
 	}
 
-	log.Infof("using forwarders: %s", strings.Join(d.Forward, ", "))
+	d.Logger.Infof("using forwarders: %s", strings.Join(d.Forward, ", "))
 
 	errCh := make(chan error, len(d.Servers))
 
 	for _, server := range d.Servers {
 		server.Handler = d
 		go func(server *dns.Server) {
-			log.WithFields(log.Fields{
+			d.Logger.WithFields(logrus.Fields{
 				"Net":  server.Net,
 				"Addr": server.Addr,
 			}).Info("starting dns server")
@@ -99,7 +105,7 @@ func (d DNSServer) Shutdown() error {
 		if err := server.Shutdown(); err != nil {
 			return err
 		}
-		log.WithFields(log.Fields{
+		d.Logger.WithFields(logrus.Fields{
 			"Net":  server.Net,
 			"Addr": server.Addr,
 		}).Debug("successfully shut down dns server")
@@ -116,16 +122,25 @@ func (d DNSServer) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 
 	if d.shouldBlock(req) {
 		if err := d.block(w, req); err != nil {
-			log.WithError(err).Error("error blocking request")
+			d.Logger.WithError(err).Error("error blocking request")
 			dns.HandleFailed(w, req)
 		}
 		return
 	}
 
 	if err := d.forward(w, req); err != nil {
-		log.WithError(err).Error("error forwarding request")
+		d.Logger.WithError(err).Error("error forwarding request")
 		dns.HandleFailed(w, req)
 	}
+}
+
+func stripTrailing(text string, trail string) string {
+	i := strings.LastIndex(text, trail)
+	if i == -1 {
+		return text
+	}
+
+	return text[:i]
 }
 
 func (d DNSServer) shouldBlock(req *dns.Msg) bool {
@@ -135,8 +150,16 @@ func (d DNSServer) shouldBlock(req *dns.Msg) bool {
 		return false
 	}
 
+	host := stripTrailing(q.Name, ".")
+
+	for _, p := range d.Block.Passers {
+		if p.Pass(host) {
+			return false
+		}
+	}
+
 	for _, b := range d.Block.Blockers {
-		if b.Block(q.Name) {
+		if b.Block(host) {
 			return true
 		}
 	}
@@ -218,7 +241,7 @@ func (d DNSServer) forward(w dns.ResponseWriter, req *dns.Msg) error {
 			return w.WriteMsg(resp)
 		}
 
-		log.WithError(err).Error("error forwarding request")
+		d.Logger.WithError(err).Error("error forwarding request")
 	}
 
 	return fmt.Errorf("all forward servers failed")

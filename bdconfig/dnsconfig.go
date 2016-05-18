@@ -68,7 +68,7 @@ func parseDNSServer(val string) (*dns.Server, error) {
 	}, nil
 }
 
-func (cfg *DNSConfig) Init(cacheDir string) error {
+func (cfg *DNSConfig) Init(root *Config) error {
 	servers := make([]*dns.Server, len(cfg.Listen))
 
 	for i, listen := range cfg.Listen {
@@ -79,7 +79,7 @@ func (cfg *DNSConfig) Init(cacheDir string) error {
 		servers[i] = server
 	}
 
-	if err := cfg.Block.Init(cacheDir); err != nil {
+	if err := cfg.Block.Init(root); err != nil {
 		return err
 	}
 
@@ -87,6 +87,7 @@ func (cfg *DNSConfig) Init(cacheDir string) error {
 		Forward: cfg.Forward,
 		Servers: servers,
 		Block:   cfg.Block.Block(),
+		Logger:  root.Logger,
 	}
 
 	return nil

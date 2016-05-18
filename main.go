@@ -8,16 +8,17 @@ import (
 	"jrubin.io/blamedns/bdconfig"
 	"jrubin.io/cliconfig"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 )
 
 var (
 	name, version string
 
-	cfg bdconfig.Config
+	cfg = bdconfig.New(name, version)
 	cc  = cliconfig.New(bdconfig.Default())
 	app = cli.NewApp()
+
+	logger = cfg.Logger
 )
 
 func init() {
@@ -40,13 +41,13 @@ func init() {
 
 func main() {
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 }
 
 func setup(c *cli.Context) error {
 	parseConfigFile(c)
-	return cc.Parse(c, &cfg)
+	return cc.Parse(c, cfg)
 }
 
 func run(c *cli.Context) error {
@@ -68,7 +69,7 @@ func run(c *cli.Context) error {
 			return err
 		}
 	case sig := <-sigs:
-		log.WithField("signal", sig).Debug("received signal")
+		logger.WithField("signal", sig).Debug("received signal")
 	}
 
 	return cfg.Shutdown()

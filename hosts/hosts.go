@@ -8,37 +8,48 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 )
 
-type Hosts struct {
-	mu          sync.RWMutex
-	update      time.Duration
-	dir         string
-	fileName    string
-	url         string
-	stopCh      chan struct{}
-	hosts       map[string]struct{}
-	initialized bool
+type Doer interface {
+	Do(*http.Request) (*http.Response, error)
 }
 
-const subDir = "hosts"
+type Hosts struct {
+	mu             sync.RWMutex
+	dir            string
+	fileName       string
+	url            string
+	stopCh         chan struct{}
+	hosts          map[string]struct{}
+	initialized    bool
+	UpdateInterval time.Duration
+	Parser         Parser
+	Client         Doer
+	Logger         *logrus.Logger
+	AppName        string
+	AppVersion     string
+}
 
-func New(u, cacheDir string, update time.Duration) (*Hosts, error) {
+const (
+	defaultUpdateInterval = 24 * time.Hour
+	subDir                = "hosts"
+)
+
+func (h *Hosts) Init(u, cacheDir string) error {
 	p, err := url.Parse(u)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	dirName := path.Join(cacheDir, subDir)
 	err = os.MkdirAll(dirName, 0700)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	file := p.Path
@@ -54,12 +65,27 @@ func New(u, cacheDir string, update time.Duration) (*Hosts, error) {
 	// replace '/' with '__'
 	file = strings.Replace(file, "/", "__", -1)
 
-	return &Hosts{
-		update:   update,
-		dir:      dirName,
-		fileName: path.Join(dirName, file),
-		url:      u,
-	}, nil
+	h.dir = dirName
+	h.fileName = path.Join(dirName, file)
+	h.url = u
+
+	if h.UpdateInterval == 0 {
+		h.UpdateInterval = defaultUpdateInterval
+	}
+
+	if h.Parser == nil {
+		h.Parser = FileParser
+	}
+
+	if h.Logger == nil {
+		h.Logger = logrus.New()
+	}
+
+	if h.Client == nil {
+		h.Client = http.DefaultClient
+	}
+
+	return nil
 }
 
 func (h *Hosts) Start() (<-chan struct{}, <-chan error) {
@@ -72,7 +98,7 @@ func (h *Hosts) Start() (<-chan struct{}, <-chan error) {
 
 	h.stopCh = make(chan struct{})
 
-	log.Infof("starting hosts file %s", h.fileName)
+	h.Logger.Debugf("starting hosts file %s", h.fileName)
 
 	updatedCh := make(chan struct{})
 	errCh := make(chan error)
@@ -91,10 +117,10 @@ func (h *Hosts) Start() (<-chan struct{}, <-chan error) {
 	go func() {
 		for {
 			select {
-			case <-time.Tick(h.update):
+			case <-time.Tick(h.UpdateInterval):
 				go updater()
 			case <-h.stopCh:
-				log.Infof("stopped hosts file %s", h.fileName)
+				h.Logger.Debugf("stopped hosts file %s", h.fileName)
 				close(h.stopCh)
 				return
 			}
@@ -112,7 +138,7 @@ func (h *Hosts) Stop() {
 		return
 	}
 
-	log.Infof("stopping hosts file %s", h.fileName)
+	h.Logger.Debugf("stopping hosts file %s", h.fileName)
 	h.stopCh <- struct{}{}
 	<-h.stopCh
 	h.stopCh = nil
@@ -153,23 +179,41 @@ func (h *Hosts) doUpdate() (updated bool, err error) {
 			return false, fmt.Errorf("%s is a directory", h.fileName)
 		}
 
-		if info.ModTime().After(time.Now().Add(-h.update)) {
+		if info.ModTime().After(time.Now().Add(-h.UpdateInterval)) {
 			// file exists and does not need to be updated
-			log.Infof("%s does not need to be updated yet", h.fileName)
+			h.Logger.Debugf("%s does not need to be updated yet", h.fileName)
 			return false, nil
 		}
 
 		// file exists and needs to be updated
 	}
 
-	log.Infof("updating %s", h.fileName)
+	h.Logger.Debugf("updating %s", h.fileName)
 
-	res, err := http.Get(h.url)
+	req, _ := http.NewRequest("GET", h.url, nil)
+	req.Header.Set("User-Agent", fmt.Sprintf("%s/%s", h.AppName, h.AppVersion))
+	h.debugRequestOut(req, false)
+
+	res, err := h.Client.Do(req)
 	if err != nil {
 		return false, err
 	}
 
 	defer res.Body.Close()
+
+	h.debugResponse(res, false)
+
+	if res.StatusCode != http.StatusOK {
+		err = NewErrStatusCode(res.StatusCode)
+		h.Logger.
+			WithError(err).
+			WithFields(logrus.Fields{
+				"fileName": h.fileName,
+				"url":      h.url,
+			}).
+			Warn("error updating hosts")
+		return false, err
+	}
 
 	// open the file and truncate it if it already exists
 	f, err := os.Create(h.fileName)
@@ -180,18 +224,12 @@ func (h *Hosts) doUpdate() (updated bool, err error) {
 
 	_, err = io.Copy(f, res.Body)
 	if err != nil {
-		log.Warnf("error updating %s: %v", h.fileName, err)
+		h.Logger.Warnf("error updating %s: %v", h.fileName, err)
 		return false, err
 	}
 
-	log.Infof("successfully updated %s", h.fileName)
+	h.Logger.Debugf("successfully updated %s", h.fileName)
 	return true, nil
-}
-
-var re *regexp.Regexp
-
-func init() {
-	re = regexp.MustCompile(`\S+\s+(\S+)`)
 }
 
 func (h *Hosts) Block(host string) bool {
@@ -206,7 +244,7 @@ func (h *Hosts) parse() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	log.Debugf("parsing %s", h.fileName)
+	h.Logger.Debugf("parsing %s", h.fileName)
 
 	f, err := os.Open(h.fileName)
 	if err != nil {
@@ -217,50 +255,23 @@ func (h *Hosts) parse() error {
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		text := scanner.Text()
-		i := strings.Index(text, "#")
-		if i == 0 {
-			continue
-		}
-		if i != -1 {
-			text = text[:i-1]
-		}
-
-		text = strings.TrimSpace(text)
-		if len(text) == 0 {
+		host, valid := h.Parser.Parse(scanner.Text())
+		if !valid {
 			continue
 		}
 
-		res := re.FindStringSubmatch(text)
-		if len(res) < 2 {
+		if host = strings.TrimSpace(host); len(host) == 0 {
 			continue
 		}
 
-		host := res[1]
-		if host == "localhost" {
-			continue
-		}
-
-		if host == "localhost.localdomain" {
-			continue
-		}
-
-		if host == "broadcasthost" {
-			continue
-		}
-
-		if host == "local" {
-			continue
-		}
-
-		h.hosts[host+"."] = struct{}{}
+		h.hosts[host] = struct{}{}
 	}
 
 	if err := scanner.Err(); err != nil {
 		return err
 	}
 
-	log.Infof("parsed %d hosts in %s", len(h.hosts), h.fileName)
+	h.Logger.Debugf("parsed %d hosts in %s", len(h.hosts), h.fileName)
 
 	h.initialized = true
 	return nil
