@@ -2,6 +2,7 @@ package bdtype
 
 import (
 	"encoding"
+	"fmt"
 	"time"
 
 	"jrubin.io/cliconfig"
@@ -10,6 +11,8 @@ import (
 const (
 	defaultBlockTTL       = 1 * time.Hour
 	defaultUpdateInterval = 24 * time.Hour
+	defaultDNSTimeout     = 5 * time.Second
+	defaultDNSInterval    = 200 * time.Millisecond
 )
 
 type Duration time.Duration
@@ -23,12 +26,16 @@ var (
 
 func (d Duration) Default(name string) interface{} {
 	switch name {
-	case "TTL":
+	case "dns-block-ttl":
 		return defaultBlockTTL
-	case "UpdateInterval":
+	case "dns-block-update-interval":
 		return defaultUpdateInterval
+	case "dns-timeout":
+		return defaultDNSTimeout
+	case "dns-interval":
+		return defaultDNSInterval
 	}
-	return d.Duration()
+	panic(fmt.Sprintf("bdtype.Duration.Default unknown name: %s", name))
 }
 
 func (d Duration) Duration() time.Duration {

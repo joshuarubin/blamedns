@@ -22,13 +22,14 @@ func defaultCacheDir(name string) string {
 }
 
 type Config struct {
-	CacheDir        string         `toml:"cache_dir" cli:",directory in which to store cached data"`
-	Log             LogConfig      `toml:"log"`
-	DNS             DNSConfig      `toml:"dns"`
-	ListenPixelserv string         `toml:"listen_pixelserv" cli:",address to run the pixel server on"`
-	Logger          *logrus.Logger `toml:"-" cli:"-"`
-	AppName         string         `toml:"-" cli:"-"`
-	AppVersion      string         `toml:"-" cli:"-"`
+	CacheDir        string            `toml:"cache_dir" cli:",directory in which to store cached data"`
+	Log             LogConfig         `toml:"log"`
+	DNS             DNSConfig         `toml:"dns"`
+	ListenPixelserv string            `toml:"listen_pixelserv" cli:",address to run the pixel server on"`
+	Logger          *logrus.Logger    `toml:"-" cli:"-"`
+	AppName         string            `toml:"-" cli:"-"`
+	AppVersion      string            `toml:"-" cli:"-"`
+	pixelServ       *pixelserv.Server `toml:"-" cli:"-"`
 }
 
 func New(appName, appVersion string) *Config {
@@ -52,6 +53,7 @@ func Default(appName, appVersion string) Config {
 
 func (m *Config) Init() error {
 	m.Log.Init(m)
+	m.pixelServ = &pixelserv.Server{Logger: m.Logger}
 	return m.DNS.Init(m)
 }
 
@@ -60,12 +62,8 @@ func (m Config) Start() error {
 	if err != nil {
 		return err
 	}
-	defer l.Close()
-	m.Logger.WithFields(logrus.Fields{
-		"Addr": m.ListenPixelserv,
-		"Net":  "tcp",
-	}).Info("starting pixelserv")
-	go pixelserv.Serve(l)
+	defer func() { _ = l.Close() }()
+	go func() { _ = m.pixelServ.Serve(l) }()
 
 	return m.DNS.Start()
 }

@@ -2,6 +2,7 @@ package bdtype
 
 import (
 	"encoding"
+	"fmt"
 	"net"
 
 	"jrubin.io/cliconfig"
@@ -17,12 +18,12 @@ var (
 
 func (i IP) Default(name string) interface{} {
 	switch name {
-	case "IPv4":
+	case "dns-block-ipv4":
 		return "127.0.0.1"
-	case "IPv6":
+	case "dns-block-ipv6":
 		return "::1"
 	}
-	return ""
+	panic(fmt.Sprintf("bdtype.Duration.Default unknown name: %s", name))
 }
 
 func (i IP) UnmarshalCLIConfig(text string) (interface{}, error) {

@@ -115,10 +115,13 @@ func (h *Hosts) Start() (<-chan struct{}, <-chan error) {
 
 	go updater()
 
+	ticker := time.NewTicker(h.UpdateInterval)
+	defer ticker.Stop()
+
 	go func() {
 		for {
 			select {
-			case <-time.Tick(h.UpdateInterval):
+			case <-ticker.C:
 				go updater()
 			case <-h.stopCh:
 				h.Logger.Debugf("stopped hosts file %s", h.fileName)

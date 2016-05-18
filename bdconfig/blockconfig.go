@@ -9,7 +9,6 @@ import (
 type BlockConfig struct {
 	IPv4           bdtype.IP       `toml:"ipv4" cli:"ipv4,ipv4 address to return to clients for blocked a requests"`
 	IPv6           bdtype.IP       `toml:"ipv6" cli:"ipv6,ipv6 address to return to clients for blocked aaaa requests"`
-	Host           string          `toml:"host" cli:",host name to return to clients for blocked cname requests"`
 	TTL            bdtype.Duration `toml:"ttl" cli:",ttl to return for blocked requests"`
 	UpdateInterval bdtype.Duration `toml:"update_interval" cli:",update the hosts files at this interval"`
 	Hosts          []string        `toml:"hosts" cli:",files in \"/etc/hosts\" format from which to derive blocked hostnames"`
@@ -21,7 +20,6 @@ type BlockConfig struct {
 
 func defaultBlockConfig() BlockConfig {
 	return BlockConfig{
-		Host: "blocked.blamedns.com",
 		Hosts: []string{
 			"http://someonewhocares.org/hosts/hosts",
 			"http://hosts-file.net/ad_servers.txt",
@@ -48,7 +46,6 @@ func (b BlockConfig) Block() dnsserver.Block {
 	return dnsserver.Block{
 		IPv4:     b.IPv4.IP(),
 		IPv6:     b.IPv6.IP(),
-		Host:     b.Host,
 		TTL:      b.TTL.Duration(),
 		Blockers: b.blockers,
 		Passers:  b.passers,
