@@ -167,9 +167,6 @@ func (h *Hosts) Update() (bool, error) {
 }
 
 func (h *Hosts) doUpdate() (updated bool, err error) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	info, err := os.Stat(h.fileName)
 	if err != nil && !os.IsNotExist(err) {
 		return false, err
@@ -189,7 +186,7 @@ func (h *Hosts) doUpdate() (updated bool, err error) {
 		// file exists and needs to be updated
 	}
 
-	h.Logger.Debugf("updating %s", h.fileName)
+	h.Logger.Infof("updating %s", h.fileName)
 
 	req, _ := http.NewRequest("GET", h.url, nil)
 	req.Header.Set("User-Agent", fmt.Sprintf("%s/%s", h.AppName, h.AppVersion))
@@ -215,6 +212,9 @@ func (h *Hosts) doUpdate() (updated bool, err error) {
 			Warn("error updating hosts")
 		return false, err
 	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	// open the file and truncate it if it already exists
 	f, err := os.Create(h.fileName)
