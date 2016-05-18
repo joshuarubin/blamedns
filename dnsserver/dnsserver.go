@@ -10,10 +10,15 @@ import (
 	"github.com/miekg/dns"
 )
 
+type Blocker interface {
+	Block(host string) bool
+}
+
 type Block struct {
 	IPv4, IPv6 net.IP
 	Host       string
 	TTL        time.Duration
+	Blockers   []Blocker
 }
 
 type DNSServer struct {
@@ -109,7 +114,7 @@ func (d DNSServer) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 		return
 	}
 
-	if shouldBlock(req) {
+	if d.shouldBlock(req) {
 		if err := d.block(w, req); err != nil {
 			log.WithError(err).Error("error blocking request")
 			dns.HandleFailed(w, req)
@@ -123,17 +128,17 @@ func (d DNSServer) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 	}
 }
 
-func shouldBlock(req *dns.Msg) bool {
+func (d DNSServer) shouldBlock(req *dns.Msg) bool {
 	q := req.Question[0]
 
 	if !shouldRespondToQtype(q.Qtype) {
 		return false
 	}
 
-	// TODO(jrubin) check if req.Question[0].Name should be blocked
-	switch q.Name {
-	case "blamedns.com.", "smtp.blamedns.com.":
-		return true
+	for _, b := range d.Block.Blockers {
+		if b.Block(q.Name) {
+			return true
+		}
 	}
 
 	return false

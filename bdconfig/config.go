@@ -43,3 +43,11 @@ func (m *Config) Init() error {
 	m.Log.Init()
 	return m.DNS.Init(m.CacheDir)
 }
+
+func (m Config) Start() error {
+	return m.DNS.Start()
+}
+
+func (m Config) Shutdown() error {
+	return m.DNS.Shutdown()
+}

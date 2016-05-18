@@ -17,6 +17,7 @@ type BlockConfig struct {
 	TTL            bdtype.Duration `cli:",ttl to return for blocked requests"`
 	UpdateInterval bdtype.Duration `toml:"update_interval" cli:",update the hosts files at this interval"`
 	Hosts          []string        `cli:",files in \"/etc/hosts\" format from which to derive blocked hostnames"`
+	blockers       []dnsserver.Blocker
 }
 
 func defaultBlockConfig() BlockConfig {
@@ -29,25 +30,44 @@ func defaultBlockConfig() BlockConfig {
 
 func (b BlockConfig) Block() dnsserver.Block {
 	return dnsserver.Block{
-		IPv4: b.IPv4.IP(),
-		IPv6: b.IPv6.IP(),
-		Host: b.Host,
-		TTL:  b.TTL.Duration(),
+		IPv4:     b.IPv4.IP(),
+		IPv6:     b.IPv6.IP(),
+		Host:     b.Host,
+		TTL:      b.TTL.Duration(),
+		Blockers: b.blockers,
 	}
 }
 
-func (b BlockConfig) Init(cacheDir string) error {
+func (b *BlockConfig) Init(cacheDir string) error {
+	b.blockers = make([]dnsserver.Blocker, 0, len(b.blockers))
+
 	for _, i := range b.Hosts {
 		f, err := hosts.New(i, cacheDir, b.UpdateInterval.Duration())
 		if err != nil {
 			return err
 		}
 
-		if _, err = f.Update(); err != nil {
-			return err
-		}
+		b.blockers = append(b.blockers, f)
 	}
 
+	return nil
+}
+
+func (b *BlockConfig) Start() error {
+	for _, b := range b.blockers {
+		if host, ok := b.(*hosts.Hosts); ok {
+			host.Start()
+		}
+	}
+	return nil
+}
+
+func (b *BlockConfig) Shutdown() error {
+	for _, b := range b.blockers {
+		if host, ok := b.(*hosts.Hosts); ok {
+			host.Stop()
+		}
+	}
 	return nil
 }
 

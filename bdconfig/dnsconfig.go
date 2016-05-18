@@ -79,11 +79,31 @@ func (cfg *DNSConfig) Init(cacheDir string) error {
 		servers[i] = server
 	}
 
+	if err := cfg.Block.Init(cacheDir); err != nil {
+		return err
+	}
+
 	cfg.Server = &dnsserver.DNSServer{
 		Forward: cfg.Forward,
 		Servers: servers,
 		Block:   cfg.Block.Block(),
 	}
 
-	return cfg.Block.Init(cacheDir)
+	return nil
+}
+
+func (cfg DNSConfig) Start() error {
+	if err := cfg.Block.Start(); err != nil {
+		return err
+	}
+
+	return cfg.Server.ListenAndServe()
+}
+
+func (cfg DNSConfig) Shutdown() error {
+	if err := cfg.Server.Shutdown(); err != nil {
+		return err
+	}
+
+	return cfg.Block.Shutdown()
 }

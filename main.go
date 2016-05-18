@@ -56,7 +56,7 @@ func run(c *cli.Context) error {
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- cfg.DNS.Server.ListenAndServe()
+		errCh <- cfg.Start()
 	}()
 
 	sigs := make(chan os.Signal, 1)
@@ -71,7 +71,7 @@ func run(c *cli.Context) error {
 		log.WithField("signal", sig).Debug("received signal")
 	}
 
-	return cfg.DNS.Server.Shutdown()
+	return cfg.Shutdown()
 }
 
 func writeConfig(c *cli.Context) error {

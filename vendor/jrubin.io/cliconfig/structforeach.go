@@ -19,6 +19,11 @@ func structForEach(prefix string, structure reflect.Value, fn structFn) error {
 	typ := value.Type()
 
 	for i := 0; i < value.NumField(); i++ {
+		fieldValue := value.Field(i)
+		if !fieldValue.CanInterface() {
+			continue
+		}
+
 		field := typ.Field(i)
 		tag := field.Tag.Get(tagName)
 
@@ -45,8 +50,6 @@ func structForEach(prefix string, structure reflect.Value, fn structFn) error {
 		if len(name) == 0 {
 			name = typ.Field(i).Name
 		}
-		fieldValue := value.Field(i)
-
 		nameParts := fromCamel(name)
 		fieldName := massageName(toSpinal, prefixParts, nameParts)
 		envVar := massageName(toUpperSnake, prefixParts, nameParts)
