@@ -23,15 +23,15 @@ func defaultBlockConfig() BlockConfig {
 	return BlockConfig{
 		Hosts: []string{
 			"http://someonewhocares.org/hosts/hosts",
+			"http://hosts-file.net/ad_servers.txt",
+			"https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
+			"http://sysctl.org/cameleon/hosts",
 		},
 		Domains: []string{
 			"http://mirror1.malwaredomains.com/files/justdomains",
-			"https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
-			"http://sysctl.org/cameleon/hosts",
 			"https://zeustracker.abuse.ch/blocklist.php?download=domainblocklist",
 			"https://s3.amazonaws.com/lists.disconnect.me/simple_tracking.txt",
 			"https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt",
-			"http://hosts-file.net/ad_servers.txt",
 			"https://raw.githubusercontent.com/quidsup/notrack/master/trackers.txt",
 		},
 		Whitelist: []string{

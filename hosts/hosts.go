@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -254,17 +255,29 @@ func (h *Hosts) parse() error {
 	h.hosts = map[string]struct{}{}
 
 	scanner := bufio.NewScanner(f)
+	i := 0
 	for scanner.Scan() {
-		host, valid := h.Parser.Parse(scanner.Text())
+		i++
+
+		text := scanner.Text()
+		text = stripComments(text)
+
+		if len(text) == 0 {
+			continue
+		}
+
+		host, valid := h.Parser.Parse(text)
 		if !valid {
 			continue
 		}
 
-		if host = strings.TrimSpace(host); len(host) == 0 {
-			continue
-		}
+		host = strings.ToLower(host)
+		host = stripTrailing(host, ".")
+		host = stripPort(host)
 
-		h.hosts[host] = struct{}{}
+		if h.validateHost(i, host) {
+			h.hosts[host] = struct{}{}
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -275,4 +288,98 @@ func (h *Hosts) parse() error {
 
 	h.initialized = true
 	return nil
+}
+
+func stripComments(text string) string {
+	i := strings.Index(text, "#")
+	if i == 0 {
+		return ""
+	}
+
+	if i != -1 {
+		return text[:i-1]
+	}
+
+	return text
+}
+
+var portRe = regexp.MustCompile(`(\S+):\d+`)
+
+func stripPort(text string) string {
+	res := portRe.FindStringSubmatch(text)
+	if len(res) < 2 {
+		return text
+	}
+	return res[1]
+}
+
+func stripTrailing(text string, trail string) string {
+	i := strings.LastIndex(text, trail)
+	if i == -1 {
+		return text
+	}
+
+	if len(text) != i+len(trail) {
+		return text
+	}
+
+	return text[:i]
+}
+
+func (h *Hosts) validateHost(ln int, host string) bool {
+	// the entire hostname (including the delimiting dots but not a trailing
+	// dot) has a maximum of 253 ascii characters
+	if len(host) > 253 {
+		h.Logger.Warnf("%s:%d: hostname too long: %s", h.fileName, ln, host)
+		return false
+	}
+
+	labels := strings.Split(host, ".")
+	for _, label := range labels {
+		// each label must be between 1 and 63 characters long
+		l := len(label)
+
+		if l == 0 {
+			h.Logger.Warnf("%s:%d: empty label: %s", h.fileName, ln, host)
+			return false
+		}
+
+		if l > 63 {
+			h.Logger.Warnf("%s:%d: label too long: %s (%s)", h.fileName, ln, label, host)
+			return false
+		}
+
+		// hostname labels may contain only the ASCII letters 'a' through 'z' (in a
+		// case-insensitive manner), the digits '0' through '9', and the hyphen
+		// ('-')
+		for i := 0; i < l; i++ {
+			c := label[i]
+
+			if c >= 'a' && c <= 'z' {
+				continue
+			}
+
+			// if c >= 'A' && c <= 'Z' {
+			// 	continue
+			// }
+
+			if c >= '0' && c <= '9' {
+				continue
+			}
+
+			if c == '_' {
+				continue
+			}
+
+			// must not start or end with a hyphen
+			if c == '-' && i > 0 && i < l-1 {
+				continue
+			}
+
+			h.Logger.Warnf("%s:%d: invalid character \"%c\" (%s)", h.fileName, ln, c, host)
+			return false
+		}
+	}
+
+	return true
 }

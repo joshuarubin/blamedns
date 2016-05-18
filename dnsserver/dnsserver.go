@@ -140,6 +140,10 @@ func stripTrailing(text string, trail string) string {
 		return text
 	}
 
+	if len(text) != i+len(trail) {
+		return text
+	}
+
 	return text[:i]
 }
 
@@ -151,6 +155,7 @@ func (d DNSServer) shouldBlock(req *dns.Msg) bool {
 	}
 
 	host := stripTrailing(q.Name, ".")
+	host = strings.ToLower(host)
 
 	for _, p := range d.Block.Passers {
 		if p.Pass(host) {
