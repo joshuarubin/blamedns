@@ -1,6 +1,7 @@
 package bdtype
 
 import (
+	"encoding"
 	"unicode"
 	"unicode/utf8"
 
@@ -13,7 +14,12 @@ const defaultLogLevelValue = LogLevel(logrus.WarnLevel)
 
 type LogLevel logrus.Level
 
-var _ cliconfig.CustomType = LogLevel(0)
+var (
+	tmpLvl                          = LogLevel(0)
+	_      cliconfig.CustomType     = tmpLvl
+	_      encoding.TextMarshaler   = tmpLvl
+	_      encoding.TextUnmarshaler = &tmpLvl
+)
 
 func DefaultLogLevel() LogLevel {
 	return LogLevel(defaultLogLevelValue)

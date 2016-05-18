@@ -1,6 +1,7 @@
 package bdtype
 
 import (
+	"encoding"
 	"io"
 	"os"
 
@@ -15,7 +16,11 @@ type LogFile struct {
 	IsFile bool
 }
 
-var _ cliconfig.CustomType = LogFile{}
+var (
+	_ cliconfig.CustomType     = LogFile{}
+	_ encoding.TextMarshaler   = LogFile{}
+	_ encoding.TextUnmarshaler = &LogFile{}
+)
 
 func DefaultLogFile() LogFile {
 	file, _ := parseLogFileName(defaultLogFileName)

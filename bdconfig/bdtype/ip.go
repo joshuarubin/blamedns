@@ -1,6 +1,7 @@
 package bdtype
 
 import (
+	"encoding"
 	"net"
 
 	"jrubin.io/cliconfig"
@@ -8,7 +9,11 @@ import (
 
 type IP net.IP
 
-var _ cliconfig.CustomType = IP{}
+var (
+	_ cliconfig.CustomType     = IP{}
+	_ encoding.TextMarshaler   = IP{}
+	_ encoding.TextUnmarshaler = &IP{}
+)
 
 func (i IP) Default(name string) interface{} {
 	return ""

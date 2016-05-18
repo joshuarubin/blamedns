@@ -1,6 +1,7 @@
 package bdtype
 
 import (
+	"encoding"
 	"time"
 
 	"jrubin.io/cliconfig"
@@ -13,7 +14,12 @@ const (
 
 type Duration time.Duration
 
-var _ cliconfig.CustomType = Duration(0)
+var (
+	tmpDur                          = Duration(0)
+	_      cliconfig.CustomType     = tmpDur
+	_      encoding.TextMarshaler   = tmpDur
+	_      encoding.TextUnmarshaler = &tmpDur
+)
 
 func (d Duration) Default(name string) interface{} {
 	switch name {
