@@ -1,19 +1,14 @@
 package bdconfig
 
-import (
-	"fmt"
-	"io"
-
-	"github.com/Sirupsen/logrus"
-)
+import "github.com/Sirupsen/logrus"
 
 type Config struct {
-	CacheDir   string `toml:"cache_dir" cli:",directory in which to store cached data"`
-	Log        LogConfig
-	DNS        DNSConfig
-	Logger     *logrus.Logger `cli:"-"`
-	AppName    string         `cli:"-"`
-	AppVersion string         `cli:"-"`
+	CacheDir   string         `toml:"cache_dir" cli:",directory in which to store cached data"`
+	Log        LogConfig      `toml:"log"`
+	DNS        DNSConfig      `toml:"dns"`
+	Logger     *logrus.Logger `toml:"-" cli:"-"`
+	AppName    string         `toml:"-" cli:"-"`
+	AppVersion string         `toml:"-" cli:"-"`
 }
 
 func New(appName, appVersion string) *Config {
@@ -25,24 +20,6 @@ func New(appName, appVersion string) *Config {
 }
 
 const defaultCacheDir = "cache"
-
-func (m Config) Write(w io.Writer) (int, error) {
-	n, err := fmt.Fprintf(w, "cache_dir = \"%s\"\n", m.CacheDir)
-	if err != nil {
-		return n, err
-	}
-
-	o, err := m.Log.Write(w)
-	n += o
-	if err != nil {
-		return n, err
-	}
-
-	o, err = m.DNS.Write(w)
-	n += o
-
-	return n, err
-}
 
 func Default() Config {
 	return Config{

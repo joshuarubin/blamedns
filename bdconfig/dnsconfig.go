@@ -1,21 +1,18 @@
 package bdconfig
 
 import (
-	"fmt"
-	"io"
 	"net/url"
 
 	"github.com/miekg/dns"
 
-	"jrubin.io/blamedns/bdconfig/stringslice"
 	"jrubin.io/blamedns/dnsserver"
 )
 
 type DNSConfig struct {
-	Forward []string `cli:",dns server(s) to forward requests to"`
-	Listen  []string `cli:",url(s) to listen for dns requests on"`
-	Block   BlockConfig
-	Server  *dnsserver.DNSServer `cli:"-"`
+	Forward []string             `toml:"forward" cli:",dns server(s) to forward requests to"`
+	Listen  []string             `toml:"listen" cli:",url(s) to listen for dns requests on"`
+	Block   BlockConfig          `toml:"block"`
+	Server  *dnsserver.DNSServer `toml:"-" cli:"-"`
 }
 
 func defaultDNSConfig() DNSConfig {
@@ -30,30 +27,6 @@ func defaultDNSConfig() DNSConfig {
 		},
 		Block: defaultBlockConfig(),
 	}
-}
-
-func (cfg DNSConfig) Write(w io.Writer) (int, error) {
-	n, err := fmt.Fprintf(w, "[dns]\n")
-	if err != nil {
-		return n, err
-	}
-
-	o, err := stringslice.Write("forward", cfg.Forward, w)
-	n += o
-	if err != nil {
-		return n, err
-	}
-
-	o, err = stringslice.Write("listen", cfg.Listen, w)
-	n += o
-	if err != nil {
-		return n, err
-	}
-
-	o, err = cfg.Block.Write(w)
-	n += o
-
-	return n, err
 }
 
 func parseDNSServer(val string) (*dns.Server, error) {

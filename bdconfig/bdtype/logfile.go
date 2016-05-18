@@ -41,6 +41,10 @@ func (l LogFile) UnmarshalCLIConfig(text string) (interface{}, error) {
 	return ret, nil
 }
 
+func (l LogFile) MarshalText() ([]byte, error) {
+	return []byte(l.Name), nil
+}
+
 func (l *LogFile) UnmarshalText(text []byte) error {
 	tmp, err := parseLogFileName(string(text))
 	if err != nil {

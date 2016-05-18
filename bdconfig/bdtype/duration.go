@@ -46,6 +46,10 @@ func (d Duration) Equal(val interface{}) bool {
 	return false
 }
 
+func (d Duration) MarshalText() ([]byte, error) {
+	return []byte(d.String()), nil
+}
+
 func (d *Duration) UnmarshalText(text []byte) error {
 	tmp, err := time.ParseDuration(string(text))
 	if err != nil {

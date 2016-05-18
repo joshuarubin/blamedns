@@ -42,6 +42,10 @@ func (l LogLevel) String() string {
 	return l.Level().String()
 }
 
+func (l LogLevel) MarshalText() ([]byte, error) {
+	return []byte(l.String()), nil
+}
+
 func (l *LogLevel) UnmarshalText(text []byte) error {
 	*l = parseLogLevel(string(text))
 	return nil

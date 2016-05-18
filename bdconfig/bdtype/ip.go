@@ -37,6 +37,10 @@ func (i IP) String() string {
 	return i.IP().String()
 }
 
+func (i IP) MarshalText() ([]byte, error) {
+	return []byte(i.String()), nil
+}
+
 func (i *IP) UnmarshalText(text []byte) error {
 	*i = IP(net.ParseIP(string(text)))
 	return nil

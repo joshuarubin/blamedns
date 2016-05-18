@@ -19,6 +19,14 @@ var configFileFlags = []cli.Flag{
 	},
 }
 
+func init() {
+	app.Commands = append(app.Commands, cli.Command{
+		Name:   "config",
+		Usage:  "write the config to stdout",
+		Action: writeConfig,
+	})
+}
+
 func parseConfigFile(c *cli.Context) {
 	file := c.String("config")
 
@@ -38,4 +46,8 @@ func parseConfigFile(c *cli.Context) {
 	if undecoded := md.Undecoded(); len(undecoded) > 0 {
 		logger.Warnf("undecoded keys: %q", undecoded)
 	}
+}
+
+func writeConfig(c *cli.Context) error {
+	return toml.NewEncoder(os.Stdout).Encode(cfg)
 }

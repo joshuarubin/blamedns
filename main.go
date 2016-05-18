@@ -32,11 +32,6 @@ func init() {
 	app.Before = setup
 	app.Action = run
 	app.Flags = append(configFileFlags, cc.Flags()...)
-	app.Commands = []cli.Command{{
-		Name:   "config",
-		Usage:  "write the config to stdout",
-		Action: writeConfig,
-	}}
 }
 
 func main() {
@@ -73,9 +68,4 @@ func run(c *cli.Context) error {
 	}
 
 	return cfg.Shutdown()
-}
-
-func writeConfig(c *cli.Context) error {
-	_, err := cfg.Write(os.Stdout)
-	return err
 }
