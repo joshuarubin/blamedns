@@ -15,7 +15,7 @@ var (
 	name, version string
 
 	cfg = bdconfig.New(name, version)
-	cc  = cliconfig.New(bdconfig.Default())
+	cc  = cliconfig.New(bdconfig.Default(name, version))
 	app = cli.NewApp()
 
 	logger = cfg.Logger

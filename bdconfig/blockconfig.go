@@ -21,6 +21,7 @@ type BlockConfig struct {
 
 func defaultBlockConfig() BlockConfig {
 	return BlockConfig{
+		Host: "blocked.blamedns.com",
 		Hosts: []string{
 			"http://someonewhocares.org/hosts/hosts",
 			"http://hosts-file.net/ad_servers.txt",

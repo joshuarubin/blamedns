@@ -1,17 +1,25 @@
 package bdconfig
 
 import (
+	"fmt"
 	"net"
+	"os"
+	"runtime"
 
 	"jrubin.io/blamedns/pixelserv"
 
 	"github.com/Sirupsen/logrus"
 )
 
-const (
-	defaultCacheDir        = "cache"
-	defaultListenPixelserv = "[::]:http"
-)
+const defaultListenPixelserv = "[::]:http"
+
+func defaultCacheDir(name string) string {
+	if runtime.GOOS == "darwin" {
+		return fmt.Sprintf("%s/Library/Caches/%s", os.Getenv("HOME"), name)
+	}
+
+	return fmt.Sprintf("%s/.cache/%s", os.Getenv("HOME"), name)
+}
 
 type Config struct {
 	CacheDir        string         `toml:"cache_dir" cli:",directory in which to store cached data"`
@@ -31,12 +39,14 @@ func New(appName, appVersion string) *Config {
 	}
 }
 
-func Default() Config {
+func Default(appName, appVersion string) Config {
 	return Config{
-		CacheDir:        defaultCacheDir,
+		CacheDir:        defaultCacheDir(appName),
 		Log:             defaultLogConfig(),
 		DNS:             defaultDNSConfig(),
 		ListenPixelserv: defaultListenPixelserv,
+		AppName:         appName,
+		AppVersion:      appVersion,
 	}
 }
 

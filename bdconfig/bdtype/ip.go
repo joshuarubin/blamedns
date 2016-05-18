@@ -16,6 +16,12 @@ var (
 )
 
 func (i IP) Default(name string) interface{} {
+	switch name {
+	case "IPv4":
+		return "127.0.0.1"
+	case "IPv6":
+		return "::1"
+	}
 	return ""
 }
 

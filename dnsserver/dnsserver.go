@@ -198,6 +198,7 @@ func newAAAA(ipv6 net.IP, hdr dns.RR_Header) *dns.Msg {
 }
 
 func newCNAME(host string, ipv4, ipv6 net.IP, hdr dns.RR_Header) *dns.Msg {
+	host += "."
 	return &dns.Msg{
 		Answer: []dns.RR{
 			&dns.CNAME{Hdr: hdr, Target: host},
