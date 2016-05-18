@@ -10,7 +10,7 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
-const defaultLogLevelValue = LogLevel(logrus.WarnLevel)
+const DefaultLogLevel = LogLevel(logrus.WarnLevel)
 
 type LogLevel logrus.Level
 
@@ -20,10 +20,6 @@ var (
 	_      encoding.TextMarshaler   = tmpLvl
 	_      encoding.TextUnmarshaler = &tmpLvl
 )
-
-func DefaultLogLevel() LogLevel {
-	return LogLevel(defaultLogLevelValue)
-}
 
 func (l LogLevel) UnmarshalCLIConfig(text string) (interface{}, error) {
 	var ret LogLevel
@@ -58,11 +54,11 @@ func (l *LogLevel) UnmarshalText(text []byte) error {
 }
 
 func (l LogLevel) Default(name string) interface{} {
-	return defaultLogLevelValue.String()
+	return DefaultLogLevel.String()
 }
 
 func parseLogLevel(level string) LogLevel {
-	ret := defaultLogLevelValue
+	ret := DefaultLogLevel
 
 	if len(level) > 0 {
 		r, _ := utf8.DecodeRuneInString(level)
@@ -78,5 +74,5 @@ func parseLogLevel(level string) LogLevel {
 		}
 	}
 
-	return LogLevel(ret)
+	return ret
 }

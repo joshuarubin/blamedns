@@ -14,7 +14,7 @@ type LogConfig struct {
 func defaultLogConfig() LogConfig {
 	return LogConfig{
 		File:  bdtype.DefaultLogFile(),
-		Level: bdtype.DefaultLogLevel(),
+		Level: bdtype.DefaultLogLevel,
 	}
 }
 

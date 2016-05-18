@@ -199,7 +199,7 @@ func (h *Hosts) doUpdate() (updated bool, err error) {
 		return false, err
 	}
 
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	h.debugResponse(res, false)
 

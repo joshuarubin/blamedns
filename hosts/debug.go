@@ -35,7 +35,7 @@ func (h *Hosts) debugHTTP(data interface{}, fn debugHTTPFn, prefix string, b boo
 	}
 
 	debugWriter := h.Logger.WriterLevel(logrus.DebugLevel)
-	defer debugWriter.Close()
+	defer func() { _ = debugWriter.Close() }()
 
 	for _, line := range strings.Split(string(dump), "\n") {
 		fmt.Fprintf(debugWriter, "%s%s\n", prefix, line)
