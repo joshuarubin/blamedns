@@ -16,10 +16,6 @@ import (
 func (d *DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 	q := req.Question[0]
 
-	// TODO(jrubin) refuse RRSIG type requests?
-	// TODO(jrubin) refuse ANY type requests?
-	// TODO(jrubin) refuse other type requests?
-
 	logFields := logrus.Fields{
 		"name":  unfqdn(q.Name),
 		"type":  dns.TypeToString[q.Qtype],

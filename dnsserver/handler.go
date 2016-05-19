@@ -5,23 +5,48 @@ import (
 	"github.com/miekg/dns"
 )
 
+func (d *DNSServer) RespondCode(net string, w dns.ResponseWriter, req *dns.Msg, code int) {
+	logFields := logrus.Fields{
+		"name":  req.Question[0].Name,
+		"type":  dns.TypeToString[req.Question[0].Qtype],
+		"net":   net,
+		"rcode": dns.RcodeToString[code],
+	}
+
+	d.Logger.WithFields(logFields).Debug("responding with rcode")
+
+	resp := &dns.Msg{}
+	resp.SetRcode(req, code)
+	if err := w.WriteMsg(resp); err != nil {
+		d.Logger.WithError(err).WithFields(logFields).Error("handler error")
+		dns.HandleFailed(w, req)
+	}
+}
+
 func (d *DNSServer) Handler(net string) dns.Handler {
 	return dns.HandlerFunc(func(w dns.ResponseWriter, req *dns.Msg) {
 		if len(req.Question) == 0 {
-			resp := &dns.Msg{}
-			resp.SetRcode(req, dns.RcodeFormatError)
+			d.RespondCode(net, w, req, dns.RcodeFormatError)
 			return
 		}
 
 		if len(req.Question) > 1 {
-			resp := &dns.Msg{}
-			resp.SetRcode(req, dns.RcodeNotImplemented)
+			d.RespondCode(net, w, req, dns.RcodeNotImplemented)
+			return
+		}
+
+		// refuse "any" and "rrsig" requests
+		// TODO(jrubin) refuse other request types?
+		switch req.Question[0].Qtype {
+		case dns.TypeANY, dns.TypeRRSIG:
+			d.RespondCode(net, w, req, dns.RcodeRefused)
 			return
 		}
 
 		logFields := logrus.Fields{
-			"qname": req.Question[0].Name,
-			"net":   net,
+			"name": req.Question[0].Name,
+			"type": dns.TypeToString[req.Question[0].Qtype],
+			"net":  net,
 		}
 
 		var resp *dns.Msg
