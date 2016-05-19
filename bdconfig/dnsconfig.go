@@ -1,10 +1,6 @@
 package bdconfig
 
 import (
-	"net/url"
-
-	"github.com/miekg/dns"
-
 	"jrubin.io/blamedns/bdconfig/bdtype"
 	"jrubin.io/blamedns/dnscache"
 	"jrubin.io/blamedns/dnsserver"
@@ -35,36 +31,14 @@ func defaultDNSConfig() DNSConfig {
 	}
 }
 
-func parseDNSServer(val string) (*dns.Server, error) {
-	u, err := url.Parse(val)
-	if err != nil {
-		return nil, err
-	}
-
-	return &dns.Server{
-		Addr: u.Host,
-		Net:  u.Scheme,
-	}, nil
-}
-
 func (cfg *DNSConfig) Init(root *Config) error {
-	servers := make([]*dns.Server, len(cfg.Listen))
-
-	for i, listen := range cfg.Listen {
-		server, err := parseDNSServer(listen)
-		if err != nil {
-			return err
-		}
-		servers[i] = server
-	}
-
 	if err := cfg.Block.Init(root); err != nil {
 		return err
 	}
 
 	cfg.Server = &dnsserver.DNSServer{
 		Forward:            cfg.Forward,
-		Servers:            servers,
+		Listen:             cfg.Listen,
 		Block:              cfg.Block.Block(),
 		Timeout:            cfg.Timeout.Duration(),
 		DialTimeout:        cfg.DialTimeout.Duration(),

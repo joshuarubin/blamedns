@@ -3,6 +3,7 @@ package dnsserver
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"strings"
 	"time"
 
@@ -14,7 +15,8 @@ import (
 
 type DNSServer struct {
 	Forward            []string
-	Servers            []*dns.Server
+	Listen             []string
+	servers            []*dns.Server
 	Block              Block
 	Logger             *logrus.Logger
 	Timeout            time.Duration
@@ -67,18 +69,47 @@ func (d *DNSServer) startCachePruner() {
 	}()
 }
 
+func (d DNSServer) parseDNSServer(val string) (*dns.Server, error) {
+	u, err := url.Parse(val)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dns.Server{
+		Addr:    u.Host,
+		Net:     u.Scheme,
+		Handler: d.Handler(u.Scheme),
+	}, nil
+}
+
+func (d *DNSServer) createServers() error {
+	d.servers = make([]*dns.Server, len(d.Listen))
+
+	for i, listen := range d.Listen {
+		server, err := d.parseDNSServer(listen)
+		if err != nil {
+			return err
+		}
+		d.servers[i] = server
+	}
+	return nil
+}
+
 func (d *DNSServer) ListenAndServe() error {
 	var err error
+	if err = d.createServers(); err != nil {
+		return err
+	}
+
 	if d.Forward, err = addDefaultPort(d.Forward); err != nil {
 		return err
 	}
 
 	d.Logger.Infof("using forwarders: %s", strings.Join(d.Forward, ", "))
 
-	errCh := make(chan error, len(d.Servers))
+	errCh := make(chan error, len(d.servers))
 
-	for _, server := range d.Servers {
-		server.Handler = d.Handler(server.Net)
+	for _, server := range d.servers {
 		go func(server *dns.Server) {
 			d.Logger.WithFields(logrus.Fields{
 				"net":  server.Net,
@@ -90,7 +121,7 @@ func (d *DNSServer) ListenAndServe() error {
 
 	d.startCachePruner()
 
-	for range d.Servers {
+	for range d.servers {
 		if err := <-errCh; err != nil {
 			return err
 		}
@@ -112,7 +143,7 @@ func (d *DNSServer) stopCachePruner() {
 func (d *DNSServer) Shutdown() error {
 	d.stopCachePruner()
 
-	for _, server := range d.Servers {
+	for _, server := range d.servers {
 		if err := server.Shutdown(); err != nil {
 			return err
 		}
