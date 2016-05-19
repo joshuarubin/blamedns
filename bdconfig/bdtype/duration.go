@@ -9,10 +9,11 @@ import (
 )
 
 const (
-	defaultBlockTTL       = 1 * time.Hour
-	defaultUpdateInterval = 24 * time.Hour
-	defaultDNSTimeout     = 5 * time.Second
-	defaultDNSInterval    = 200 * time.Millisecond
+	defaultBlockTTL           = 1 * time.Hour
+	defaultUpdateInterval     = 24 * time.Hour
+	defaultDNSTimeout         = 5 * time.Second
+	defaultDNSInterval        = 200 * time.Millisecond
+	defaultCachePruneInterval = 1 * time.Hour
 )
 
 type Duration time.Duration
@@ -34,6 +35,8 @@ func (d Duration) Default(name string) interface{} {
 		return defaultDNSTimeout
 	case "dns-interval":
 		return defaultDNSInterval
+	case "dns-cache-prune-interval":
+		return defaultCachePruneInterval
 	}
 	panic(fmt.Sprintf("bdtype.Duration.Default unknown name: %s", name))
 }

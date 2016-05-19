@@ -23,6 +23,10 @@ func (d DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 		"net":   net,
 	}
 
+	if resp := d.LookupCached(req); resp != nil {
+		return resp, nil
+	}
+
 	c := &dns.Client{
 		Net:          net,
 		ReadTimeout:  d.Timeout,
@@ -66,6 +70,7 @@ func (d DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 		// but exit early, if we have an answer
 		select {
 		case res := <-resCh:
+			d.StoreCached(res)
 			return res, nil
 		case <-ticker.C:
 			continue

@@ -11,12 +11,13 @@ import (
 )
 
 type DNSConfig struct {
-	Forward  []string             `toml:"forward" cli:",dns server(s) to forward requests to"`
-	Listen   []string             `toml:"listen" cli:",url(s) to listen for dns requests on"`
-	Block    BlockConfig          `toml:"block"`
-	Timeout  bdtype.Duration      `toml:"timeout" cli:",time to wait for remote servers to respond to queries"`
-	Interval bdtype.Duration      `toml:"interval" cli:",concurrency interval for lookups in miliseconds"`
-	Server   *dnsserver.DNSServer `toml:"-" cli:"-"`
+	Forward            []string             `toml:"forward" cli:",dns server(s) to forward requests to"`
+	Listen             []string             `toml:"listen" cli:",url(s) to listen for dns requests on"`
+	Block              BlockConfig          `toml:"block"`
+	Timeout            bdtype.Duration      `toml:"timeout" cli:",time to wait for remote servers to respond to queries"`
+	Interval           bdtype.Duration      `toml:"interval" cli:",concurrency interval for lookups in miliseconds"`
+	Server             *dnsserver.DNSServer `toml:"-" cli:"-"`
+	CachePruneInterval bdtype.Duration      `toml:"cache_prune_interval" cli:",how often to run cache expiration"`
 }
 
 func defaultDNSConfig() DNSConfig {
@@ -61,13 +62,14 @@ func (cfg *DNSConfig) Init(root *Config) error {
 	}
 
 	cfg.Server = &dnsserver.DNSServer{
-		Forward:  cfg.Forward,
-		Servers:  servers,
-		Block:    cfg.Block.Block(),
-		Timeout:  cfg.Timeout.Duration(),
-		Interval: cfg.Interval.Duration(),
-		Logger:   root.Logger,
-		Cache:    dnscache.NewMemory(root.Logger),
+		Forward:            cfg.Forward,
+		Servers:            servers,
+		Block:              cfg.Block.Block(),
+		Timeout:            cfg.Timeout.Duration(),
+		Interval:           cfg.Interval.Duration(),
+		Logger:             root.Logger,
+		Cache:              dnscache.NewMemory(root.Logger),
+		CachePruneInterval: cfg.CachePruneInterval.Duration(),
 	}
 
 	return nil

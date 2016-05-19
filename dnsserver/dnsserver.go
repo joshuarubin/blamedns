@@ -13,13 +13,15 @@ import (
 )
 
 type DNSServer struct {
-	Forward  []string
-	Servers  []*dns.Server
-	Block    Block
-	Logger   *logrus.Logger
-	Timeout  time.Duration
-	Interval time.Duration
-	Cache    dnscache.Cache
+	Forward            []string
+	Servers            []*dns.Server
+	Block              Block
+	Logger             *logrus.Logger
+	Timeout            time.Duration
+	Interval           time.Duration
+	Cache              dnscache.Cache
+	CachePruneInterval time.Duration
+	cachePruneTicker   *time.Ticker
 }
 
 const DefaultPort = 53
@@ -47,6 +49,23 @@ func addDefaultPort(addrs []string) ([]string, error) {
 	return ret, nil
 }
 
+func (d *DNSServer) startCachePruner() {
+	if d.Cache == nil {
+		d.Logger.Info("dns cache is disabled")
+		return
+	}
+
+	d.Logger.Infof("will run cache pruning every %v", d.CachePruneInterval)
+	d.cachePruneTicker = time.NewTicker(d.CachePruneInterval)
+
+	go func() {
+		for range d.cachePruneTicker.C {
+			n := d.Cache.Prune()
+			d.Logger.Debugf("pruned %d items from cache", n)
+		}
+	}()
+}
+
 func (d *DNSServer) ListenAndServe() error {
 	var err error
 	if d.Forward, err = addDefaultPort(d.Forward); err != nil {
@@ -68,6 +87,8 @@ func (d *DNSServer) ListenAndServe() error {
 		}(server)
 	}
 
+	d.startCachePruner()
+
 	for range d.Servers {
 		if err := <-errCh; err != nil {
 			return err
@@ -77,7 +98,19 @@ func (d *DNSServer) ListenAndServe() error {
 	return nil
 }
 
-func (d DNSServer) Shutdown() error {
+func (d *DNSServer) stopCachePruner() {
+	if d.cachePruneTicker == nil {
+		return
+	}
+
+	d.cachePruneTicker.Stop()
+	d.cachePruneTicker = nil
+	d.Logger.Debug("stopped cache pruner")
+}
+
+func (d *DNSServer) Shutdown() error {
+	d.stopCachePruner()
+
 	for _, server := range d.Servers {
 		if err := server.Shutdown(); err != nil {
 			return err
