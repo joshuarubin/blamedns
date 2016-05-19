@@ -68,6 +68,6 @@ func (m Config) Start() error {
 	return m.DNS.Start()
 }
 
-func (m Config) Shutdown() error {
-	return m.DNS.Shutdown()
+func (m Config) Shutdown() {
+	m.DNS.Shutdown()
 }

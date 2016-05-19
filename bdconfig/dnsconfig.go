@@ -46,23 +46,17 @@ func (cfg *DNSConfig) Init(root *Config) error {
 		Logger:             root.Logger,
 		Cache:              dnscache.NewMemory(root.Logger),
 		CachePruneInterval: cfg.CachePruneInterval.Duration(),
+		NotifyStartedFunc:  cfg.Block.Start,
 	}
 
 	return nil
 }
 
 func (cfg DNSConfig) Start() error {
-	if err := cfg.Block.Start(); err != nil {
-		return err
-	}
-
 	return cfg.Server.ListenAndServe()
 }
 
-func (cfg DNSConfig) Shutdown() error {
-	if err := cfg.Server.Shutdown(); err != nil {
-		return err
-	}
-
-	return cfg.Block.Shutdown()
+func (cfg DNSConfig) Shutdown() {
+	cfg.Block.Shutdown()
+	cfg.Server.Shutdown()
 }

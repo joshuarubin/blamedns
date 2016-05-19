@@ -98,11 +98,10 @@ func (b *BlockConfig) Start() error {
 	return nil
 }
 
-func (b *BlockConfig) Shutdown() error {
+func (b *BlockConfig) Shutdown() {
 	for _, b := range b.blockers {
 		if host, ok := b.(*hosts.Hosts); ok {
 			host.Stop()
 		}
 	}
-	return nil
 }

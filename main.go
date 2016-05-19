@@ -51,9 +51,7 @@ func run(c *cli.Context) error {
 	}
 
 	errCh := make(chan error, 1)
-	go func() {
-		errCh <- cfg.Start()
-	}()
+	go func() { errCh <- cfg.Start() }()
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -65,7 +63,8 @@ func run(c *cli.Context) error {
 		}
 	case sig := <-sigs:
 		logger.WithField("signal", sig).Debug("received signal")
+		cfg.Shutdown()
 	}
 
-	return cfg.Shutdown()
+	return nil
 }
