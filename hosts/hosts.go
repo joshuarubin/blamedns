@@ -21,19 +21,20 @@ type Doer interface {
 }
 
 type Hosts struct {
-	mu             sync.RWMutex
-	dir            string
-	fileName       string
-	url            string
-	stopCh         chan struct{}
-	hosts          map[string]struct{}
-	initialized    bool
-	UpdateInterval time.Duration
-	Parser         Parser
-	Client         Doer
-	Logger         *logrus.Logger
-	AppName        string
-	AppVersion     string
+	mu                sync.RWMutex
+	dir               string
+	fileName          string
+	url               string
+	stopCh            chan struct{}
+	hosts             map[string]struct{}
+	initialized       bool
+	UpdateInterval    time.Duration
+	Parser            Parser
+	Client            Doer
+	Logger            *logrus.Logger
+	AppName           string
+	AppVersion        string
+	NotifyUpdatedFunc func(file string, num int, updated bool, err error)
 }
 
 const (
@@ -89,31 +90,19 @@ func (h *Hosts) Init(u, cacheDir string) error {
 	return nil
 }
 
-func (h *Hosts) Start() (<-chan struct{}, <-chan error) {
+func (h *Hosts) Start() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	if h.stopCh != nil {
-		return nil, nil
+		return
 	}
 
 	h.stopCh = make(chan struct{})
 
 	h.Logger.Debugf("starting hosts file %s", h.fileName)
 
-	updatedCh := make(chan struct{})
-	errCh := make(chan error)
-
-	updater := func() {
-		updated, err := h.Update()
-		if err != nil {
-			errCh <- err
-		} else if updated {
-			updatedCh <- struct{}{}
-		}
-	}
-
-	go updater()
+	go h.Update()
 
 	ticker := time.NewTicker(h.UpdateInterval)
 	defer ticker.Stop()
@@ -122,7 +111,7 @@ func (h *Hosts) Start() (<-chan struct{}, <-chan error) {
 		for {
 			select {
 			case <-ticker.C:
-				go updater()
+				go h.Update()
 			case <-h.stopCh:
 				h.Logger.Debugf("stopped hosts file %s", h.fileName)
 				close(h.stopCh)
@@ -130,8 +119,6 @@ func (h *Hosts) Start() (<-chan struct{}, <-chan error) {
 			}
 		}
 	}()
-
-	return updatedCh, errCh
 }
 
 func (h *Hosts) Stop() {
@@ -148,10 +135,25 @@ func (h *Hosts) Stop() {
 	h.stopCh = nil
 }
 
-func (h *Hosts) Update() (bool, error) {
-	updated, err := h.doUpdate()
+func (h *Hosts) notify(updated bool, err error) {
+	if (!updated && err == nil) || h.NotifyUpdatedFunc == nil {
+		return
+	}
+
+	go h.NotifyUpdatedFunc(h.fileName, h.Len(), updated, err)
+}
+
+func (h *Hosts) Len() int {
+	return len(h.hosts)
+}
+
+func (h *Hosts) Update() (updated bool, err error) {
+	// wrap the defer in func so that it uses latest values of updated and err
+	defer func() { h.notify(updated, err) }()
+
+	updated, err = h.doUpdate()
 	if err != nil {
-		return false, err
+		return
 	}
 
 	h.mu.RLock()
@@ -159,14 +161,15 @@ func (h *Hosts) Update() (bool, error) {
 	h.mu.RUnlock()
 
 	if !updated && initialized {
-		return false, nil
+		return
 	}
 
-	if err := h.parse(); err != nil {
-		return false, err
+	if err = h.parse(); err != nil {
+		return
 	}
 
-	return true, nil
+	updated = true
+	return
 }
 
 func (h *Hosts) doUpdate() (updated bool, err error) {
@@ -287,7 +290,7 @@ func (h *Hosts) parse() error {
 		return err
 	}
 
-	h.Logger.Debugf("parsed %d hosts in %s", len(h.hosts), h.fileName)
+	h.Logger.Debugf("parsed %d hosts in %s", h.Len(), h.fileName)
 
 	h.initialized = true
 	return nil
