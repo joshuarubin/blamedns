@@ -6,6 +6,7 @@ import (
 	"github.com/miekg/dns"
 
 	"jrubin.io/blamedns/bdconfig/bdtype"
+	"jrubin.io/blamedns/dnscache"
 	"jrubin.io/blamedns/dnsserver"
 )
 
@@ -66,6 +67,7 @@ func (cfg *DNSConfig) Init(root *Config) error {
 		Timeout:  cfg.Timeout.Duration(),
 		Interval: cfg.Interval.Duration(),
 		Logger:   root.Logger,
+		Cache:    dnscache.NewMemory(root.Logger),
 	}
 
 	return nil

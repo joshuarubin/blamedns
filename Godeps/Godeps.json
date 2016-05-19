@@ -23,7 +23,7 @@
 		},
 		{
 			"ImportPath": "github.com/miekg/dns",
-			"Rev": "b5deb9f6c09fdf6f81acb98398bff176d2b75904"
+			"Rev": "48ab6605c66ac797e07f615101c3e9e10e932b66"
 		},
 		{
 			"ImportPath": "golang.org/x/sys/unix",

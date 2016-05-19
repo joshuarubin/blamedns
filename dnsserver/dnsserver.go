@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"jrubin.io/blamedns/dnscache"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 )
@@ -17,6 +19,7 @@ type DNSServer struct {
 	Logger   *logrus.Logger
 	Timeout  time.Duration
 	Interval time.Duration
+	Cache    dnscache.Cache
 }
 
 const DefaultPort = 53
