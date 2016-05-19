@@ -33,15 +33,9 @@ func (d *DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 		return resp, nil
 	}
 
-	// TODO(jrubin) handle recursive requests without forward servers
-	// will need root.hints
-	// if len(d.Forward) == 0 {
-	// for n, i := 1, len(q.Name); i > 0; n++ {
-	// 	i, _ = dns.PrevLabel(q.Name, n)
-	// 	label := q.Name[i:]
-	// 	fmt.Println(i, label)
-	// }
-	// }
+	if len(d.Forward) == 0 {
+		// TODO(jrubin) resolve recursive requests using root.hints (if no forwards)
+	}
 
 	c := &dns.Client{
 		Net:          net,

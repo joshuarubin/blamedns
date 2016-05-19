@@ -36,7 +36,6 @@ func (d *DNSServer) Handler(net string) dns.Handler {
 		}
 
 		// refuse "any" and "rrsig" requests
-		// TODO(jrubin) refuse other request types?
 		switch req.Question[0].Qtype {
 		case dns.TypeANY, dns.TypeRRSIG:
 			d.RespondCode(net, w, req, dns.RcodeRefused)
@@ -76,8 +75,6 @@ func (d *DNSServer) Handler(net string) dns.Handler {
 }
 
 func (d *DNSServer) ValidateDNSSEC(req, resp *dns.Msg) {
-	// TODO(jrubin) what to return?
-
 	if d.DisableDNSSEC {
 		return
 	}
@@ -86,8 +83,8 @@ func (d *DNSServer) ValidateDNSSEC(req, resp *dns.Msg) {
 		return
 	}
 
-	// TODO(jrubin) validate dnssec here
-	// TODO(jrubin) if validated, set resp.AuthenticatedData?
+	// TODO(jrubin) dnssec validation
+	// TODO(jrubin)if validated, set resp.AuthenticatedData
 }
 
 func (d *DNSServer) stripRRSIG(req, resp *dns.Msg) {

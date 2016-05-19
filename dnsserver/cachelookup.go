@@ -29,6 +29,12 @@ func (d DNSServer) LookupCached(req *dns.Msg) *dns.Msg {
 
 	d.Logger.WithFields(logFields(q, "hit")).Debug("cache lookup")
 
+	return d.buildReply(req, ans)
+}
+
+func (d DNSServer) buildReply(req *dns.Msg, ans []dns.RR) *dns.Msg {
+	q := req.Question[0]
+
 	resp := &dns.Msg{}
 	resp.SetReply(req)
 	resp.Answer = ans

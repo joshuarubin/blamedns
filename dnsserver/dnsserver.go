@@ -31,8 +31,6 @@ type DNSServer struct {
 	NotifyStartedFunc  func() error
 }
 
-// TODO(jrubin) add zone parsing and authoritative responses for them
-
 const DefaultPort = 53
 
 func addDefaultPort(addrs []string) ([]string, error) {
