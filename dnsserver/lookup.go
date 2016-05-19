@@ -16,6 +16,10 @@ import (
 func (d *DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 	q := req.Question[0]
 
+	// TODO(jrubin) refuse RRSIG type requests?
+	// TODO(jrubin) refuse ANY type requests?
+	// TODO(jrubin) refuse other type requests?
+
 	logFields := logrus.Fields{
 		"name":  unfqdn(q.Name),
 		"type":  dns.TypeToString[q.Qtype],
@@ -27,11 +31,27 @@ func (d *DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 		return resp, nil
 	}
 
+	if !req.RecursionDesired {
+		resp := &dns.Msg{}
+		resp.SetRcode(req, dns.RcodeRefused)
+		return resp, nil
+	}
+
 	c := &dns.Client{
 		Net:          net,
 		DialTimeout:  d.DialTimeout,
 		ReadTimeout:  d.Timeout,
 		WriteTimeout: d.Timeout,
+	}
+
+	freq := req.Copy()
+
+	if !d.DisableDNSSEC {
+		// ensure all forward requests request dnssec
+		if opt := freq.IsEdns0(); opt == nil || !opt.Do() {
+			// only set it if it wasn't already set
+			freq.SetEdns0(4096, true)
+		}
 	}
 
 	resCh := make(chan *dns.Msg, 1)
@@ -41,14 +61,14 @@ func (d *DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 
 		logFields["nameserver"] = nameserver
 
-		res, _, err := c.Exchange(req, nameserver)
+		resp, _, err := c.Exchange(freq, nameserver)
 		if err != nil {
 			d.Logger.WithError(err).WithFields(logFields).Warn("socket error")
 			return
 		}
-		if res != nil && res.Rcode != dns.RcodeSuccess {
+		if resp != nil && resp.Rcode != dns.RcodeSuccess {
 			d.Logger.WithFields(logFields).Debugf("failed to get a valid answer")
-			if res.Rcode == dns.RcodeServerFailure {
+			if resp.Rcode == dns.RcodeServerFailure {
 				return
 			}
 		} else {
@@ -56,7 +76,7 @@ func (d *DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 		}
 
 		select {
-		case resCh <- res:
+		case resCh <- resp:
 		default:
 		}
 	}
@@ -70,9 +90,10 @@ func (d *DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 		go L(nameserver)
 		// but exit early, if we have an answer
 		select {
-		case res := <-resCh:
-			d.StoreCached(res)
-			return res, nil
+		case resp := <-resCh:
+			// TODO(jrubin) validate dnssec here and only cache if valid?
+			d.StoreCached(resp)
+			return resp, nil
 		case <-ticker.C:
 			continue
 		}
@@ -81,8 +102,8 @@ func (d *DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 	// wait for all the namservers to finish
 	wg.Wait()
 	select {
-	case res := <-resCh:
-		return res, nil
+	case resp := <-resCh:
+		return resp, nil
 	default:
 		return nil, ResolvError{q.Name, net, d.Forward}
 	}

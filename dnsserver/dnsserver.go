@@ -25,6 +25,7 @@ type DNSServer struct {
 	Cache              dnscache.Cache
 	CachePruneInterval time.Duration
 	cachePruneTicker   *time.Ticker
+	DisableDNSSEC      bool // TODO(jrubin)
 }
 
 const DefaultPort = 53
@@ -79,6 +80,9 @@ func (d *DNSServer) parseDNSServer(val string) (*dns.Server, error) {
 		Addr:    u.Host,
 		Net:     u.Scheme,
 		Handler: d.Handler(u.Scheme),
+		// TODO(jrubin)
+		// ReadTimeout:  2*time.Second,
+		// WriteTimeout: 2*time.Second,
 	}, nil
 }
 
