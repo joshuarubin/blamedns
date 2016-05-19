@@ -102,7 +102,7 @@ func (h *Hosts) Start() {
 
 	h.Logger.Debugf("starting hosts file %s", h.fileName)
 
-	go h.Update()
+	go func() { _, _ = h.Update() }()
 
 	ticker := time.NewTicker(h.UpdateInterval)
 	defer ticker.Stop()
@@ -111,7 +111,7 @@ func (h *Hosts) Start() {
 		for {
 			select {
 			case <-ticker.C:
-				go h.Update()
+				go func() { _, _ = h.Update() }()
 			case <-h.stopCh:
 				h.Logger.Debugf("stopped hosts file %s", h.fileName)
 				close(h.stopCh)
