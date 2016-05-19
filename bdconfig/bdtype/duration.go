@@ -14,6 +14,7 @@ const (
 	defaultDNSTimeout         = 5 * time.Second
 	defaultDNSInterval        = 200 * time.Millisecond
 	defaultCachePruneInterval = 1 * time.Hour
+	defaultDialTimeout        = 2 * time.Second
 )
 
 type Duration time.Duration
@@ -37,6 +38,8 @@ func (d Duration) Default(name string) interface{} {
 		return defaultDNSInterval
 	case "dns-cache-prune-interval":
 		return defaultCachePruneInterval
+	case "dns-dial-timeout":
+		return defaultDialTimeout
 	}
 	panic(fmt.Sprintf("bdtype.Duration.Default unknown name: %s", name))
 }

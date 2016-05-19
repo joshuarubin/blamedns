@@ -15,6 +15,7 @@ type DNSConfig struct {
 	Listen             []string             `toml:"listen" cli:",url(s) to listen for dns requests on"`
 	Block              BlockConfig          `toml:"block"`
 	Timeout            bdtype.Duration      `toml:"timeout" cli:",time to wait for remote servers to respond to queries"`
+	DialTimeout        bdtype.Duration      `toml:"dial-timeout" cli:",time to wait to establish connection to remote server"`
 	Interval           bdtype.Duration      `toml:"interval" cli:",concurrency interval for lookups in miliseconds"`
 	Server             *dnsserver.DNSServer `toml:"-" cli:"-"`
 	CachePruneInterval bdtype.Duration      `toml:"cache_prune_interval" cli:",how often to run cache expiration"`
@@ -66,6 +67,7 @@ func (cfg *DNSConfig) Init(root *Config) error {
 		Servers:            servers,
 		Block:              cfg.Block.Block(),
 		Timeout:            cfg.Timeout.Duration(),
+		DialTimeout:        cfg.DialTimeout.Duration(),
 		Interval:           cfg.Interval.Duration(),
 		Logger:             root.Logger,
 		Cache:              dnscache.NewMemory(root.Logger),

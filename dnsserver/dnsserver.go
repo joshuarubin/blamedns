@@ -18,6 +18,7 @@ type DNSServer struct {
 	Block              Block
 	Logger             *logrus.Logger
 	Timeout            time.Duration
+	DialTimeout        time.Duration
 	Interval           time.Duration
 	Cache              dnscache.Cache
 	CachePruneInterval time.Duration
