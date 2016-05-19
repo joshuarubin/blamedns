@@ -50,8 +50,8 @@ func (d *DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 	c := &dns.Client{
 		Net:          net,
 		DialTimeout:  d.DialTimeout,
-		ReadTimeout:  d.Timeout,
-		WriteTimeout: d.Timeout,
+		ReadTimeout:  d.ClientTimeout,
+		WriteTimeout: d.ClientTimeout,
 	}
 
 	freq := req.Copy()

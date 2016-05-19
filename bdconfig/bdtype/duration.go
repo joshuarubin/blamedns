@@ -11,7 +11,8 @@ import (
 const (
 	defaultBlockTTL           = 1 * time.Hour
 	defaultUpdateInterval     = 24 * time.Hour
-	defaultDNSTimeout         = 5 * time.Second
+	defaultDNSClientTimeout   = 5 * time.Second
+	defaultDNSServerTimeout   = 2 * time.Second
 	defaultDNSInterval        = 200 * time.Millisecond
 	defaultCachePruneInterval = 1 * time.Hour
 	defaultDialTimeout        = 2 * time.Second
@@ -32,8 +33,10 @@ func (d Duration) Default(name string) interface{} {
 		return defaultBlockTTL
 	case "dns-block-update-interval":
 		return defaultUpdateInterval
-	case "dns-timeout":
-		return defaultDNSTimeout
+	case "dns-client-timeout":
+		return defaultDNSClientTimeout
+	case "dns-server-timeout":
+		return defaultDNSServerTimeout
 	case "dns-interval":
 		return defaultDNSInterval
 	case "dns-cache-prune-interval":

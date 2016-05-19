@@ -19,14 +19,15 @@ type DNSServer struct {
 	servers            []*dns.Server
 	Block              Block
 	Logger             *logrus.Logger
-	Timeout            time.Duration
+	ClientTimeout      time.Duration
+	ServerTimeout      time.Duration
 	DialTimeout        time.Duration
 	Interval           time.Duration
 	Cache              dnscache.Cache
 	CachePruneInterval time.Duration
 	cachePruneTicker   *time.Ticker
-	DisableDNSSEC      bool // TODO(jrubin)
-	DisableRecursion   bool // TODO(jrubin)
+	DisableDNSSEC      bool
+	DisableRecursion   bool
 	NotifyStartedFunc  func() error
 }
 
@@ -91,9 +92,8 @@ func (d *DNSServer) parseDNSServer(val string, startCh chan<- struct{}) (*dns.Se
 		Net:               u.Scheme,
 		Handler:           d.Handler(u.Scheme),
 		NotifyStartedFunc: func() { startCh <- struct{}{} },
-		// TODO(jrubin)
-		// ReadTimeout:  2*time.Second,
-		// WriteTimeout: 2*time.Second,
+		ReadTimeout:       d.ServerTimeout,
+		WriteTimeout:      d.ServerTimeout,
 	}, nil
 }
 

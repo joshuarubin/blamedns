@@ -19,7 +19,6 @@ func (d DNSServer) LookupCached(req *dns.Msg) *dns.Msg {
 		return nil
 	}
 
-	// TODO(jrubin) handle multiple questions?
 	q := req.Question[0]
 
 	ans := d.Cache.Get(q)

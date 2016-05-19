@@ -10,11 +10,14 @@ type DNSConfig struct {
 	Forward            []string             `toml:"forward" cli:",dns server(s) to forward requests to"`
 	Listen             []string             `toml:"listen" cli:",url(s) to listen for dns requests on"`
 	Block              BlockConfig          `toml:"block"`
-	Timeout            bdtype.Duration      `toml:"timeout" cli:",time to wait for remote servers to respond to queries"`
-	DialTimeout        bdtype.Duration      `toml:"dial-timeout" cli:",time to wait to establish connection to remote server"`
+	ClientTimeout      bdtype.Duration      `toml:"client_timeout" cli:",time to wait for remote servers to respond to queries"`
+	ServerTimeout      bdtype.Duration      `toml:"server_timeout" cli:",time for server to wait for remote clients to respond to queries"`
+	DialTimeout        bdtype.Duration      `toml:"dial_timeout" cli:",time to wait to establish connection to remote server"`
 	Interval           bdtype.Duration      `toml:"interval" cli:",concurrency interval for lookups in miliseconds"`
 	Server             *dnsserver.DNSServer `toml:"-" cli:"-"`
 	CachePruneInterval bdtype.Duration      `toml:"cache_prune_interval" cli:",how often to run cache expiration"`
+	DisableDNSSEC      bool                 `toml:"disable_dnssec" cli:",disable dnssec validation"`
+	DisableRecursion   bool                 `toml:"disable_recursion" cli:",refuse recursive queries (you probably don't want to set this)"`
 }
 
 func defaultDNSConfig() DNSConfig {
@@ -40,13 +43,16 @@ func (cfg *DNSConfig) Init(root *Config) error {
 		Forward:            cfg.Forward,
 		Listen:             cfg.Listen,
 		Block:              cfg.Block.Block(),
-		Timeout:            cfg.Timeout.Duration(),
+		ClientTimeout:      cfg.ClientTimeout.Duration(),
+		ServerTimeout:      cfg.ServerTimeout.Duration(),
 		DialTimeout:        cfg.DialTimeout.Duration(),
 		Interval:           cfg.Interval.Duration(),
 		Logger:             root.Logger,
 		Cache:              dnscache.NewMemory(root.Logger),
 		CachePruneInterval: cfg.CachePruneInterval.Duration(),
 		NotifyStartedFunc:  cfg.Block.Start,
+		DisableDNSSEC:      cfg.DisableDNSSEC,
+		DisableRecursion:   cfg.DisableRecursion,
 	}
 
 	return nil
