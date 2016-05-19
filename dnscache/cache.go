@@ -7,6 +7,7 @@ type Cache interface {
 	Set(*dns.Msg) int
 	Prune() int
 	Len() int
+	FlushAll()
 }
 
 func unfqdn(s string) string {

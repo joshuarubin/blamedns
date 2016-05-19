@@ -55,6 +55,13 @@ func (c *Memory) add(rr dns.RR) *t.RR {
 	return rrs.Add(rr)
 }
 
+func (c *Memory) FlushAll() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.data = map[string]t.RRSets{}
+}
+
 func (c *Memory) Set(res *dns.Msg) int {
 	if len(res.Question) == 0 {
 		return 0
