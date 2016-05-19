@@ -18,6 +18,7 @@ type DNSConfig struct {
 	CachePruneInterval bdtype.Duration      `toml:"cache_prune_interval" cli:",how often to run cache expiration"`
 	DisableDNSSEC      bool                 `toml:"disable_dnssec" cli:",disable dnssec validation"`
 	DisableRecursion   bool                 `toml:"disable_recursion" cli:",refuse recursive queries (you probably don't want to set this)"`
+	DisableCache       bool                 `toml:"disable_cache" cli:",disable dns lookup cache"`
 }
 
 func defaultDNSConfig() DNSConfig {
@@ -48,11 +49,14 @@ func (cfg *DNSConfig) Init(root *Config) error {
 		DialTimeout:        cfg.DialTimeout.Duration(),
 		Interval:           cfg.Interval.Duration(),
 		Logger:             root.Logger,
-		Cache:              dnscache.NewMemory(root.Logger),
 		CachePruneInterval: cfg.CachePruneInterval.Duration(),
 		NotifyStartedFunc:  cfg.Block.Start,
 		DisableDNSSEC:      cfg.DisableDNSSEC,
 		DisableRecursion:   cfg.DisableRecursion,
+	}
+
+	if !cfg.DisableCache {
+		cfg.Server.Cache = dnscache.NewMemory(root.Logger)
 	}
 
 	return nil
