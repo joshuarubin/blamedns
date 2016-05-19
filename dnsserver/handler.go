@@ -17,25 +17,23 @@ func (d DNSServer) Handler(net string) dns.Handler {
 			"net":   net,
 		}
 
-		if blocked, err := d.Block.IfNeeded(w, req); blocked {
-			if err != nil {
-				d.Logger.WithError(err).WithFields(logFields).Error("error blocking request")
-				return
-			}
+		var resp *dns.Msg
+		var err error
 
+		if d.Block.Should(req) {
+			resp = d.Block.NewReply(req)
 			d.Logger.WithFields(logFields).Debug("blocked")
-			return
+		} else if resp, err = d.Lookup(net, req); err != nil {
+			d.Logger.WithError(err).WithFields(logFields).Error("lookup error")
 		}
 
-		resp, err := d.Lookup(net, req)
-		if err != nil {
-			d.Logger.WithError(err).Error("lookup error")
+		if resp == nil {
 			dns.HandleFailed(w, req)
 			return
 		}
 
 		if err = w.WriteMsg(resp); err != nil {
-			d.Logger.WithError(err).Error("handler error")
+			d.Logger.WithError(err).WithFields(logFields).Error("handler error")
 			dns.HandleFailed(w, req)
 		}
 	})

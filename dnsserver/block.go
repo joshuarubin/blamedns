@@ -31,7 +31,7 @@ func unfqdn(s string) string {
 	return s
 }
 
-func (b Block) ShouldBlock(req *dns.Msg) bool {
+func (b Block) Should(req *dns.Msg) bool {
 	q := req.Question[0]
 
 	switch q.Qtype {
@@ -75,18 +75,4 @@ func (b Block) NewReply(req *dns.Msg) *dns.Msg {
 	}
 
 	return msg.SetReply(req)
-}
-
-func (b Block) IfNeeded(w dns.ResponseWriter, req *dns.Msg) (blocked bool, err error) {
-	if !b.ShouldBlock(req) {
-		return false, nil
-	}
-
-	err = w.WriteMsg(b.NewReply(req))
-
-	if err != nil {
-		dns.HandleFailed(w, req)
-	}
-
-	return true, err
 }
