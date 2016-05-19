@@ -5,7 +5,7 @@ import (
 	"github.com/miekg/dns"
 )
 
-func (d DNSServer) Handler(net string) dns.Handler {
+func (d *DNSServer) Handler(net string) dns.Handler {
 	return dns.HandlerFunc(func(w dns.ResponseWriter, req *dns.Msg) {
 		if len(req.Question) < 1 { // allow more than one question
 			dns.HandleFailed(w, req)

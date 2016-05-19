@@ -69,7 +69,7 @@ func (d *DNSServer) startCachePruner() {
 	}()
 }
 
-func (d DNSServer) parseDNSServer(val string) (*dns.Server, error) {
+func (d *DNSServer) parseDNSServer(val string) (*dns.Server, error) {
 	u, err := url.Parse(val)
 	if err != nil {
 		return nil, err

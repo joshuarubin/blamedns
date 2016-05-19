@@ -13,7 +13,7 @@ import (
 // It returns an error if no request has succeeded.
 //
 // largely taken from github.com/looterz/grimd
-func (d DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
+func (d *DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 	q := req.Question[0]
 
 	logFields := logrus.Fields{
