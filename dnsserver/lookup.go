@@ -31,11 +31,15 @@ func (d *DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 		return resp, nil
 	}
 
-	if !req.RecursionDesired {
+	if !req.RecursionDesired || d.DisableRecursion {
 		resp := &dns.Msg{}
 		resp.SetRcode(req, dns.RcodeRefused)
 		return resp, nil
 	}
+
+	// TODO(jrubin) handle recursive requests without forward servers
+	// if len(d.Forward) == 0 {
+	// }
 
 	c := &dns.Client{
 		Net:          net,

@@ -26,7 +26,10 @@ type DNSServer struct {
 	CachePruneInterval time.Duration
 	cachePruneTicker   *time.Ticker
 	DisableDNSSEC      bool // TODO(jrubin)
+	DisableRecursion   bool // TODO(jrubin)
 }
+
+// TODO(jrubin) add zone parsing and authoritative responses for them
 
 const DefaultPort = 53
 

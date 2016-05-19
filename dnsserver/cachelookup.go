@@ -57,8 +57,10 @@ func (d DNSServer) LookupCached(req *dns.Msg) *dns.Msg {
 	return resp
 }
 
+var additionalQTypes = []uint16{dns.TypeA, dns.TypeAAAA}
+
 func additionalQ(qs []dns.Question, name string) []dns.Question {
-	for _, t := range []uint16{dns.TypeA, dns.TypeAAAA} {
+	for _, t := range additionalQTypes {
 		qs = append(qs, dns.Question{
 			Name:   name,
 			Qtype:  t,
