@@ -41,9 +41,10 @@ func (m RR) Expired() bool {
 
 func NewRR(r dns.RR) *RR {
 	ttl := time.Duration(r.Header().Ttl) * time.Second
+	r = dns.Copy(r)
 	r.Header().Ttl = 0 // set to 0 so that Equal works using r.String()
 	return &RR{
-		RR:      dns.Copy(r),
+		RR:      r,
 		Expires: time.Now().UTC().Add(ttl),
 	}
 }
