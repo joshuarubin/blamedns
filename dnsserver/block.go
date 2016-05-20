@@ -20,8 +20,8 @@ type Passer interface {
 type Block struct {
 	IPv4, IPv6 net.IP
 	TTL        time.Duration
-	Blockers   []Blocker
-	Passers    []Passer
+	Blocker    Blocker
+	Passer     Passer
 }
 
 func unfqdn(s string) string {
@@ -44,16 +44,12 @@ func (b Block) Should(req *dns.Msg) bool {
 	host := unfqdn(q.Name)
 	host = strings.ToLower(host)
 
-	for _, p := range b.Passers {
-		if p.Pass(host) {
-			return false
-		}
+	if b.Passer.Pass(host) {
+		return false
 	}
 
-	for _, b := range b.Blockers {
-		if b.Block(host) {
-			return true
-		}
+	if b.Blocker.Block(host) {
+		return true
 	}
 
 	return false

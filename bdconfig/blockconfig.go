@@ -1,9 +1,16 @@
 package bdconfig
 
 import (
+	"net/url"
+	"path"
+
 	"jrubin.io/blamedns/bdconfig/bdtype"
+	"jrubin.io/blamedns/blocker"
+	"jrubin.io/blamedns/dl"
 	"jrubin.io/blamedns/dnsserver"
-	"jrubin.io/blamedns/hosts"
+	"jrubin.io/blamedns/parser"
+	"jrubin.io/blamedns/watcher"
+	"jrubin.io/blamedns/whitelist"
 )
 
 type BlockConfig struct {
@@ -14,8 +21,10 @@ type BlockConfig struct {
 	Hosts          []string        `toml:"hosts" cli:",files in \"/etc/hosts\" format from which to derive blocked hostnames"`
 	Domains        []string        `toml:"domains" cli:",files with one domain per line to block"`
 	Whitelist      []string        `toml:"whitelist" cli:",domains to never block"`
-	blockers       []dnsserver.Blocker
-	passers        []dnsserver.Passer
+	DebugHTTP      bool            `toml:"debug-http" cli:",log http headers"`
+	dl             []*dl.DL
+	blocker        *blocker.Blocker
+	watchers       []*watcher.Watcher
 }
 
 func defaultBlockConfig() BlockConfig {
@@ -44,64 +53,100 @@ func defaultBlockConfig() BlockConfig {
 
 func (b BlockConfig) Block() dnsserver.Block {
 	return dnsserver.Block{
-		IPv4:     b.IPv4.IP(),
-		IPv6:     b.IPv6.IP(),
-		TTL:      b.TTL.Duration(),
-		Blockers: b.blockers,
-		Passers:  b.passers,
+		IPv4:    b.IPv4.IP(),
+		IPv6:    b.IPv6.IP(),
+		TTL:     b.TTL.Duration(),
+		Blocker: b.blocker,
+		Passer:  whitelist.New(b.Whitelist),
 	}
 }
 
 func (b *BlockConfig) Init(root *Config) error {
-	b.blockers = []dnsserver.Blocker{}
+	hostsDir := path.Join(root.CacheDir, "hosts")
+	domainsDir := path.Join(root.CacheDir, "domains")
+
+	b.blocker = &blocker.Blocker{Logger: root.Logger}
+
+	hostsFileParser := parser.HostsFileParser{
+		HostAdder: b.blocker,
+		Logger:    root.Logger,
+	}
+
+	hostsWatcher, err := watcher.New(root.Logger, hostsFileParser, hostsDir)
+	if err != nil {
+		return err
+	}
+
+	domainParser := parser.DomainParser{
+		HostAdder: b.blocker,
+		Logger:    root.Logger,
+	}
+
+	domainsWatcher, err := watcher.New(root.Logger, domainParser, domainsDir)
+	if err != nil {
+		return err
+	}
+
+	b.watchers = []*watcher.Watcher{
+		hostsWatcher,
+		domainsWatcher,
+	}
 
 	for _, t := range []struct {
-		Values []string
-		Parser hosts.Parser
+		Values  []string
+		BaseDir string
 	}{{
-		Values: b.Hosts,
-		Parser: hosts.FileParser,
+		Values:  b.Hosts,
+		BaseDir: hostsDir,
 	}, {
-		Values: b.Domains,
-		Parser: hosts.DomainParser,
+		Values:  b.Domains,
+		BaseDir: domainsDir,
 	}} {
-		for _, i := range t.Values {
-			f := &hosts.Hosts{
-				UpdateInterval: b.UpdateInterval.Duration(),
-				Parser:         t.Parser,
-				Logger:         root.Logger,
-				AppName:        root.AppName,
-				AppVersion:     root.AppVersion,
-			}
-
-			if err := f.Init(i, root.CacheDir); err != nil {
+		for _, u := range t.Values {
+			p, err := url.Parse(u)
+			if err != nil {
 				return err
 			}
 
-			b.blockers = append(b.blockers, f)
-		}
-	}
+			d := &dl.DL{
+				URL:            p,
+				BaseDir:        t.BaseDir,
+				UpdateInterval: b.UpdateInterval.Duration(),
+				Logger:         root.Logger,
+				AppName:        root.AppName,
+				AppVersion:     root.AppVersion,
+				DebugHTTP:      b.DebugHTTP,
+			}
 
-	b.passers = []dnsserver.Passer{
-		hosts.NewWhiteList(b.Whitelist),
+			if err = d.Init(); err != nil {
+				return err
+			}
+
+			b.dl = append(b.dl, d)
+		}
 	}
 
 	return nil
 }
 
 func (b *BlockConfig) Start() error {
-	for _, b := range b.blockers {
-		if host, ok := b.(*hosts.Hosts); ok {
-			host.Start()
-		}
+	for _, w := range b.watchers {
+		w.Start()
 	}
+
+	for _, d := range b.dl {
+		d.Start()
+	}
+
 	return nil
 }
 
 func (b *BlockConfig) Shutdown() {
-	for _, b := range b.blockers {
-		if host, ok := b.(*hosts.Hosts); ok {
-			host.Stop()
-		}
+	for _, w := range b.watchers {
+		w.Stop()
+	}
+
+	for _, d := range b.dl {
+		d.Stop()
 	}
 }

@@ -63,11 +63,10 @@ func (c *Memory) FlushAll() {
 }
 
 func (c *Memory) Set(res *dns.Msg) int {
-	if len(res.Question) == 0 {
+	if len(res.Question) != 1 {
 		return 0
 	}
 
-	// TODO(jrubin) support multiple questions?
 	q := res.Question[0]
 	if q.Qclass != dns.ClassINET {
 		return 0
