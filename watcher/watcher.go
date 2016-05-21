@@ -63,6 +63,8 @@ func (w *Watcher) parse(file string) {
 	}
 	defer f.Close()
 
+	w.Parser.Reset(file)
+
 	scanner := bufio.NewScanner(f)
 	i := 0
 	n := 0

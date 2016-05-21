@@ -18,6 +18,10 @@ type HostsFileParser struct {
 	Logger    *logrus.Logger
 }
 
+func (h HostsFileParser) Reset(fileName string) {
+	h.HostAdder.Reset(fileName)
+}
+
 func (h HostsFileParser) Parse(fileName string, lineNum int, text string) (ret bool) {
 	textmodifier.New(&text).StripComments().ExtractField(1).ToLower().UnFQDN().StripPort()
 

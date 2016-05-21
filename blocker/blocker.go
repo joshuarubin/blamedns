@@ -6,6 +6,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"jrubin.io/blamedns/dnsserver"
 	"jrubin.io/blamedns/parser"
+	"jrubin.io/blamedns/trie"
 )
 
 var (
@@ -15,7 +16,7 @@ var (
 
 type Blocker struct {
 	Logger *logrus.Logger
-	data   map[string]struct{} // TODO(jrubin) this is just temporary
+	trie   trie.Node
 	mu     sync.RWMutex
 }
 
@@ -23,24 +24,24 @@ func (b *Blocker) AddHost(source, host string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	if b.data == nil {
-		b.data = map[string]struct{}{}
-	}
-
-	b.data[host] = struct{}{}
-	// TODO(jrubin)
+	n := b.trie.Insert(ReverseHostName(host))
+	addSource(n, source)
 }
 
 func (b *Blocker) Block(host string) bool {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	_, found := b.data[host]
-	return found
-	// TODO(jrubin)
+
+	return b.trie.GetSubString(ReverseHostName(host)) != nil
 }
 
 func (b *Blocker) Len() int {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
-	return len(b.data)
+
+	return b.trie.Len()
+}
+
+func (b *Blocker) Reset(source string) {
+	removeBySource(&b.trie, source)
 }

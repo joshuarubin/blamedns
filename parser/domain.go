@@ -12,6 +12,10 @@ type DomainParser struct {
 	Logger    *logrus.Logger
 }
 
+func (d DomainParser) Reset(fileName string) {
+	d.HostAdder.Reset(fileName)
+}
+
 func (d DomainParser) Parse(fileName string, lineNum int, text string) (ret bool) {
 	textmodifier.New(&text).StripComments().TrimSpace().ToLower().UnFQDN().StripPort()
 
