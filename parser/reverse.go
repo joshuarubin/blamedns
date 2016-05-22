@@ -1,4 +1,4 @@
-package blocker
+package parser
 
 func ReverseHostName(host string) string {
 	last := len(host)

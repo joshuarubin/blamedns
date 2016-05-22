@@ -9,30 +9,32 @@ import (
 func TestTrie(t *testing.T) {
 	Convey("trie should work", t, func() {
 		t := Node{}
-		t.Insert("www.example.com", "the source")
+		n := t.InsertString("www.example.com")
+		n.SetValue("the source")
 
-		n := t.Get("www.example.com")
+		n = t.GetString("www.example.com")
 		So(n, ShouldNotBeNil)
-		So(n.Value, ShouldNotBeNil)
-		So(n.Value, ShouldEqual, "the source")
+		So(n.Value(), ShouldNotBeNil)
+		So(n.Value(), ShouldEqual, "the source")
 
-		t.Insert("www.example.com", "another source")
+		n = t.InsertString("www.example.com")
+		n.SetValue("another source")
 
-		n = t.Get("www.example.com")
+		n = t.GetString("www.example.com")
 		So(n, ShouldNotBeNil)
-		So(n.Value, ShouldNotBeNil)
-		So(n.Value, ShouldEqual, "another source")
+		So(n.Value(), ShouldNotBeNil)
+		So(n.Value(), ShouldEqual, "another source")
 
-		n = t.Get("example.com")
+		n = t.GetString("example.com")
 		So(n, ShouldBeNil)
 
-		n = t.Get("sub.www.example.com")
+		n = t.GetString("sub.www.example.com")
 		So(n, ShouldBeNil)
 
 		n = t.GetSubString("www.example.com")
 		So(n, ShouldNotBeNil)
-		So(n.Value, ShouldNotBeNil)
-		So(n.Value, ShouldEqual, "another source")
+		So(n.Value(), ShouldNotBeNil)
+		So(n.Value(), ShouldEqual, "another source")
 
 		n = t.GetSubString("example.com")
 		So(n, ShouldBeNil)
@@ -42,21 +44,21 @@ func TestTrie(t *testing.T) {
 
 		n = t.GetSubString("www.example.com.sub")
 		So(n, ShouldNotBeNil)
-		So(n.Value, ShouldNotBeNil)
-		So(n.Value, ShouldEqual, "another source")
+		So(n.Value(), ShouldNotBeNil)
+		So(n.Value(), ShouldEqual, "another source")
 
 		n = t.GetSubString("www.example.com2")
 		So(n, ShouldNotBeNil)
-		So(n.Value, ShouldNotBeNil)
-		So(n.Value, ShouldEqual, "another source")
+		So(n.Value(), ShouldNotBeNil)
+		So(n.Value(), ShouldEqual, "another source")
 
 		So(t.Len(), ShouldEqual, 1)
 		So(t.NumNodes(), ShouldEqual, len("www.example.com"))
 
-		n = t.Get("www.example.com")
+		n = t.GetString("www.example.com")
 		So(n, ShouldNotBeNil)
-		So(n.Value, ShouldNotBeNil)
-		So(n.Value, ShouldEqual, "another source")
+		So(n.Value(), ShouldNotBeNil)
+		So(n.Value(), ShouldEqual, "another source")
 
 		n.Delete()
 		So(t.Len(), ShouldEqual, 0)
@@ -66,11 +68,24 @@ func TestTrie(t *testing.T) {
 		So(t.Len(), ShouldEqual, 0)
 		So(t.NumNodes(), ShouldEqual, 0)
 
-		t.Insert("abc", true)
+		n = t.InsertString("abc")
+		So(n.KeyString(), ShouldEqual, "abc")
+		n.SetValue(true)
 		So(t.Len(), ShouldEqual, 1)
 		So(t.NumNodes(), ShouldEqual, len("abc"))
 
-		n = t.Get("ab")
+		n = t.GetString("ab")
 		So(n, ShouldBeNil)
+
+		n = t.GetSubString("ab")
+		So(n, ShouldBeNil)
+
+		n = t.InsertString("abd")
+		So(n.KeyString(), ShouldEqual, "abd")
+		So(n.SetValueIfNil(true), ShouldBeTrue)
+		So(t.Len(), ShouldEqual, 2)
+		So(t.NumNodes(), ShouldEqual, len("abc")+1)
+
+		So(n.SetValueIfNil(true), ShouldBeFalse)
 	})
 }

@@ -1,68 +1,130 @@
 package trie
 
 import (
+	"bytes"
 	"container/list"
+	"sync"
 )
 
 type Node struct {
-	C      byte
-	Parent *Node
-	Next   map[byte]*Node
-	Value  interface{}
+	sync.RWMutex
+	c      byte
+	parent *Node
+	n      map[byte]*Node
+	value  interface{}
 }
 
-func (t *Node) Insert(text string, value interface{}) *Node {
+func (t *Node) next(c byte) *Node {
+	t.RLock()
+	defer t.RUnlock()
+
+	n, ok := t.n[c]
+	if !ok {
+		return nil
+	}
+	return n
+}
+
+func (t *Node) Value() interface{} {
+	t.RLock()
+	defer t.RUnlock()
+	return t.value
+}
+
+func (t *Node) nextCreate(c byte) *Node {
+	if n := t.next(c); n != nil {
+		return n
+	}
+
+	t.Lock()
+	defer t.Unlock()
+
+	if t.n == nil {
+		t.n = map[byte]*Node{}
+	} else if n := t.n[c]; n != nil {
+		// check to make sure that next wasn't set while upgrading the lock
+		return n
+	}
+
+	n := &Node{
+		c:      c,
+		parent: t,
+	}
+	t.n[c] = n
+
+	return n
+}
+
+func (t *Node) SetValue(value interface{}) {
+	t.Lock()
+	defer t.Unlock()
+	t.value = value
+}
+
+func (t *Node) SetValueIfNil(value interface{}) bool {
+	if t.Value() != nil {
+		return false
+	}
+
+	t.Lock()
+	defer t.Unlock()
+
+	// make sure value wasn't set while upgrading the lock
+	if t.value != nil {
+		return false
+	}
+
+	t.value = value
+	return true
+}
+
+func (t *Node) InsertString(text string) *Node {
+	return t.Insert([]byte(text))
+}
+
+func (t *Node) Insert(text []byte) *Node {
 	l := len(text)
 	for i := 0; i <= l; i++ {
 		if i == l {
-			if value != nil {
-				t.Value = value
-			}
 			return t
 		}
 
-		c := text[i]
-
-		if t.Next == nil {
-			t.Next = map[byte]*Node{}
-		}
-
-		n, ok := t.Next[c]
-		if !ok {
-			n = &Node{
-				C:      c,
-				Parent: t,
-			}
-			t.Next[c] = n
-		}
-		t = n
+		t = t.nextCreate(text[i])
 	}
 
 	return nil
 }
 
-func (t *Node) Get(text string) *Node {
+func (t *Node) GetString(text string) *Node {
+	return t.Get([]byte(text))
+}
+
+func (t *Node) Get(text []byte) *Node {
 	return t.get(text, false)
 }
 
 func (t *Node) GetSubString(text string) *Node {
+	return t.GetSub([]byte(text))
+}
+
+func (t *Node) GetSub(text []byte) *Node {
 	return t.get(text, true)
 }
 
-func (t *Node) get(text string, matchSubString bool) *Node {
+func (t *Node) get(text []byte, matchSubString bool) *Node {
 	l := len(text)
 	for i := 0; i <= l; i++ {
-		if (matchSubString && t.Value != nil) || i == l {
-			if t.Value == nil {
+		value := t.Value()
+
+		if (matchSubString && value != nil) || i == l {
+			if value == nil {
 				return nil
 			}
 
 			return t
 		}
 
-		c := text[i]
-		var ok bool
-		if t, ok = t.Next[c]; !ok {
+		if t = t.next(text[i]); t == nil {
 			return nil
 		}
 	}
@@ -71,56 +133,75 @@ func (t *Node) get(text string, matchSubString bool) *Node {
 }
 
 type Walker interface {
-	Walk(text string, node *Node)
+	Walk(node *Node)
 }
 
-type WalkerFunc func(text string, node *Node)
+type WalkerFunc func(node *Node)
 
-func (f WalkerFunc) Walk(text string, node *Node) {
-	f(text, node)
+func (f WalkerFunc) Walk(node *Node) {
+	f(node)
 }
 
-type listNode struct {
-	String   string
-	TrieNode *Node
-}
+func (t *Node) pushNext(queue *list.List) {
+	t.RLock()
+	defer t.RUnlock()
 
-func (t *Node) listNode(str string) *listNode {
-	return &listNode{
-		String:   str,
-		TrieNode: t,
+	for _, n := range t.n {
+		if n != nil {
+			queue.PushBack(n)
+		}
 	}
+}
+
+func pop(queue *list.List) *Node {
+	if queue.Len() == 0 {
+		return nil
+	}
+
+	return queue.Remove(queue.Front()).(*Node)
 }
 
 func (t *Node) Walk(w Walker) {
 	queue := list.New()
 
-	// initialize the queue
-	for c, n := range t.Next {
-		queue.PushBack(n.listNode(string(c)))
+	t.pushNext(queue)
+
+	for ln := pop(queue); ln != nil; ln = pop(queue) {
+		w.Walk(ln)
+		ln.pushNext(queue)
 	}
+}
 
-	for queue.Len() > 0 {
-		ln := queue.Remove(queue.Front()).(*listNode)
-
-		w.Walk(ln.String, ln.TrieNode)
-
-		for c, n := range ln.TrieNode.Next {
-			queue.PushBack(n.listNode(ln.String + string(c)))
-		}
-	}
+func (t *Node) deleteChild(c byte) {
+	t.Lock()
+	defer t.Unlock()
+	delete(t.n, c)
 }
 
 func (t *Node) Delete() {
-	if t.Parent != nil {
-		delete(t.Parent.Next, t.C)
+	if t.parent != nil {
+		t.parent.deleteChild(t.c)
 	}
 }
 
+func (t *Node) lenNext() int {
+	t.RLock()
+	defer t.RUnlock()
+
+	var ret int
+	for _, n := range t.n {
+		if n != nil {
+			ret++
+		}
+	}
+
+	return ret
+}
+
 func (t *Node) DeletePrune() {
-	t.Value = nil
-	for ; t.Parent != nil; t = t.Parent {
-		if t.Value != nil || len(t.Next) > 0 {
+	t.SetValue(nil)
+	for ; t.parent != nil; t = t.parent {
+		if t.Value() != nil || t.lenNext() > 0 {
 			break
 		}
 
@@ -128,16 +209,41 @@ func (t *Node) DeletePrune() {
 	}
 }
 
+func (t *Node) Key() []byte {
+	buf := bytes.NewBuffer(make([]byte, 0, 32))
+
+	for ; t.parent != nil; t = t.parent {
+		if err := buf.WriteByte(t.c); err != nil {
+			panic(err)
+		}
+	}
+
+	// the buffer needs to be reversed before it can be returned
+	ret := buf.Bytes()
+	l := len(ret)
+
+	for i := 0; i < l/2; i++ {
+		j := l - 1 - i
+		ret[j], ret[i] = ret[i], ret[j]
+	}
+
+	return ret
+}
+
+func (t *Node) KeyString() string {
+	return string(t.Key())
+}
+
 func (t *Node) Prune() {
-	t.Walk(WalkerFunc(func(text string, node *Node) {
+	t.Walk(WalkerFunc(func(node *Node) {
 		node.DeletePrune()
 	}))
 }
 
 func (t *Node) Len() int {
 	var n int
-	t.Walk(WalkerFunc(func(text string, node *Node) {
-		if node.Value != nil {
+	t.Walk(WalkerFunc(func(node *Node) {
+		if node.Value() != nil {
 			n++
 		}
 	}))
@@ -146,7 +252,7 @@ func (t *Node) Len() int {
 
 func (t *Node) NumNodes() int {
 	var n int
-	t.Walk(WalkerFunc(func(text string, node *Node) {
+	t.Walk(WalkerFunc(func(node *Node) {
 		n++
 	}))
 	return n

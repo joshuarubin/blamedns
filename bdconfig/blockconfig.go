@@ -23,7 +23,7 @@ type BlockConfig struct {
 	Whitelist      []string        `toml:"whitelist" cli:",domains to never block"`
 	DebugHTTP      bool            `toml:"debug-http" cli:",log http headers"`
 	dl             []*dl.DL
-	blocker        *blocker.Blocker
+	blocker        blocker.Blocker
 	watchers       []*watcher.Watcher
 }
 
@@ -65,7 +65,7 @@ func (b *BlockConfig) Init(root *Config) error {
 	hostsDir := path.Join(root.CacheDir, "hosts")
 	domainsDir := path.Join(root.CacheDir, "domains")
 
-	b.blocker = &blocker.Blocker{Logger: root.Logger}
+	b.blocker = &blocker.HashBlocker{}
 
 	hostsFileParser := parser.HostsFileParser{
 		HostAdder: b.blocker,

@@ -30,6 +30,10 @@ func New(l *logrus.Logger, p parser.Parser, dir ...string) (*Watcher, error) {
 	}
 
 	for _, d := range dir {
+		if err = os.MkdirAll(d, 0700); err != nil {
+			return nil, err
+		}
+
 		if err = w.Add(d); err != nil {
 			return nil, err
 		}
@@ -52,9 +56,8 @@ func New(l *logrus.Logger, p parser.Parser, dir ...string) (*Watcher, error) {
 
 func (w *Watcher) parse(file string) {
 	w.mu.Lock()
-	defer w.mu.Unlock()
-
 	delete(w.parseTimer, file)
+	w.mu.Unlock()
 
 	f, err := os.Open(file)
 	if err != nil {
@@ -88,7 +91,7 @@ func (w *Watcher) parse(file string) {
 
 // this much time must elapse without a file being further modified before it
 // will be parsed
-const debounce = 500 * time.Millisecond
+const debounce = 1 * time.Second
 
 func (w *Watcher) setParseTimer(file string) {
 	w.mu.Lock()
@@ -121,7 +124,7 @@ func (w *Watcher) parseAll() {
 		}
 
 		for _, fd := range fi {
-			w.parse(path.Join(d, fd.Name()))
+			go w.parse(path.Join(d, fd.Name()))
 		}
 	}
 }
@@ -141,7 +144,7 @@ func (w *Watcher) Start() {
 			select {
 			case event := <-w.watcher.Events:
 				if event.Op&fsnotify.Chmod > 0 {
-					w.parse(event.Name)
+					go w.parse(event.Name)
 					break
 				}
 
