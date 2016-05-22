@@ -1,6 +1,8 @@
 package trie
 
-import "container/list"
+import (
+	"container/list"
+)
 
 type Node struct {
 	C      byte
@@ -9,10 +11,13 @@ type Node struct {
 	Value  interface{}
 }
 
-func (t *Node) Insert(text string) *Node {
+func (t *Node) Insert(text string, value interface{}) *Node {
 	l := len(text)
 	for i := 0; i <= l; i++ {
 		if i == l {
+			if value != nil {
+				t.Value = value
+			}
 			return t
 		}
 
@@ -36,19 +41,23 @@ func (t *Node) Insert(text string) *Node {
 	return nil
 }
 
-func (t *Node) Get(text string) interface{} {
+func (t *Node) Get(text string) *Node {
 	return t.get(text, false)
 }
 
-func (t *Node) GetSubString(text string) interface{} {
+func (t *Node) GetSubString(text string) *Node {
 	return t.get(text, true)
 }
 
-func (t *Node) get(text string, matchSubString bool) interface{} {
+func (t *Node) get(text string, matchSubString bool) *Node {
 	l := len(text)
 	for i := 0; i <= l; i++ {
 		if (matchSubString && t.Value != nil) || i == l {
-			return t.Value
+			if t.Value == nil {
+				return nil
+			}
+
+			return t
 		}
 
 		c := text[i]
@@ -92,9 +101,7 @@ func (t *Node) Walk(w Walker) {
 	}
 
 	for queue.Len() > 0 {
-		e := queue.Front()
-		queue.Remove(e)
-		ln := e.Value.(*listNode)
+		ln := queue.Remove(queue.Front()).(*listNode)
 
 		w.Walk(ln.String, ln.TrieNode)
 
@@ -105,21 +112,26 @@ func (t *Node) Walk(w Walker) {
 }
 
 func (t *Node) Delete() {
-	delete(t.Parent.Next, t.C)
+	if t.Parent != nil {
+		delete(t.Parent.Next, t.C)
+	}
+}
+
+func (t *Node) DeletePrune() {
+	t.Value = nil
+	for ; t.Parent != nil; t = t.Parent {
+		if t.Value != nil || len(t.Next) > 0 {
+			break
+		}
+
+		t.Delete()
+	}
 }
 
 func (t *Node) Prune() {
-	var n int
 	t.Walk(WalkerFunc(func(text string, node *Node) {
-		if node.Value == nil && len(node.Next) == 0 {
-			n++
-			node.Delete()
-		}
+		node.DeletePrune()
 	}))
-
-	if n > 0 {
-		t.Prune()
-	}
 }
 
 func (t *Node) Len() int {

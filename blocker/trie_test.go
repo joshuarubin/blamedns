@@ -20,19 +20,21 @@ func TestTrie(t *testing.T) {
 
 	Convey("trie should work", t, func() {
 		t := trie.Node{}
-		n := t.Insert(ReverseHostName("www.example.com"))
+		n := t.Insert(ReverseHostName("www.example.com"), nil)
 		addSource(n, "the source")
 
 		s := t.Get(ReverseHostName("www.example.com"))
 		So(s, ShouldNotBeNil)
+		So(s.Value, ShouldNotBeNil)
 		So(numSources(s), ShouldEqual, 1)
 		So(hasSource(s, "the source"), ShouldBeTrue)
 
-		n = t.Insert(ReverseHostName("www.example.com"))
+		n = t.Insert(ReverseHostName("www.example.com"), nil)
 		addSource(n, "another source")
 
 		s = t.Get(ReverseHostName("www.example.com"))
 		So(s, ShouldNotBeNil)
+		So(s.Value, ShouldNotBeNil)
 		So(numSources(s), ShouldEqual, 2)
 		So(hasSource(s, "the source"), ShouldBeTrue)
 		So(hasSource(s, "another source"), ShouldBeTrue)
@@ -45,6 +47,7 @@ func TestTrie(t *testing.T) {
 
 		s = t.GetSubString(ReverseHostName("www.example.com"))
 		So(s, ShouldNotBeNil)
+		So(s.Value, ShouldNotBeNil)
 		So(numSources(s), ShouldEqual, 2)
 		So(hasSource(s, "the source"), ShouldBeTrue)
 		So(hasSource(s, "another source"), ShouldBeTrue)
@@ -57,12 +60,14 @@ func TestTrie(t *testing.T) {
 
 		s = t.GetSubString(ReverseHostName("sub.www.example.com"))
 		So(s, ShouldNotBeNil)
+		So(s.Value, ShouldNotBeNil)
 		So(numSources(s), ShouldEqual, 2)
 		So(hasSource(s, "the source"), ShouldBeTrue)
 		So(hasSource(s, "another source"), ShouldBeTrue)
 
 		s = t.GetSubString(ReverseHostName("www2.example.com"))
 		So(s, ShouldNotBeNil)
+		So(s.Value, ShouldNotBeNil)
 		So(numSources(s), ShouldEqual, 2)
 		So(hasSource(s, "the source"), ShouldBeTrue)
 		So(hasSource(s, "another source"), ShouldBeTrue)
@@ -74,6 +79,7 @@ func TestTrie(t *testing.T) {
 
 		s = t.Get(ReverseHostName("www.example.com"))
 		So(s, ShouldNotBeNil)
+		So(s.Value, ShouldNotBeNil)
 		So(numSources(s), ShouldEqual, 1)
 		So(hasSource(s, "another source"), ShouldBeTrue)
 		So(t.Len(), ShouldEqual, 1)

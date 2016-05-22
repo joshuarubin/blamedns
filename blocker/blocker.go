@@ -24,7 +24,7 @@ func (b *Blocker) AddHost(source, host string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	n := b.trie.Insert(ReverseHostName(host))
+	n := b.trie.Insert(ReverseHostName(host), nil)
 	addSource(n, source)
 }
 

@@ -11,48 +11,44 @@ func addSource(t *trie.Node, source string) {
 	value[source] = struct{}{}
 }
 
-func hasSource(t interface{}, source string) bool {
-	if t == nil {
+func hasSource(t *trie.Node, source string) bool {
+	if t == nil || t.Value == nil {
 		return false
 	}
 
-	value := t.(map[string]struct{})
+	value := t.Value.(map[string]struct{})
 	_, ok := value[source]
 	return ok
 }
 
-func numSources(t interface{}) int {
-	if t == nil {
+func numSources(t *trie.Node) int {
+	if t == nil || t.Value == nil {
 		return 0
 	}
 
-	return len(t.(map[string]struct{}))
+	return len(t.Value.(map[string]struct{}))
 }
 
-func deleteSource(t interface{}, source string) {
-	if t == nil {
+func deleteSource(t *trie.Node, source string) {
+	if t == nil || t.Value == nil {
 		return
 	}
 
-	value := t.(map[string]struct{})
+	value := t.Value.(map[string]struct{})
 	delete(value, source)
 }
 
 func removeBySource(t *trie.Node, source string) {
-	var n int
 	t.Walk(trie.WalkerFunc(func(text string, node *trie.Node) {
-		if hasSource(node.Value, source) {
-			n++
-			if numSources(node.Value) == 1 {
-				node.Delete()
-				return
-			}
-
-			deleteSource(node.Value, source)
+		if !hasSource(node, source) {
+			return
 		}
-	}))
 
-	if n > 0 {
-		t.Prune()
-	}
+		if numSources(node) > 1 {
+			deleteSource(node, source)
+			return
+		}
+
+		node.DeletePrune()
+	}))
 }
