@@ -44,7 +44,7 @@ func (d Duration) Default(name string) interface{} {
 	case "dns-dial-timeout":
 		return defaultDialTimeout
 	}
-	panic(fmt.Sprintf("bdtype.Duration.Default unknown name: %s", name))
+	panic(fmt.Errorf("bdtype.Duration.Default unknown name: %s", name))
 }
 
 func (d Duration) Duration() time.Duration {

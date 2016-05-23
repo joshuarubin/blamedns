@@ -67,7 +67,7 @@ func (b Block) NewReply(req *dns.Msg) *dns.Msg {
 	case dns.TypeAAAA:
 		msg = newAAAA(b.IPv6, hdr)
 	default:
-		panic(fmt.Sprintf("unexpected question type: %d (%s)", qType, dns.TypeToString[qType]))
+		panic(fmt.Errorf("unexpected question type: %d (%s)", qType, dns.TypeToString[qType]))
 	}
 
 	return msg.SetReply(req)

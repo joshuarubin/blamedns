@@ -1,6 +1,8 @@
 package dnscache
 
 import (
+	"time"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 	"jrubin.io/blamedns/lru"
@@ -16,13 +18,10 @@ type Memory struct {
 	data     *lru.LRU
 	nxDomain *lru.LRU
 	noData   *lru.LRU
+	stopCh   chan struct{}
 }
 
 func NewMemory(size int, logger *logrus.Logger, onEvict lru.Elementer) *Memory {
-	if size <= 0 {
-		panic("dns memory cache must have a positive size")
-	}
-
 	if logger == nil {
 		logger = logrus.New()
 	}
@@ -296,5 +295,32 @@ func (c *Memory) processAdditionalSection(resp *dns.Msg) {
 		}
 
 		c.Logger.WithFields(lf).Debug("cache lookup (additional)")
+	}
+}
+
+func (c *Memory) Start(i time.Duration) {
+	c.Logger.WithField("interval", i).Info("started cache prune background process")
+	ticker := time.NewTicker(i)
+	c.stopCh = make(chan struct{})
+
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				c.Logger.WithField("num", c.Prune()).Debug("pruned items from cache")
+			case <-c.stopCh:
+				ticker.Stop()
+				c.Logger.Debug("stopped cache pruner")
+				return
+			}
+		}
+	}()
+}
+
+func (c *Memory) Stop() {
+	if c.stopCh != nil {
+		c.stopCh <- struct{}{}
+		close(c.stopCh)
+		c.stopCh = nil
 	}
 }

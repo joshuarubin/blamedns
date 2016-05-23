@@ -23,7 +23,7 @@ func (i IP) Default(name string) interface{} {
 	case "dns-block-ipv6":
 		return "::1"
 	}
-	panic(fmt.Sprintf("bdtype.Duration.Default unknown name: %s", name))
+	panic(fmt.Errorf("bdtype.Duration.Default unknown name: %s", name))
 }
 
 func (i IP) UnmarshalCLIConfig(text string) (interface{}, error) {

@@ -14,21 +14,19 @@ import (
 )
 
 type DNSServer struct {
-	Forward            []string
-	Listen             []string
-	servers            []*dns.Server
-	Block              Block
-	Logger             *logrus.Logger
-	ClientTimeout      time.Duration
-	ServerTimeout      time.Duration
-	DialTimeout        time.Duration
-	Interval           time.Duration
-	Cache              dnscache.Cache
-	CachePruneInterval time.Duration
-	cachePruneTicker   *time.Ticker
-	DisableDNSSEC      bool
-	DisableRecursion   bool
-	NotifyStartedFunc  func() error
+	Forward           []string
+	Listen            []string
+	servers           []*dns.Server
+	Block             Block
+	Logger            *logrus.Logger
+	ClientTimeout     time.Duration
+	ServerTimeout     time.Duration
+	DialTimeout       time.Duration
+	Interval          time.Duration
+	Cache             dnscache.Cache
+	DisableDNSSEC     bool
+	DisableRecursion  bool
+	NotifyStartedFunc func() error
 }
 
 const DefaultPort = 53
@@ -54,29 +52,6 @@ func addDefaultPort(addrs []string) ([]string, error) {
 	}
 
 	return ret, nil
-}
-
-func (d *DNSServer) startCachePruner() {
-	if d.Cache == nil {
-		d.Logger.Info("dns cache is disabled")
-		return
-	}
-
-	d.Logger.Infof("will run cache pruning every %v", d.CachePruneInterval)
-	d.cachePruneTicker = time.NewTicker(d.CachePruneInterval)
-
-	go func() {
-		if d.cachePruneTicker == nil {
-			// happens when NotifyStartedFunc returns an error and shuts down
-			// the server right away
-			return
-		}
-
-		for range d.cachePruneTicker.C {
-			n := d.Cache.Prune()
-			d.Logger.Debugf("pruned %d items from cache", n)
-		}
-	}()
 }
 
 func (d *DNSServer) parseDNSServer(val string, startCh chan<- struct{}) (*dns.Server, error) {
@@ -116,8 +91,6 @@ func (d *DNSServer) startedListener() chan<- struct{} {
 			<-startCh
 		}
 		close(startCh)
-
-		d.startCachePruner()
 
 		if d.NotifyStartedFunc != nil {
 			d.Logger.Debug("running NotifyStartedFunc")
@@ -174,19 +147,7 @@ func (d *DNSServer) ListenAndServe() error {
 	return nil
 }
 
-func (d *DNSServer) stopCachePruner() {
-	if d.cachePruneTicker == nil {
-		return
-	}
-
-	d.cachePruneTicker.Stop()
-	d.cachePruneTicker = nil
-	d.Logger.Debug("stopped cache pruner")
-}
-
 func (d *DNSServer) Shutdown() {
-	d.stopCachePruner()
-
 	for _, server := range d.servers {
 		logFields := logrus.Fields{
 			"net":  server.Net,

@@ -44,23 +44,29 @@ func (cfg *DNSConfig) Init(root *Config) error {
 		return err
 	}
 
-	cfg.Server = &dnsserver.DNSServer{
-		Forward:            cfg.Forward,
-		Listen:             cfg.Listen,
-		Block:              cfg.Block.Block(),
-		ClientTimeout:      cfg.ClientTimeout.Duration(),
-		ServerTimeout:      cfg.ServerTimeout.Duration(),
-		DialTimeout:        cfg.DialTimeout.Duration(),
-		Interval:           cfg.Interval.Duration(),
-		Logger:             root.Logger,
-		CachePruneInterval: cfg.CachePruneInterval.Duration(),
-		NotifyStartedFunc:  cfg.Block.Start,
-		DisableDNSSEC:      cfg.DisableDNSSEC,
-		DisableRecursion:   cfg.DisableRecursion,
+	var cache *dnscache.Memory
+	if !cfg.DisableCache {
+		cache = dnscache.NewMemory(cfg.CacheSize, root.Logger, nil)
 	}
 
-	if !cfg.DisableCache {
-		cfg.Server.Cache = dnscache.NewMemory(cfg.CacheSize, root.Logger, nil)
+	cfg.Server = &dnsserver.DNSServer{
+		Forward:       cfg.Forward,
+		Listen:        cfg.Listen,
+		Block:         cfg.Block.Block(),
+		ClientTimeout: cfg.ClientTimeout.Duration(),
+		ServerTimeout: cfg.ServerTimeout.Duration(),
+		DialTimeout:   cfg.DialTimeout.Duration(),
+		Interval:      cfg.Interval.Duration(),
+		Logger:        root.Logger,
+		NotifyStartedFunc: func() error {
+			if !cfg.DisableCache {
+				cache.Start(cfg.CachePruneInterval.Duration())
+			}
+			return cfg.Block.Start()
+		},
+		DisableDNSSEC:    cfg.DisableDNSSEC,
+		DisableRecursion: cfg.DisableRecursion,
+		Cache:            cache,
 	}
 
 	return nil
@@ -72,6 +78,12 @@ func (cfg DNSConfig) Start() error {
 }
 
 func (cfg DNSConfig) Shutdown() {
+	if !cfg.DisableCache {
+		if cache, ok := cfg.Server.Cache.(*dnscache.Memory); ok && cache != nil {
+			cache.Stop()
+		}
+	}
+
 	cfg.Block.Shutdown()
 	cfg.Server.Shutdown()
 }

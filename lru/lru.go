@@ -2,6 +2,7 @@ package lru
 
 import (
 	"container/list"
+	"errors"
 	"sync"
 )
 
@@ -30,7 +31,7 @@ type LRU struct {
 
 func New(size int, onEvict Elementer) *LRU {
 	if size <= 0 {
-		panic("lru must have a positive size")
+		panic(errors.New("lru must have a positive size"))
 	}
 
 	return &LRU{
