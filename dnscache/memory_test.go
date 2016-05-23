@@ -96,7 +96,7 @@ func init() {
 	logger.Level = logrus.DebugLevel
 }
 
-func newAMsg(host string, ttl uint32, ip net.IP) *dns.Msg {
+func newAMsg(host string) *dns.Msg {
 	return &dns.Msg{
 		Question: []dns.Question{{
 			Qclass: dns.ClassINET,
@@ -107,19 +107,21 @@ func newAMsg(host string, ttl uint32, ip net.IP) *dns.Msg {
 					Name:   host,
 					Rrtype: dns.TypeA,
 					Class:  dns.ClassINET,
-					Ttl:    ttl,
+					Ttl:    60,
 				},
-				A: ip,
+				A: net.ParseIP("127.0.0.1"),
 			},
 		},
 	}
 }
 
-func newAQ(host string) dns.Question {
-	return dns.Question{
-		Qclass: dns.ClassINET,
-		Name:   host,
-		Qtype:  dns.TypeA,
+func newReq(typ uint16, host string) *dns.Msg {
+	return &dns.Msg{
+		Question: []dns.Question{{
+			Qclass: dns.ClassINET,
+			Name:   host,
+			Qtype:  typ,
+		}},
 	}
 }
 
@@ -146,16 +148,13 @@ func TestMemoryCache(t *testing.T) {
 		So(c.Len(), ShouldEqual, 5)
 		So(c.numEntries(), ShouldEqual, 5)
 
-		rr := c.Get(dns.Question{
-			Qclass: dns.ClassINET,
-			Name:   "example.com",
-			Qtype:  dns.TypeA,
-		})
+		resp := c.Get(newReq(dns.TypeA, "example.com"))
 
-		So(rr, ShouldNotBeNil)
-		So(len(rr), ShouldEqual, 2)
-		for i := range rr {
-			r, ok := rr[i].(*dns.A)
+		So(resp, ShouldNotBeNil)
+		So(resp.Answer, ShouldNotBeNil)
+		So(len(resp.Answer), ShouldEqual, 2)
+		for i := range resp.Answer {
+			r, ok := resp.Answer[i].(*dns.A)
 			So(ok, ShouldBeTrue)
 			So(r.Hdr.Name, ShouldEqual, "example.com")
 			So(r.Hdr.Rrtype, ShouldEqual, dns.TypeA)
@@ -169,15 +168,12 @@ func TestMemoryCache(t *testing.T) {
 			}
 		}
 
-		rr = c.Get(dns.Question{
-			Qclass: dns.ClassINET,
-			Name:   "example.com",
-			Qtype:  dns.TypeAAAA,
-		})
-		So(rr, ShouldNotBeNil)
-		So(len(rr), ShouldEqual, 1)
+		resp = c.Get(newReq(dns.TypeAAAA, "example.com"))
+		So(resp, ShouldNotBeNil)
+		So(resp.Answer, ShouldNotBeNil)
+		So(len(resp.Answer), ShouldEqual, 1)
 
-		r, ok := rr[0].(*dns.AAAA)
+		r, ok := resp.Answer[0].(*dns.AAAA)
 		So(ok, ShouldBeTrue)
 		So(r.Hdr.Name, ShouldEqual, "example.com")
 		So(r.Hdr.Rrtype, ShouldEqual, dns.TypeAAAA)
@@ -187,12 +183,8 @@ func TestMemoryCache(t *testing.T) {
 
 		time.Sleep(1 * time.Second)
 
-		rr = c.Get(dns.Question{
-			Qclass: dns.ClassINET,
-			Name:   "example.com",
-			Qtype:  dns.TypeAAAA,
-		})
-		So(rr, ShouldBeNil)
+		resp = c.Get(newReq(dns.TypeAAAA, "example.com"))
+		So(resp, ShouldBeNil)
 		So(c.Len(), ShouldEqual, 4)
 		So(c.numEntries(), ShouldEqual, 5)
 
@@ -200,19 +192,13 @@ func TestMemoryCache(t *testing.T) {
 		So(c.Len(), ShouldEqual, 4)
 		So(c.numEntries(), ShouldEqual, 4)
 
-		rr = c.Get(dns.Question{
-			// missing Qclass
-			Name:  "example.com",
-			Qtype: dns.TypeA,
-		})
-		So(rr, ShouldBeNil)
+		req := newReq(dns.TypeA, "example.com")
+		req.Question[0].Qclass = 0 // missing Qclass
+		resp = c.Get(req)
+		So(resp, ShouldBeNil)
 
-		rr = c.Get(dns.Question{
-			Qclass: dns.ClassINET,
-			Name:   "www.example.com",
-			Qtype:  dns.TypeA,
-		})
-		So(rr, ShouldBeNil)
+		resp = c.Get(newReq(dns.TypeA, "www.example.com"))
+		So(resp, ShouldBeNil)
 
 		So(c.Len(), ShouldEqual, 4)
 		So(c.numEntries(), ShouldEqual, 4)
@@ -245,19 +231,19 @@ func TestMemoryCache(t *testing.T) {
 			l := NewMemory(128, nil, onEvicted)
 
 			for i := 0; i < 256; i++ {
-				l.Set(newAMsg(fmt.Sprintf("%d.example.com", i), 60, net.ParseIP("127.0.0.1")))
+				l.Set(newAMsg(fmt.Sprintf("%d.example.com", i)))
 			}
 
 			So(l.Len(), ShouldEqual, 128)
 			So(evictCounter, ShouldEqual, 128)
 
 			for i := 0; i < 128; i++ {
-				rr := l.Get(newAQ(fmt.Sprintf("%d.example.com", i+128)))
+				rr := l.Get(newReq(dns.TypeA, fmt.Sprintf("%d.example.com", i+128)))
 				So(rr, ShouldNotBeNil)
 			}
 
 			for i := 0; i < 128; i++ {
-				rr := l.Get(newAQ(fmt.Sprintf("%d.example.com", i)))
+				rr := l.Get(newReq(dns.TypeA, fmt.Sprintf("%d.example.com", i)))
 				So(rr, ShouldBeNil)
 			}
 
@@ -274,10 +260,10 @@ func TestMemoryCache(t *testing.T) {
 
 			l := NewMemory(1, nil, onEvicted)
 
-			l.Set(newAMsg("0.example.com", 60, net.ParseIP("127.0.0.1")))
+			l.Set(newAMsg("0.example.com"))
 			So(evictCounter, ShouldEqual, 0)
 
-			l.Set(newAMsg("1.example.com", 60, net.ParseIP("127.0.0.1")))
+			l.Set(newAMsg("1.example.com"))
 			So(evictCounter, ShouldEqual, 1)
 		})
 	})

@@ -4,9 +4,7 @@ import "github.com/miekg/dns"
 
 type RRSet []*RR
 
-func (rs *RRSet) Add(rr dns.RR) *RR {
-	r := NewRR(rr)
-
+func (rs *RRSet) Add(r *RR) *RR {
 	var deleted int
 	var added bool
 	for i := range *rs {

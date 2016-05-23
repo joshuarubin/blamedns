@@ -23,7 +23,7 @@ func (d *DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 		"net":   net,
 	}
 
-	if resp := d.LookupCached(req); resp != nil {
+	if resp := d.Cache.Get(req); resp != nil {
 		return resp, nil
 	}
 
@@ -66,7 +66,7 @@ func (d *DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 			d.Logger.WithError(err).WithFields(logFields).Warn("socket error")
 			return
 		}
-		if resp != nil && resp.Rcode != dns.RcodeSuccess {
+		if resp != nil && resp.Rcode != dns.RcodeSuccess && resp.Rcode != dns.RcodeNameError {
 			d.Logger.WithFields(logFields).Debugf("failed to get a valid answer")
 			if resp.Rcode == dns.RcodeServerFailure {
 				return
@@ -92,7 +92,7 @@ func (d *DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 		select {
 		case resp := <-resCh:
 			// TODO(jrubin) validate dnssec here and only cache if valid?
-			d.StoreCached(resp)
+			d.Cache.Set(resp)
 			return resp, nil
 		case <-ticker.C:
 			continue

@@ -35,6 +35,11 @@ func (m RR) Equal(d *RR) bool {
 	return m.String() == d.String()
 }
 
+func (m *RR) SetTTL(value uint32) {
+	ttl := time.Duration(value) * time.Second
+	m.Expires = time.Now().UTC().Add(ttl)
+}
+
 func (m RR) TTL() TTL {
 	return TTL(m.Expires.Sub(time.Now().UTC()))
 }
@@ -50,11 +55,10 @@ func (m RR) Expired() bool {
 }
 
 func NewRR(r dns.RR) *RR {
-	ttl := time.Duration(r.Header().Ttl) * time.Second
+	ttl := r.Header().Ttl
 	r = dns.Copy(r)
 	r.Header().Ttl = 0 // set to 0 so that Equal works using r.String()
-	return &RR{
-		rr:      r,
-		Expires: time.Now().UTC().Add(ttl),
-	}
+	ret := &RR{rr: r}
+	ret.SetTTL(ttl)
+	return ret
 }

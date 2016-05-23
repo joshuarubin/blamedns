@@ -2,7 +2,9 @@
 
 ## TODO
 
-1. ensure no duplicates of resp.Answer are in resp.Extra
+1. app.Usage
+1. reorganize config opts
+    * see unbound config
 1. api server
 1. import _ "net/http/pprof"
 1. profiling
