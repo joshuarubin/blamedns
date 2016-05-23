@@ -36,6 +36,7 @@ type Memory struct {
 	Logger    *logrus.Logger
 	onEvict   EvictNotifier
 	nxDomain  map[string]*negativeEntry
+	noData    map[key]*negativeEntry
 }
 
 func NewMemory(size int, logger *logrus.Logger, onEvict EvictNotifier) *Memory {
@@ -54,6 +55,7 @@ func NewMemory(size int, logger *logrus.Logger, onEvict EvictNotifier) *Memory {
 		Logger:    logger,
 		onEvict:   onEvict,
 		nxDomain:  map[string]*negativeEntry{},
+		noData:    map[key]*negativeEntry{},
 	}
 }
 
@@ -66,7 +68,7 @@ func (c *Memory) Len() int {
 		n += elem.Value.(*entry).Set.Len()
 	}
 
-	return n + len(c.nxDomain)
+	return n + len(c.nxDomain) + len(c.noData)
 }
 
 func (c *Memory) Prune() int {
@@ -85,6 +87,13 @@ func (c *Memory) Prune() int {
 	for host, e := range c.nxDomain {
 		if e.Expired() {
 			delete(c.nxDomain, host)
+			n++
+		}
+	}
+
+	for key, e := range c.noData {
+		if e.Expired() {
+			delete(c.noData, key)
 			n++
 		}
 	}
@@ -150,6 +159,10 @@ func (c *Memory) Purge() {
 	for host := range c.nxDomain {
 		delete(c.nxDomain, host)
 	}
+
+	for k := range c.noData {
+		delete(c.noData, k)
+	}
 }
 
 func (c *Memory) Set(resp *dns.Msg) int {
@@ -166,7 +179,6 @@ func (c *Memory) Set(resp *dns.Msg) int {
 		return 0
 	}
 
-	// TODO(jrubin) implement negative response caching according to:
 	// https://tools.ietf.org/html/rfc2308#section-5
 
 	if resp.Rcode == dns.RcodeNameError {
@@ -176,6 +188,7 @@ func (c *Memory) Set(resp *dns.Msg) int {
 		return 0
 	} else if len(resp.Answer) == 0 {
 		// NODATA cache for only Qtype/Name conbination
+		c.setNoData(resp)
 	}
 
 	var n int
@@ -237,9 +250,20 @@ func (c *Memory) Get(req *dns.Msg) *dns.Msg {
 		return c.buildReply(req, ans)
 	}
 
-	if e := c.getNxDomain(q.Name); e != nil {
+	if e := c.getNoData(q); e != nil {
+		if r := c.buildNoDataReply(req, e); r != nil {
+			lf := logFields(q, "hit")
+			lf["ttl"] = e.TTL().Seconds()
+			c.Logger.WithFields(lf).Debug("cache lookup (nodata)")
+			return r
+		}
+	}
+
+	if e := c.getNxDomain(q); e != nil {
 		if r := c.buildNXReply(req, e); r != nil {
-			c.Logger.WithFields(logFields(q, "hit")).Debug("cache lookup (nxdomain)")
+			lf := logFields(q, "hit")
+			lf["ttl"] = e.TTL().Seconds()
+			c.Logger.WithFields(lf).Debug("cache lookup (nxdomain)")
 			return r
 		}
 	}

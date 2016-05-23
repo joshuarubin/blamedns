@@ -7,31 +7,9 @@ import (
 	"github.com/miekg/dns"
 )
 
-type negativeEntry struct {
-	SOA     string
-	Expires time.Time
-}
-
-func (e negativeEntry) TTL() TTL {
-	return TTL(e.Expires.Sub(time.Now().UTC()))
-}
-
-func (e negativeEntry) Expired() bool {
-	return e.Expires.Before(time.Now().UTC())
-}
-
-func getSOA(resp *dns.Msg) *dns.SOA {
-	for _, n := range resp.Ns {
-		if soa, ok := n.(*dns.SOA); ok {
-			return soa
-		}
-	}
-	return nil
-}
-
-func (c *Memory) setNxDomain(resp *dns.Msg) {
-	if resp.Rcode != dns.RcodeNameError {
-		// wasn't an NXDOMAIN response
+func (c *Memory) setNoData(resp *dns.Msg) {
+	if resp.Rcode != dns.RcodeSuccess || len(resp.Answer) > 0 {
+		// wasn't an NODATA response
 		return
 	}
 
@@ -48,9 +26,13 @@ func (c *Memory) setNxDomain(resp *dns.Msg) {
 	expires := time.Now().UTC().Add(time.Duration(ttl) * time.Second)
 
 	q := resp.Question[0]
+	k := key{
+		Host: q.Name,
+		Type: q.Qtype,
+	}
 
 	c.mu.RLock()
-	if e, ok := c.nxDomain[q.Name]; ok {
+	if e, ok := c.noData[k]; ok {
 		// it already exists, only update to lower the ttl
 		if e.Expires.Before(expires) {
 			c.mu.RUnlock()
@@ -66,33 +48,38 @@ func (c *Memory) setNxDomain(resp *dns.Msg) {
 		SOA:     soa.Header().Name,
 		Expires: expires,
 	}
-	c.nxDomain[q.Name] = e
+	c.noData[k] = e
 
 	c.Logger.WithFields(logrus.Fields{
 		"name": q.Name,
 		"soa":  e.SOA,
 		"ttl":  e.TTL().Seconds(),
-	}).Debug("stored nxdomain response in cache")
+	}).Debug("stored nodata response in cache")
 }
 
-func (c *Memory) getNxDomain(q dns.Question) *negativeEntry {
+func (c *Memory) getNoData(q dns.Question) *negativeEntry {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if e, ok := c.nxDomain[q.Name]; ok {
+	k := key{
+		Host: q.Name,
+		Type: q.Qtype,
+	}
+
+	if e, ok := c.noData[k]; ok {
 		if !e.Expired() {
 			return e
 		}
 
-		delete(c.nxDomain, q.Name)
+		delete(c.noData, k)
 	}
 
 	return nil
 }
 
-func (c *Memory) buildNXReply(req *dns.Msg, e *negativeEntry) *dns.Msg {
+func (c *Memory) buildNoDataReply(req *dns.Msg, e *negativeEntry) *dns.Msg {
 	resp := &dns.Msg{}
-	resp.SetRcode(req, dns.RcodeNameError)
+	resp.SetReply(req)
 
 	q := dns.Question{
 		Name:   e.SOA,
