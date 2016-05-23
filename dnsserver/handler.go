@@ -55,7 +55,7 @@ func (d *DNSServer) Handler(net string) dns.Handler {
 			resp = d.Block.NewReply(req)
 			d.Logger.WithFields(logFields).Debug("blocked")
 		} else if resp, err = d.Lookup(net, req); err != nil {
-			d.Logger.WithError(err).WithFields(logFields).Error("lookup error")
+			d.Logger.WithError(err).WithFields(logFields).Warn("lookup error")
 		}
 
 		if resp == nil {
