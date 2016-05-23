@@ -8,15 +8,20 @@ import (
 	t "jrubin.io/blamedns/dnscache/dnscachetypes"
 )
 
+type key struct {
+	Host string
+	Type uint16
+}
+
 type Memory struct {
 	mu     sync.RWMutex
-	data   map[string]t.RRSets
+	data   map[key]*t.RRSet
 	Logger *logrus.Logger
 }
 
 func NewMemory(logger *logrus.Logger) *Memory {
 	return &Memory{
-		data:   map[string]t.RRSets{},
+		data:   map[key]*t.RRSet{},
 		Logger: logger,
 	}
 }
@@ -46,11 +51,15 @@ func (c *Memory) add(rr dns.RR) *t.RR {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	name := rr.Header().Name
-	rrs, ok := c.data[name]
+	k := key{
+		Host: rr.Header().Name,
+		Type: rr.Header().Rrtype,
+	}
+
+	rrs, ok := c.data[k]
 	if !ok || rrs == nil {
-		rrs = t.RRSets{}
-		c.data[name] = rrs
+		rrs = &t.RRSet{}
+		c.data[k] = rrs
 	}
 	return rrs.Add(rr)
 }
@@ -59,7 +68,7 @@ func (c *Memory) FlushAll() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.data = map[string]t.RRSets{}
+	c.data = map[key]*t.RRSet{}
 }
 
 func (c *Memory) Set(res *dns.Msg) int {
@@ -103,10 +112,13 @@ func (c *Memory) Get(q dns.Question) []dns.RR {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	rrs, ok := c.data[q.Name]
+	rrs, ok := c.data[key{
+		Host: q.Name,
+		Type: q.Qtype,
+	}]
 	if !ok || rrs == nil {
 		return nil
 	}
 
-	return rrs.Get(q)
+	return rrs.RR()
 }
