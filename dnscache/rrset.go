@@ -60,12 +60,19 @@ func (rs *RRSet) delete(i int) {
 }
 
 func (rs RRSet) RR() []dns.RR {
-	ret := make([]dns.RR, 0, rs.Len())
+	// we don't want the cache to have to take a write lock for this operation
+	// so we don't prune, but we still exclude expired results
+	ret := make([]dns.RR, 0, len(rs))
 	for _, rr := range rs {
 		if !rr.Expired() {
 			ret = append(ret, rr.RR())
 		}
 	}
+
+	if len(ret) == 0 {
+		return nil
+	}
+
 	return ret
 }
 
@@ -90,5 +97,11 @@ func (rs *RRSet) Prune() int {
 }
 
 func (rs RRSet) Len() int {
-	return len(rs)
+	var ret int
+	for _, rr := range rs {
+		if !rr.Expired() {
+			ret++
+		}
+	}
+	return ret
 }

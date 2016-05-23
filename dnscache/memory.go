@@ -18,16 +18,10 @@ type Memory struct {
 	Logger *logrus.Logger
 }
 
-func NewMemory(logger *logrus.Logger) *Memory {
-	return &Memory{
-		data:   map[key]*RRSet{},
-		Logger: logger,
-	}
-}
-
-var _ Cache = &Memory{}
-
 func (c *Memory) Len() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	var n int
 	for _, sets := range c.data {
 		n += sets.Len()
@@ -55,10 +49,17 @@ func (c *Memory) add(rr dns.RR) *RR {
 		Type: rr.Header().Rrtype,
 	}
 
-	rrs, ok := c.data[k]
-	if !ok || rrs == nil {
+	var rrs *RRSet
+	if c.data == nil {
 		rrs = &RRSet{}
-		c.data[k] = rrs
+		c.data = map[key]*RRSet{k: rrs}
+	} else {
+		var ok bool
+		rrs, ok = c.data[k]
+		if !ok || rrs == nil {
+			rrs = &RRSet{}
+			c.data[k] = rrs
+		}
 	}
 	return rrs.Add(rr)
 }
@@ -93,7 +94,7 @@ func (c *Memory) Set(res *dns.Msg) int {
 			if c.Logger != nil {
 				c.Logger.WithFields(logrus.Fields{
 					"type": dns.TypeToString[e.Header().Rrtype],
-					"name": unfqdn(e.Header().Name),
+					"name": e.Header().Name,
 					"ttl":  e.TTL().Seconds(),
 				}).Debug("stored in cache")
 			}

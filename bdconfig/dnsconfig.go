@@ -56,7 +56,7 @@ func (cfg *DNSConfig) Init(root *Config) error {
 	}
 
 	if !cfg.DisableCache {
-		cfg.Server.Cache = dnscache.NewMemory(root.Logger)
+		cfg.Server.Cache = &dnscache.Memory{Logger: root.Logger}
 	}
 
 	return nil

@@ -9,10 +9,3 @@ type Cache interface {
 	Len() int
 	FlushAll()
 }
-
-func unfqdn(s string) string {
-	if dns.IsFqdn(s) {
-		return s[:len(s)-1]
-	}
-	return s
-}
