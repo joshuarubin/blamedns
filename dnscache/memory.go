@@ -35,6 +35,7 @@ type Memory struct {
 	data      map[key]*list.Element
 	Logger    *logrus.Logger
 	onEvict   EvictNotifier
+	nxDomain  map[string]*negativeEntry
 }
 
 func NewMemory(size int, logger *logrus.Logger, onEvict EvictNotifier) *Memory {
@@ -52,6 +53,7 @@ func NewMemory(size int, logger *logrus.Logger, onEvict EvictNotifier) *Memory {
 		data:      map[key]*list.Element{},
 		Logger:    logger,
 		onEvict:   onEvict,
+		nxDomain:  map[string]*negativeEntry{},
 	}
 }
 
@@ -63,7 +65,8 @@ func (c *Memory) Len() int {
 	for _, elem := range c.data {
 		n += elem.Value.(*entry).Set.Len()
 	}
-	return n
+
+	return n + len(c.nxDomain)
 }
 
 func (c *Memory) Prune() int {
@@ -78,10 +81,18 @@ func (c *Memory) Prune() int {
 			c.removeElement(elem)
 		}
 	}
+
+	for host, e := range c.nxDomain {
+		if e.Expired() {
+			delete(c.nxDomain, host)
+			n++
+		}
+	}
+
 	return n
 }
 
-func (c *Memory) add(rr *RR) *RR {
+func (c *Memory) add(rr *RR) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -105,7 +116,7 @@ func (c *Memory) add(rr *RR) *RR {
 		c.removeOldest()
 	}
 
-	return set.Add(rr)
+	set.Add(rr)
 }
 
 func (c *Memory) removeOldest() {
@@ -135,6 +146,10 @@ func (c *Memory) Purge() {
 		delete(c.data, k)
 	}
 	c.evictList.Init()
+
+	for host := range c.nxDomain {
+		delete(c.nxDomain, host)
+	}
 }
 
 func (c *Memory) Set(resp *dns.Msg) int {
@@ -155,11 +170,12 @@ func (c *Memory) Set(resp *dns.Msg) int {
 	// https://tools.ietf.org/html/rfc2308#section-5
 
 	if resp.Rcode == dns.RcodeNameError {
-		// NXDOMAIN
+		// NXDOMAIN cache for all Name regardless of Qtype
+		c.setNxDomain(resp)
 	} else if resp.Rcode != dns.RcodeSuccess {
 		return 0
 	} else if len(resp.Answer) == 0 {
-		// NODATA
+		// NODATA cache for only Qtype/Name conbination
 	}
 
 	var n int
@@ -169,7 +185,8 @@ func (c *Memory) Set(resp *dns.Msg) int {
 				continue
 			}
 
-			e := c.add(NewRR(rr))
+			e := NewRR(rr)
+			c.add(e)
 			n++
 
 			c.Logger.WithFields(logrus.Fields{
@@ -220,24 +237,49 @@ func (c *Memory) Get(req *dns.Msg) *dns.Msg {
 		return c.buildReply(req, ans)
 	}
 
+	if e := c.getNxDomain(q.Name); e != nil {
+		if r := c.buildNXReply(req, e); r != nil {
+			c.Logger.WithFields(logFields(q, "hit")).Debug("cache lookup (nxdomain)")
+			return r
+		}
+	}
+
 	c.Logger.WithFields(logFields(q, "miss")).Debug("cache lookup")
 	return nil
 }
 
-func (c *Memory) addDNSSEC(req, resp *dns.Msg) {
+func (c *Memory) addDNSSEC(resp *dns.Msg) {
 	// add rrsig records (regardless of DNSSEC OK flag)
-	q := req.Copy().Question[0]
-	q.Qtype = dns.TypeRRSIG
+	for i, set := range [][]dns.RR{resp.Answer, resp.Ns, resp.Extra} {
+		for _, rr := range set {
+			if rr.Header().Rrtype == dns.TypeRRSIG {
+				continue
+			}
 
-	var lf logrus.Fields
-	if ans := c.get(q); ans != nil {
-		lf = logFields(q, "hit")
-		resp.Answer = append(resp.Answer, ans...)
-	} else {
-		lf = logFields(q, "miss")
+			q := dns.Question{
+				Name:   rr.Header().Name,
+				Qtype:  dns.TypeRRSIG,
+				Qclass: dns.ClassINET,
+			}
+
+			var lf logrus.Fields
+			if ans := c.get(q); ans != nil {
+				lf = logFields(q, "hit")
+
+				switch i {
+				case 0: // Answer
+					resp.Answer = append(resp.Answer, ans...)
+				case 1: // Ns
+					resp.Ns = append(resp.Ns, ans...)
+				case 2: // Extra
+					resp.Extra = append(resp.Extra, ans...)
+				}
+			} else {
+				lf = logFields(q, "miss")
+			}
+			c.Logger.WithFields(lf).Debug("cache lookup (rrsig)")
+		}
 	}
-
-	c.Logger.WithFields(lf).Debug("cache lookup (rrsig)")
 }
 
 func (c *Memory) buildReply(req *dns.Msg, ans []dns.RR) *dns.Msg {
@@ -245,7 +287,7 @@ func (c *Memory) buildReply(req *dns.Msg, ans []dns.RR) *dns.Msg {
 	resp.SetReply(req)
 	resp.Answer = ans
 
-	c.addDNSSEC(req, resp)
+	c.addDNSSEC(resp)
 	c.processAdditionalSection(resp)
 
 	// TODO(jrubin) ensure no duplicates of resp.Answer are in resp.Extra

@@ -4,7 +4,7 @@ import "github.com/miekg/dns"
 
 type RRSet []*RR
 
-func (rs *RRSet) Add(r *RR) *RR {
+func (rs *RRSet) Add(r *RR) {
 	var deleted int
 	var added bool
 	for i := range *rs {
@@ -35,8 +35,6 @@ func (rs *RRSet) Add(r *RR) *RR {
 	if !added {
 		rs.append(r)
 	}
-
-	return r
 }
 
 func (rs *RRSet) get(i int) *RR {
@@ -57,14 +55,16 @@ func (rs *RRSet) delete(i int) {
 	*rs = (*rs)[:len((*rs))-1]
 }
 
-func (rs RRSet) RR() []dns.RR {
-	// we don't want the cache to have to take a write lock for this operation
-	// so we don't prune, but we still exclude expired results
-	ret := make([]dns.RR, 0, len(rs))
-	for _, rr := range rs {
-		if !rr.Expired() {
-			ret = append(ret, rr.RR())
+func (rs *RRSet) RR() []dns.RR {
+	var deleted int
+	ret := make([]dns.RR, 0, len(*rs))
+	for i, rr := range *rs {
+		j := i - deleted
+		if _, ok := rs.prune(j); ok {
+			deleted++
+			continue
 		}
+		ret = append(ret, rr.RR())
 	}
 
 	if len(ret) == 0 {

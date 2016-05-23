@@ -98,12 +98,27 @@ func (d *DNSServer) stripRRSIG(req, resp *dns.Msg) {
 		return
 	}
 
-	var ret []dns.RR
-	for _, ans := range resp.Answer {
-		if _, ok := ans.(*dns.RRSIG); ok {
-			continue
+	for i, set := range [][]dns.RR{resp.Answer, resp.Ns, resp.Extra} {
+		var deleted int
+		for j := range set {
+			k := j - deleted
+			rr := set[k]
+
+			if rr.Header().Rrtype == dns.TypeRRSIG {
+				copy(set[k:], set[k+1:])
+				set[len(set)-1] = nil
+				set = set[:len(set)-1]
+				deleted++
+			}
 		}
-		ret = append(ret, ans)
+
+		switch i {
+		case 0: // Answer
+			resp.Answer = set
+		case 1: // Ns
+			resp.Ns = set
+		case 2: // Extra
+			resp.Extra = set
+		}
 	}
-	resp.Answer = ret
 }

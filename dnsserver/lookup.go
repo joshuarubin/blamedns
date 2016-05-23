@@ -23,8 +23,10 @@ func (d *DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 		"net":   net,
 	}
 
-	if resp := d.Cache.Get(req); resp != nil {
-		return resp, nil
+	if d.Cache != nil {
+		if resp := d.Cache.Get(req); resp != nil {
+			return resp, nil
+		}
 	}
 
 	if !req.RecursionDesired || d.DisableRecursion {
@@ -92,7 +94,9 @@ func (d *DNSServer) Lookup(net string, req *dns.Msg) (*dns.Msg, error) {
 		select {
 		case resp := <-resCh:
 			// TODO(jrubin) validate dnssec here and only cache if valid?
-			d.Cache.Set(resp)
+			if d.Cache != nil {
+				d.Cache.Set(resp)
+			}
 			return resp, nil
 		case <-ticker.C:
 			continue

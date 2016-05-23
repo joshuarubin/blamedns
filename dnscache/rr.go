@@ -11,7 +11,7 @@ type RR struct {
 	Expires time.Time
 }
 
-func (m RR) Header() *dns.RR_Header {
+func (m *RR) Header() *dns.RR_Header {
 	return m.rr.Header()
 }
 
