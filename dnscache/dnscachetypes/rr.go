@@ -7,8 +7,16 @@ import (
 )
 
 type RR struct {
-	dns.RR
+	rr      dns.RR
 	Expires time.Time
+}
+
+func (m RR) Header() *dns.RR_Header {
+	return m.rr.Header()
+}
+
+func (m RR) String() string {
+	return m.rr.String()
 }
 
 func (m RR) Equal(d *RR) bool {
@@ -31,8 +39,10 @@ func (m RR) TTL() TTL {
 	return TTL(m.Expires.Sub(time.Now().UTC()))
 }
 
-func (m *RR) UpdateTTL() {
-	m.Header().Ttl = m.TTL().Seconds()
+func (m RR) RR() dns.RR {
+	r := dns.Copy(m.rr)
+	r.Header().Ttl = m.TTL().Seconds()
+	return r
 }
 
 func (m RR) Expired() bool {
@@ -44,7 +54,7 @@ func NewRR(r dns.RR) *RR {
 	r = dns.Copy(r)
 	r.Header().Ttl = 0 // set to 0 so that Equal works using r.String()
 	return &RR{
-		RR:      r,
+		rr:      r,
 		Expires: time.Now().UTC().Add(ttl),
 	}
 }

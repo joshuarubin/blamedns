@@ -70,5 +70,17 @@ func TestRRSet(t *testing.T) {
 		time.Sleep(1 * time.Second)
 		So(rrs.Prune(), ShouldEqual, 1)
 		So(rrs.Len(), ShouldEqual, 1)
+
+		rr.Hdr.Name = "example.com"
+		rr.Hdr.Ttl = 60
+		rr.Hdr.Rrtype = dns.TypeCNAME
+		ret = rrs.Add(rr)
+		So(ret, ShouldNotBeNil)
+		So(rrs.Len(), ShouldEqual, 2)
+		So(ret.Expires.After(time.Now().UTC().Add(59*time.Second)), ShouldBeTrue)
+		So(ret.Expires.After(time.Now().UTC().Add(61*time.Second)), ShouldBeFalse)
+		r = rrs.RR()
+		So(r, ShouldNotBeNil)
+		So(len(r), ShouldEqual, 2)
 	})
 }

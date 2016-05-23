@@ -63,9 +63,7 @@ func (rs RRSet) RR() []dns.RR {
 	ret := make([]dns.RR, 0, rs.Len())
 	for _, rr := range rs {
 		if !rr.Expired() {
-			r := dns.Copy(rr.RR)
-			r.Header().Ttl = rr.TTL().Seconds()
-			ret = append(ret, r)
+			ret = append(ret, rr.RR())
 		}
 	}
 	return ret
