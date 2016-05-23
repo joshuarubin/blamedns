@@ -1,4 +1,4 @@
-package dnscachetypes
+package dnscache
 
 import (
 	"net"

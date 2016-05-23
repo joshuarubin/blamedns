@@ -5,7 +5,6 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
-	t "jrubin.io/blamedns/dnscache/dnscachetypes"
 )
 
 type key struct {
@@ -15,13 +14,13 @@ type key struct {
 
 type Memory struct {
 	mu     sync.RWMutex
-	data   map[key]*t.RRSet
+	data   map[key]*RRSet
 	Logger *logrus.Logger
 }
 
 func NewMemory(logger *logrus.Logger) *Memory {
 	return &Memory{
-		data:   map[key]*t.RRSet{},
+		data:   map[key]*RRSet{},
 		Logger: logger,
 	}
 }
@@ -47,7 +46,7 @@ func (c *Memory) Prune() int {
 	return n
 }
 
-func (c *Memory) add(rr dns.RR) *t.RR {
+func (c *Memory) add(rr dns.RR) *RR {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -58,7 +57,7 @@ func (c *Memory) add(rr dns.RR) *t.RR {
 
 	rrs, ok := c.data[k]
 	if !ok || rrs == nil {
-		rrs = &t.RRSet{}
+		rrs = &RRSet{}
 		c.data[k] = rrs
 	}
 	return rrs.Add(rr)
@@ -68,7 +67,7 @@ func (c *Memory) FlushAll() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.data = map[key]*t.RRSet{}
+	c.data = map[key]*RRSet{}
 }
 
 func (c *Memory) Set(res *dns.Msg) int {
