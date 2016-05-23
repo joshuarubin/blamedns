@@ -6,6 +6,8 @@ import (
 	"jrubin.io/blamedns/dnsserver"
 )
 
+const defaultCacheSize = 131072 // 2^17
+
 type DNSConfig struct {
 	Forward            []string             `toml:"forward" cli:",dns server(s) to forward requests to"`
 	Listen             []string             `toml:"listen" cli:",url(s) to listen for dns requests on"`
@@ -19,6 +21,7 @@ type DNSConfig struct {
 	DisableDNSSEC      bool                 `toml:"disable_dnssec" cli:",disable dnssec validation"`
 	DisableRecursion   bool                 `toml:"disable_recursion" cli:",refuse recursive queries (you probably don't want to set this)"`
 	DisableCache       bool                 `toml:"disable_cache" cli:",disable dns lookup cache"`
+	CacheSize          int                  `toml:"cache_size" cli:",maximum number of dns records to cache"`
 }
 
 func defaultDNSConfig() DNSConfig {
@@ -31,7 +34,8 @@ func defaultDNSConfig() DNSConfig {
 			"udp://[::]:53",
 			"tcp://[::]:53",
 		},
-		Block: defaultBlockConfig(),
+		Block:     defaultBlockConfig(),
+		CacheSize: defaultCacheSize,
 	}
 }
 
@@ -56,7 +60,7 @@ func (cfg *DNSConfig) Init(root *Config) error {
 	}
 
 	if !cfg.DisableCache {
-		cfg.Server.Cache = &dnscache.Memory{Logger: root.Logger}
+		cfg.Server.Cache = dnscache.NewMemory(cfg.CacheSize, root.Logger, nil)
 	}
 
 	return nil

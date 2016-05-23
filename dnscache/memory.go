@@ -1,6 +1,7 @@
 package dnscache
 
 import (
+	"container/list"
 	"sync"
 
 	"github.com/Sirupsen/logrus"
@@ -12,10 +13,46 @@ type key struct {
 	Type uint16
 }
 
+type entry struct {
+	Key key
+	Set *RRSet
+}
+
+type EvictNotifier interface {
+	NotifyEvicted(typ uint16, host string, rr []dns.RR)
+}
+
+type EvictNotifierFunc func(typ uint16, host string, rr []dns.RR)
+
+func (f EvictNotifierFunc) NotifyEvicted(typ uint16, host string, rr []dns.RR) {
+	f(typ, host, rr)
+}
+
 type Memory struct {
-	mu     sync.RWMutex
-	data   map[key]*RRSet
-	Logger *logrus.Logger
+	mu        sync.RWMutex
+	size      int
+	evictList *list.List
+	data      map[key]*list.Element
+	Logger    *logrus.Logger
+	onEvict   EvictNotifier
+}
+
+func NewMemory(size int, logger *logrus.Logger, onEvict EvictNotifier) *Memory {
+	if size <= 0 {
+		panic("dns memory cache must have a positive size")
+	}
+
+	if logger == nil {
+		logger = logrus.New()
+	}
+
+	return &Memory{
+		size:      size,
+		evictList: list.New(),
+		data:      map[key]*list.Element{},
+		Logger:    logger,
+		onEvict:   onEvict,
+	}
 }
 
 func (c *Memory) Len() int {
@@ -23,8 +60,8 @@ func (c *Memory) Len() int {
 	defer c.mu.RUnlock()
 
 	var n int
-	for _, sets := range c.data {
-		n += sets.Len()
+	for _, elem := range c.data {
+		n += elem.Value.(*entry).Set.Len()
 	}
 	return n
 }
@@ -34,8 +71,12 @@ func (c *Memory) Prune() int {
 	defer c.mu.Unlock()
 
 	var n int
-	for _, sets := range c.data {
-		n += sets.Prune()
+	for _, elem := range c.data {
+		set := elem.Value.(*entry).Set
+		n += set.Prune()
+		if set.Len() == 0 {
+			c.removeElement(elem)
+		}
 	}
 	return n
 }
@@ -49,26 +90,51 @@ func (c *Memory) add(rr dns.RR) *RR {
 		Type: rr.Header().Rrtype,
 	}
 
-	var rrs *RRSet
-	if c.data == nil {
-		rrs = &RRSet{}
-		c.data = map[key]*RRSet{k: rrs}
+	elem, ok := c.data[k]
+	var set *RRSet
+	if ok {
+		c.evictList.MoveToFront(elem)
+		set = elem.Value.(*entry).Set
 	} else {
-		var ok bool
-		rrs, ok = c.data[k]
-		if !ok || rrs == nil {
-			rrs = &RRSet{}
-			c.data[k] = rrs
-		}
+		set = &RRSet{}
+		elem = c.evictList.PushFront(&entry{Key: k, Set: set})
+		c.data[k] = elem
 	}
-	return rrs.Add(rr)
+
+	if c.evictList.Len() > c.size {
+		c.removeOldest()
+	}
+
+	return set.Add(rr)
 }
 
-func (c *Memory) FlushAll() {
+func (c *Memory) removeOldest() {
+	if elem := c.evictList.Back(); elem != nil {
+		c.removeElement(elem)
+	}
+}
+
+func (c *Memory) removeElement(elem *list.Element) {
+	c.evictList.Remove(elem)
+
+	ent := elem.Value.(*entry)
+	delete(c.data, ent.Key)
+	if c.onEvict != nil {
+		c.onEvict.NotifyEvicted(ent.Key.Type, ent.Key.Host, ent.Set.RR())
+	}
+}
+
+func (c *Memory) Purge() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.data = map[key]*RRSet{}
+	for k, elem := range c.data {
+		if c.onEvict != nil {
+			c.onEvict.NotifyEvicted(k.Type, k.Host, elem.Value.(*entry).Set.RR())
+		}
+		delete(c.data, k)
+	}
+	c.evictList.Init()
 }
 
 func (c *Memory) Set(res *dns.Msg) int {
@@ -109,16 +175,18 @@ func (c *Memory) Get(q dns.Question) []dns.RR {
 		return nil
 	}
 
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	rrs, ok := c.data[key{
+	k := key{
 		Host: q.Name,
 		Type: q.Qtype,
-	}]
-	if !ok || rrs == nil {
-		return nil
 	}
 
-	return rrs.RR()
+	if elem, ok := c.data[k]; ok {
+		c.evictList.MoveToFront(elem)
+		return elem.Value.(*entry).Set.RR()
+	}
+
+	return nil
 }

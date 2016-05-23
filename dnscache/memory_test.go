@@ -1,6 +1,7 @@
 package dnscache
 
 import (
+	"fmt"
 	"net"
 	"testing"
 	"time"
@@ -15,8 +16,8 @@ func (c *Memory) numEntries() int {
 	defer c.mu.RUnlock()
 
 	var n int
-	for _, sets := range c.data {
-		n += len(*sets)
+	for _, elem := range c.data {
+		n += len(*elem.Value.(*entry).Set)
 	}
 	return n
 }
@@ -95,10 +96,43 @@ func init() {
 	logger.Level = logrus.DebugLevel
 }
 
+func newAMsg(host string, ttl uint32, ip net.IP) *dns.Msg {
+	return &dns.Msg{
+		Question: []dns.Question{{
+			Qclass: dns.ClassINET,
+		}},
+		Answer: []dns.RR{
+			&dns.A{
+				Hdr: dns.RR_Header{
+					Name:   host,
+					Rrtype: dns.TypeA,
+					Class:  dns.ClassINET,
+					Ttl:    ttl,
+				},
+				A: ip,
+			},
+		},
+	}
+}
+
+func newAQ(host string) dns.Question {
+	return dns.Question{
+		Qclass: dns.ClassINET,
+		Name:   host,
+		Qtype:  dns.TypeA,
+	}
+}
+
 func TestMemoryCache(t *testing.T) {
 	Convey("dns memory cache should work", t, func() {
-		c := &Memory{Logger: logger}
+		So(func() { NewMemory(0, nil, nil) }, ShouldPanic)
+
+		c := NewMemory(1, nil, nil)
+		So(c.Logger, ShouldNotEqual, logger)
+
+		c = NewMemory(64, logger, nil)
 		So(c.Len(), ShouldEqual, 0)
+		So(c.Logger, ShouldEqual, logger)
 
 		So(c.Set(&dns.Msg{}), ShouldEqual, 0)
 		So(c.Len(), ShouldEqual, 0)
@@ -182,8 +216,69 @@ func TestMemoryCache(t *testing.T) {
 
 		So(c.Len(), ShouldEqual, 4)
 		So(c.numEntries(), ShouldEqual, 4)
-		c.FlushAll()
+		c.Purge()
 		So(c.Len(), ShouldEqual, 0)
 		So(c.numEntries(), ShouldEqual, 0)
+	})
+
+	Convey("test lru", t, func() {
+		Convey("lru should work", func() {
+			evictCounter := 0
+			onEvicted := EvictNotifierFunc(func(typ uint16, host string, rr []dns.RR) {
+				if evictCounter < 128 {
+					So(typ, ShouldEqual, dns.TypeA)
+					So(host, ShouldEqual, fmt.Sprintf("%d.example.com", evictCounter))
+					So(len(rr), ShouldEqual, 1)
+					So(rr[0], ShouldResemble, &dns.A{
+						Hdr: dns.RR_Header{
+							Name:   fmt.Sprintf("%d.example.com", evictCounter),
+							Rrtype: dns.TypeA,
+							Class:  dns.ClassINET,
+							Ttl:    59,
+						},
+						A: net.ParseIP("127.0.0.1"),
+					})
+				}
+				evictCounter++
+			})
+
+			l := NewMemory(128, nil, onEvicted)
+
+			for i := 0; i < 256; i++ {
+				l.Set(newAMsg(fmt.Sprintf("%d.example.com", i), 60, net.ParseIP("127.0.0.1")))
+			}
+
+			So(l.Len(), ShouldEqual, 128)
+			So(evictCounter, ShouldEqual, 128)
+
+			for i := 0; i < 128; i++ {
+				rr := l.Get(newAQ(fmt.Sprintf("%d.example.com", i+128)))
+				So(rr, ShouldNotBeNil)
+			}
+
+			for i := 0; i < 128; i++ {
+				rr := l.Get(newAQ(fmt.Sprintf("%d.example.com", i)))
+				So(rr, ShouldBeNil)
+			}
+
+			l.Purge()
+			So(l.Len(), ShouldEqual, 0)
+		})
+
+		Convey("lru add", func() {
+			// Test that Add returns true/false if an eviction occured
+			evictCounter := 0
+			onEvicted := EvictNotifierFunc(func(typ uint16, host string, rr []dns.RR) {
+				evictCounter++
+			})
+
+			l := NewMemory(1, nil, onEvicted)
+
+			l.Set(newAMsg("0.example.com", 60, net.ParseIP("127.0.0.1")))
+			So(evictCounter, ShouldEqual, 0)
+
+			l.Set(newAMsg("1.example.com", 60, net.ParseIP("127.0.0.1")))
+			So(evictCounter, ShouldEqual, 1)
+		})
 	})
 }
