@@ -7,16 +7,20 @@ type RRSet []*RR
 func (rs *RRSet) Add(rr dns.RR) *RR {
 	r := NewRR(rr)
 
+	var deleted int
 	var added bool
-	ret := make(RRSet, 0, len(*rs)+1)
-	for _, t := range *rs {
+	for i := range *rs {
+		j := i - deleted
+
 		// might as well prune since we are here
-		if t.Expired() {
+		t, pruned := rs.prune(j)
+
+		if pruned {
+			deleted++
 			continue
 		}
 
 		if !t.Equal(r) {
-			ret = append(ret, t)
 			continue
 		}
 
@@ -25,25 +29,38 @@ func (rs *RRSet) Add(rr dns.RR) *RR {
 		// found equal rr already in cache
 		// keep only the one with the lower ttl
 
-		n := r
-		if t.Expires.Before(r.Expires) {
-			n = t
+		if r.Expires.Before(t.Expires) {
+			rs.set(j, r)
 		}
-
-		ret = append(ret, n)
 	}
 
 	if !added {
-		ret = append(ret, r)
+		rs.append(r)
 	}
-
-	*rs = ret
 
 	return r
 }
 
+func (rs *RRSet) get(i int) *RR {
+	return (*rs)[i]
+}
+
+func (rs *RRSet) set(i int, r *RR) {
+	(*rs)[i] = r
+}
+
+func (rs *RRSet) append(rr *RR) {
+	*rs = append(*rs, rr)
+}
+
+func (rs *RRSet) delete(i int) {
+	copy((*rs)[i:], (*rs)[i+1:])
+	(*rs)[len((*rs))-1] = nil // or the zero value of T
+	*rs = (*rs)[:len((*rs))-1]
+}
+
 func (rs RRSet) RR() []dns.RR {
-	var ret []dns.RR
+	ret := make([]dns.RR, 0, rs.Len())
 	for _, rr := range rs {
 		if !rr.Expired() {
 			r := dns.Copy(rr.RR)
@@ -54,19 +71,24 @@ func (rs RRSet) RR() []dns.RR {
 	return ret
 }
 
-func (rs *RRSet) Prune() int {
-	var n int
-	ret := make(RRSet, 0, len(*rs))
-	for _, rr := range *rs {
-		if rr.Expired() {
-			n++
-			continue
-		}
-
-		ret = append(ret, rr)
+func (rs *RRSet) prune(i int) (*RR, bool) {
+	rr := rs.get(i)
+	if rr.Expired() {
+		rs.delete(i)
+		return rr, true
 	}
-	*rs = ret
-	return n
+	return rr, false
+}
+
+func (rs *RRSet) Prune() int {
+	var deleted int
+	for i := range *rs {
+		j := i - deleted
+		if _, ok := rs.prune(j); ok {
+			deleted++
+		}
+	}
+	return deleted
 }
 
 func (rs RRSet) Len() int {
