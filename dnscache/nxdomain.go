@@ -49,9 +49,9 @@ func (c *Memory) setNxDomain(resp *dns.Msg) {
 
 	q := resp.Question[0]
 
-	if e, ok := c.nxDomain[q.Name]; ok {
+	if value, ok := c.nxDomain.Get(q.Name); ok {
 		// it already exists, only update to lower the ttl
-		if e.Expires.Before(expires) {
+		if value.(*negativeEntry).Expires.Before(expires) {
 			return
 		}
 	}
@@ -60,7 +60,8 @@ func (c *Memory) setNxDomain(resp *dns.Msg) {
 		SOA:     soa.Header().Name,
 		Expires: expires,
 	}
-	c.nxDomain[q.Name] = e
+
+	c.nxDomain.Add(q.Name, e)
 
 	c.Logger.WithFields(logrus.Fields{
 		"name": q.Name,
@@ -70,12 +71,12 @@ func (c *Memory) setNxDomain(resp *dns.Msg) {
 }
 
 func (c *Memory) getNxDomain(q dns.Question) *negativeEntry {
-	if e, ok := c.nxDomain[q.Name]; ok {
-		if !e.Expired() {
+	if value, ok := c.nxDomain.Get(q.Name); ok {
+		if e := value.(*negativeEntry); !e.Expired() {
 			return e
 		}
 
-		delete(c.nxDomain, q.Name)
+		c.nxDomain.Remove(q.Name)
 	}
 
 	return nil

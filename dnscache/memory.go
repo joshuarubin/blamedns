@@ -11,10 +11,10 @@ type key struct {
 }
 
 type Memory struct {
-	data     *LRU
 	Logger   *logrus.Logger
-	nxDomain map[string]*negativeEntry
-	noData   map[key]*negativeEntry
+	data     *LRU
+	nxDomain *LRU
+	noData   *LRU
 }
 
 func NewMemory(size int, logger *logrus.Logger, onEvict Elementer) *Memory {
@@ -26,21 +26,25 @@ func NewMemory(size int, logger *logrus.Logger, onEvict Elementer) *Memory {
 		logger = logrus.New()
 	}
 
+	// TODO(jrubin) should each lru be sized differently?
 	return &Memory{
-		data:     NewLRU(size, onEvict),
 		Logger:   logger,
-		nxDomain: map[string]*negativeEntry{},
-		noData:   map[key]*negativeEntry{},
+		data:     NewLRU(size, onEvict),
+		nxDomain: NewLRU(size, onEvict),
+		noData:   NewLRU(size, onEvict),
 	}
 }
 
 func (c *Memory) Len() int {
 	var n int
-	c.data.Each(ElementerFunc(func(k, value interface{}) {
-		n += value.(*RRSet).Len()
-	}))
 
-	return n + len(c.nxDomain) + len(c.noData)
+	for _, lru := range []*LRU{c.data, c.nxDomain, c.noData} {
+		lru.Each(ElementerFunc(func(k, value interface{}) {
+			n += value.(*RRSet).Len()
+		}))
+	}
+
+	return n
 }
 
 func (c *Memory) Prune() int {
@@ -53,18 +57,13 @@ func (c *Memory) Prune() int {
 		}
 	}))
 
-	for host, e := range c.nxDomain {
-		if e.Expired() {
-			delete(c.nxDomain, host)
-			n++
-		}
-	}
-
-	for key, e := range c.noData {
-		if e.Expired() {
-			delete(c.noData, key)
-			n++
-		}
+	for _, lru := range []*LRU{c.nxDomain, c.noData} {
+		lru.Each(ElementerFunc(func(k, value interface{}) {
+			if value.(*negativeEntry).Expired() {
+				n++
+				lru.RemoveNoLock(k)
+			}
+		}))
 	}
 
 	return n
@@ -94,14 +93,8 @@ func (c *Memory) add(rr *RR) {
 }
 
 func (c *Memory) Purge() {
-	c.data.Purge()
-
-	for host := range c.nxDomain {
-		delete(c.nxDomain, host)
-	}
-
-	for k := range c.noData {
-		delete(c.noData, k)
+	for _, lru := range []*LRU{c.data, c.nxDomain, c.noData} {
+		lru.Purge()
 	}
 }
 

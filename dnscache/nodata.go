@@ -31,9 +31,9 @@ func (c *Memory) setNoData(resp *dns.Msg) {
 		Type: q.Qtype,
 	}
 
-	if e, ok := c.noData[k]; ok {
+	if value, ok := c.noData.Get(k); ok {
 		// it already exists, only update to lower the ttl
-		if e.Expires.Before(expires) {
+		if value.(*negativeEntry).Expires.Before(expires) {
 			return
 		}
 	}
@@ -42,7 +42,8 @@ func (c *Memory) setNoData(resp *dns.Msg) {
 		SOA:     soa.Header().Name,
 		Expires: expires,
 	}
-	c.noData[k] = e
+
+	c.noData.Add(k, e)
 
 	c.Logger.WithFields(logrus.Fields{
 		"name": q.Name,
@@ -57,12 +58,12 @@ func (c *Memory) getNoData(q dns.Question) *negativeEntry {
 		Type: q.Qtype,
 	}
 
-	if e, ok := c.noData[k]; ok {
-		if !e.Expired() {
+	if value, ok := c.noData.Get(k); ok {
+		if e := value.(*negativeEntry); !e.Expired() {
 			return e
 		}
 
-		delete(c.noData, k)
+		c.noData.Remove(k)
 	}
 
 	return nil
