@@ -31,18 +31,12 @@ func (c *Memory) setNoData(resp *dns.Msg) {
 		Type: q.Qtype,
 	}
 
-	c.mu.RLock()
 	if e, ok := c.noData[k]; ok {
 		// it already exists, only update to lower the ttl
 		if e.Expires.Before(expires) {
-			c.mu.RUnlock()
 			return
 		}
 	}
-
-	c.mu.RUnlock()
-	c.mu.Lock()
-	defer c.mu.Unlock()
 
 	e := &negativeEntry{
 		SOA:     soa.Header().Name,
@@ -58,9 +52,6 @@ func (c *Memory) setNoData(resp *dns.Msg) {
 }
 
 func (c *Memory) getNoData(q dns.Question) *negativeEntry {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	k := key{
 		Host: q.Name,
 		Type: q.Qtype,

@@ -1,9 +1,6 @@
 package dnscache
 
 import (
-	"container/list"
-	"sync"
-
 	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 )
@@ -13,33 +10,14 @@ type key struct {
 	Type uint16
 }
 
-type entry struct {
-	Key key
-	Set *RRSet
-}
-
-type EvictNotifier interface {
-	NotifyEvicted(typ uint16, host string, rr []dns.RR)
-}
-
-type EvictNotifierFunc func(typ uint16, host string, rr []dns.RR)
-
-func (f EvictNotifierFunc) NotifyEvicted(typ uint16, host string, rr []dns.RR) {
-	f(typ, host, rr)
-}
-
 type Memory struct {
-	mu        sync.RWMutex
-	size      int
-	evictList *list.List
-	data      map[key]*list.Element
-	Logger    *logrus.Logger
-	onEvict   EvictNotifier
-	nxDomain  map[string]*negativeEntry
-	noData    map[key]*negativeEntry
+	data     *LRU
+	Logger   *logrus.Logger
+	nxDomain map[string]*negativeEntry
+	noData   map[key]*negativeEntry
 }
 
-func NewMemory(size int, logger *logrus.Logger, onEvict EvictNotifier) *Memory {
+func NewMemory(size int, logger *logrus.Logger, onEvict Elementer) *Memory {
 	if size <= 0 {
 		panic("dns memory cache must have a positive size")
 	}
@@ -49,40 +27,31 @@ func NewMemory(size int, logger *logrus.Logger, onEvict EvictNotifier) *Memory {
 	}
 
 	return &Memory{
-		size:      size,
-		evictList: list.New(),
-		data:      map[key]*list.Element{},
-		Logger:    logger,
-		onEvict:   onEvict,
-		nxDomain:  map[string]*negativeEntry{},
-		noData:    map[key]*negativeEntry{},
+		data:     NewLRU(size, onEvict),
+		Logger:   logger,
+		nxDomain: map[string]*negativeEntry{},
+		noData:   map[key]*negativeEntry{},
 	}
 }
 
 func (c *Memory) Len() int {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
 	var n int
-	for _, elem := range c.data {
-		n += elem.Value.(*entry).Set.Len()
-	}
+	c.data.Each(ElementerFunc(func(k, value interface{}) {
+		n += value.(*RRSet).Len()
+	}))
 
 	return n + len(c.nxDomain) + len(c.noData)
 }
 
 func (c *Memory) Prune() int {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	var n int
-	for _, elem := range c.data {
-		set := elem.Value.(*entry).Set
+	c.data.Each(ElementerFunc(func(k, value interface{}) {
+		set := value.(*RRSet)
 		n += set.Prune()
 		if set.Len() == 0 {
-			c.removeElement(elem)
+			c.data.RemoveNoLock(k)
 		}
-	}
+	}))
 
 	for host, e := range c.nxDomain {
 		if e.Expired() {
@@ -102,59 +71,30 @@ func (c *Memory) Prune() int {
 }
 
 func (c *Memory) add(rr *RR) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	k := key{
 		Host: rr.Header().Name,
 		Type: rr.Header().Rrtype,
 	}
 
-	elem, ok := c.data[k]
+	value, ok := c.data.Get(k)
 	var set *RRSet
 	if ok {
-		c.evictList.MoveToFront(elem)
-		set = elem.Value.(*entry).Set
+		set = value.(*RRSet)
 	} else {
 		set = &RRSet{}
-		elem = c.evictList.PushFront(&entry{Key: k, Set: set})
-		c.data[k] = elem
+		if !c.data.AddIfNotContains(k, set) {
+			c.add(rr)
+			return
+		}
 	}
 
-	if c.evictList.Len() > c.size {
-		c.removeOldest()
-	}
-
+	c.data.Lock()
+	defer c.data.Unlock()
 	set.Add(rr)
 }
 
-func (c *Memory) removeOldest() {
-	if elem := c.evictList.Back(); elem != nil {
-		c.removeElement(elem)
-	}
-}
-
-func (c *Memory) removeElement(elem *list.Element) {
-	c.evictList.Remove(elem)
-
-	ent := elem.Value.(*entry)
-	delete(c.data, ent.Key)
-	if c.onEvict != nil {
-		c.onEvict.NotifyEvicted(ent.Key.Type, ent.Key.Host, ent.Set.RR())
-	}
-}
-
 func (c *Memory) Purge() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	for k, elem := range c.data {
-		if c.onEvict != nil {
-			c.onEvict.NotifyEvicted(k.Type, k.Host, elem.Value.(*entry).Set.RR())
-		}
-		delete(c.data, k)
-	}
-	c.evictList.Init()
+	c.data.Purge()
 
 	for host := range c.nxDomain {
 		delete(c.nxDomain, host)
@@ -179,6 +119,7 @@ func (c *Memory) Set(resp *dns.Msg) int {
 		return 0
 	}
 
+	// cache negative responses according to:
 	// https://tools.ietf.org/html/rfc2308#section-5
 
 	if resp.Rcode == dns.RcodeNameError {
@@ -227,12 +168,8 @@ func (c *Memory) get(q dns.Question) []dns.RR {
 		return nil
 	}
 
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	if elem, ok := c.data[key{Host: q.Name, Type: q.Qtype}]; ok {
-		c.evictList.MoveToFront(elem)
-		return elem.Value.(*entry).Set.RR()
+	if elem, ok := c.data.Get(key{Host: q.Name, Type: q.Qtype}); ok {
+		return elem.(*RRSet).RR()
 	}
 
 	return nil

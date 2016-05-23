@@ -12,13 +12,10 @@ import (
 )
 
 func (c *Memory) numEntries() int {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
 	var n int
-	for _, elem := range c.data {
-		n += len(*elem.Value.(*entry).Set)
-	}
+	c.data.Each(ElementerFunc(func(k, value interface{}) {
+		n += len(*value.(*RRSet))
+	}))
 	return n
 }
 
@@ -186,9 +183,9 @@ func TestMemoryCache(t *testing.T) {
 		resp = c.Get(newReq(dns.TypeAAAA, "example.com"))
 		So(resp, ShouldBeNil)
 		So(c.Len(), ShouldEqual, 4)
-		So(c.numEntries(), ShouldEqual, 5)
+		So(c.numEntries(), ShouldEqual, 4)
 
-		So(c.Prune(), ShouldEqual, 1)
+		So(c.Prune(), ShouldEqual, 0)
 		So(c.Len(), ShouldEqual, 4)
 		So(c.numEntries(), ShouldEqual, 4)
 
@@ -210,7 +207,11 @@ func TestMemoryCache(t *testing.T) {
 	Convey("test lru", t, func() {
 		Convey("lru should work", func() {
 			evictCounter := 0
-			onEvicted := EvictNotifierFunc(func(typ uint16, host string, rr []dns.RR) {
+			onEvicted := ElementerFunc(func(k, value interface{}) {
+				typ := k.(key).Type
+				host := k.(key).Host
+				rr := value.(*RRSet).RR()
+
 				if evictCounter < 128 {
 					So(typ, ShouldEqual, dns.TypeA)
 					So(host, ShouldEqual, fmt.Sprintf("%d.example.com", evictCounter))
@@ -254,7 +255,7 @@ func TestMemoryCache(t *testing.T) {
 		Convey("lru add", func() {
 			// Test that Add returns true/false if an eviction occured
 			evictCounter := 0
-			onEvicted := EvictNotifierFunc(func(typ uint16, host string, rr []dns.RR) {
+			onEvicted := ElementerFunc(func(k, value interface{}) {
 				evictCounter++
 			})
 
