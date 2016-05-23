@@ -5,8 +5,6 @@ import (
 	"jrubin.io/blamedns/textmodifier"
 )
 
-var _ Parser = DomainParser{}
-
 type DomainParser struct {
 	HostAdder HostAdder
 	Logger    *logrus.Logger

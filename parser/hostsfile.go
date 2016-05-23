@@ -1,16 +1,9 @@
 package parser
 
 import (
-	"regexp"
-
 	"jrubin.io/blamedns/textmodifier"
 
 	"github.com/Sirupsen/logrus"
-)
-
-var (
-	_      Parser = HostsFileParser{}
-	fileRe        = regexp.MustCompile(`\S+\s+(\S+)`)
 )
 
 type HostsFileParser struct {

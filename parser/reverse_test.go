@@ -6,6 +6,11 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+var (
+	_ Parser = HostsFileParser{}
+	_ Parser = DomainParser{}
+)
+
 func TestReverse(t *testing.T) {
 	Convey("reverse should work", t, func() {
 		So(ReverseHostName(""), ShouldEqual, "")
