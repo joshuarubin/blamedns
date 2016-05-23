@@ -12,7 +12,7 @@
 1. websocket server
 1. web interface
 1. resolve recursive requests using root.hints (if no forwards)
+    * and maybe if all forwards fail?
 1. dnssec validation
     * if validated, set resp.AuthenticatedData
-1. negative response caching (based on SOA TTL)
 1. add zone parsing and authoritative responses for them

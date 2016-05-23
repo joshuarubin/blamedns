@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"jrubin.io/blamedns/lru"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 	. "github.com/smartystreets/goconvey/convey"
@@ -13,7 +15,7 @@ import (
 
 func (c *Memory) numEntries() int {
 	var n int
-	c.data.Each(ElementerFunc(func(k, value interface{}) {
+	c.data.Each(lru.ElementerFunc(func(k, value interface{}) {
 		n += len(*value.(*RRSet))
 	}))
 	return n
@@ -207,7 +209,7 @@ func TestMemoryCache(t *testing.T) {
 	Convey("test lru", t, func() {
 		Convey("lru should work", func() {
 			evictCounter := 0
-			onEvicted := ElementerFunc(func(k, value interface{}) {
+			onEvicted := lru.ElementerFunc(func(k, value interface{}) {
 				typ := k.(key).Type
 				host := k.(key).Host
 				rr := value.(*RRSet).RR()
@@ -255,7 +257,7 @@ func TestMemoryCache(t *testing.T) {
 		Convey("lru add", func() {
 			// Test that Add returns true/false if an eviction occured
 			evictCounter := 0
-			onEvicted := ElementerFunc(func(k, value interface{}) {
+			onEvicted := lru.ElementerFunc(func(k, value interface{}) {
 				evictCounter++
 			})
 

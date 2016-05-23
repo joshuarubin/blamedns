@@ -1,4 +1,4 @@
-package dnscache
+package lru
 
 import (
 	"container/list"
@@ -28,7 +28,7 @@ type LRU struct {
 	onEvict   Elementer
 }
 
-func NewLRU(size int, onEvict Elementer) *LRU {
+func New(size int, onEvict Elementer) *LRU {
 	if size <= 0 {
 		panic("lru must have a positive size")
 	}

@@ -3,6 +3,7 @@ package dnscache
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
+	"jrubin.io/blamedns/lru"
 )
 
 type key struct {
@@ -12,12 +13,12 @@ type key struct {
 
 type Memory struct {
 	Logger   *logrus.Logger
-	data     *LRU
-	nxDomain *LRU
-	noData   *LRU
+	data     *lru.LRU
+	nxDomain *lru.LRU
+	noData   *lru.LRU
 }
 
-func NewMemory(size int, logger *logrus.Logger, onEvict Elementer) *Memory {
+func NewMemory(size int, logger *logrus.Logger, onEvict lru.Elementer) *Memory {
 	if size <= 0 {
 		panic("dns memory cache must have a positive size")
 	}
@@ -29,17 +30,17 @@ func NewMemory(size int, logger *logrus.Logger, onEvict Elementer) *Memory {
 	// TODO(jrubin) should each lru be sized differently?
 	return &Memory{
 		Logger:   logger,
-		data:     NewLRU(size, onEvict),
-		nxDomain: NewLRU(size, onEvict),
-		noData:   NewLRU(size, onEvict),
+		data:     lru.New(size, onEvict),
+		nxDomain: lru.New(size, onEvict),
+		noData:   lru.New(size, onEvict),
 	}
 }
 
 func (c *Memory) Len() int {
 	var n int
 
-	for _, lru := range []*LRU{c.data, c.nxDomain, c.noData} {
-		lru.Each(ElementerFunc(func(k, value interface{}) {
+	for _, l := range []*lru.LRU{c.data, c.nxDomain, c.noData} {
+		l.Each(lru.ElementerFunc(func(k, value interface{}) {
 			n += value.(*RRSet).Len()
 		}))
 	}
@@ -49,7 +50,7 @@ func (c *Memory) Len() int {
 
 func (c *Memory) Prune() int {
 	var n int
-	c.data.Each(ElementerFunc(func(k, value interface{}) {
+	c.data.Each(lru.ElementerFunc(func(k, value interface{}) {
 		set := value.(*RRSet)
 		n += set.Prune()
 		if set.Len() == 0 {
@@ -57,11 +58,11 @@ func (c *Memory) Prune() int {
 		}
 	}))
 
-	for _, lru := range []*LRU{c.nxDomain, c.noData} {
-		lru.Each(ElementerFunc(func(k, value interface{}) {
+	for _, l := range []*lru.LRU{c.nxDomain, c.noData} {
+		l.Each(lru.ElementerFunc(func(k, value interface{}) {
 			if value.(*negativeEntry).Expired() {
 				n++
-				lru.RemoveNoLock(k)
+				l.RemoveNoLock(k)
 			}
 		}))
 	}
@@ -93,7 +94,7 @@ func (c *Memory) add(rr *RR) {
 }
 
 func (c *Memory) Purge() {
-	for _, lru := range []*LRU{c.data, c.nxDomain, c.noData} {
+	for _, lru := range []*lru.LRU{c.data, c.nxDomain, c.noData} {
 		lru.Purge()
 	}
 }
