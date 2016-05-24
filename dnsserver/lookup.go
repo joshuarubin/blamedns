@@ -13,35 +13,26 @@ import (
 // It returns an error if no request has succeeded.
 //
 // largely taken from github.com/looterz/grimd
-func (d *DNSServer) Lookup(net string, addr []string, req *dns.Msg) (resp *dns.Msg, err error) {
+func (d *DNSServer) Lookup(net string, addr []string, req *dns.Msg) (*dns.Msg, error) {
 	if d.Cache != nil {
-		if resp = d.Cache.Get(req); resp != nil {
-			return
+		if resp := d.Cache.Get(req); resp != nil {
+			return resp, nil
 		}
 	}
 
 	if !req.RecursionDesired {
-		resp = &dns.Msg{}
+		resp := &dns.Msg{}
 		resp.SetRcode(req, dns.RcodeRefused)
-		return
+		return resp, nil
 	}
 
-	defer func() {
-		if err == nil && d.Cache != nil {
-			go d.Cache.Set(resp)
-		}
-	}()
+	resp, err := d.fastLookup(net, addr, req)
 
-	if len(addr) > 0 {
-		resp, err = d.fastLookup(net, addr, req)
-		if err == nil {
-			return
-		}
+	if err == nil && d.Cache != nil {
+		go d.Cache.Set(resp)
 	}
 
-	// TODO(jrubin) resolve recursive requests using root.hints (if no addr)
-	err = ResolvError{req.Question[0].Name, net, addr}
-	return
+	return resp, err
 }
 
 func (d *DNSServer) fastLookup(net string, addr []string, req *dns.Msg) (resp *dns.Msg, err error) {
