@@ -12,8 +12,7 @@ const defaultLogFileName = "stderr"
 
 type LogFile struct {
 	io.Writer
-	Name   string
-	IsFile bool
+	Name string
 }
 
 var (
@@ -61,19 +60,29 @@ func (l *LogFile) UnmarshalText(text []byte) error {
 	return nil
 }
 
+func (l LogFile) File() *os.File {
+	if l.Writer == os.Stderr || l.Writer == os.Stdout {
+		return nil
+	}
+
+	if f, ok := l.Writer.(*os.File); ok {
+		return f
+	}
+
+	return nil
+}
+
 func parseLogFileName(file string) (*LogFile, error) {
 	switch file {
 	case "stderr", "STDERR":
 		return &LogFile{
 			Writer: os.Stderr,
 			Name:   "stderr",
-			IsFile: false,
 		}, nil
 	case "stdout", "STDOUT":
 		return &LogFile{
 			Writer: os.Stdout,
 			Name:   "stdout",
-			IsFile: false,
 		}, nil
 	default:
 		f, err := os.OpenFile(file, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0660)
@@ -85,7 +94,6 @@ func parseLogFileName(file string) (*LogFile, error) {
 		return &LogFile{
 			Writer: f,
 			Name:   file,
-			IsFile: true,
 		}, nil
 	}
 }

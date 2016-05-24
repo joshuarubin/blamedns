@@ -21,7 +21,7 @@ func (cfg LogConfig) Init(root *Config) {
 	logger.WithField("name", cfg.File.Name).Info("log location")
 	logger.Out = cfg.File
 
-	if cfg.File.IsFile {
+	if f := cfg.File.File(); f != nil {
 		logger.Formatter = &logrus.TextFormatter{
 			DisableColors: true,
 		}
@@ -30,4 +30,10 @@ func (cfg LogConfig) Init(root *Config) {
 	l := logrus.Level(cfg.Level)
 	logger.Level = l
 	logger.WithField("level", l).Debug("log level set")
+}
+
+func (cfg LogConfig) Shutdown() {
+	if f := cfg.File.File(); f != nil {
+		_ = f.Close()
+	}
 }

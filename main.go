@@ -24,7 +24,7 @@ var (
 func init() {
 	app.Name = name
 	app.Version = version
-	app.Usage = "" // TODO(jrubin)
+	app.Usage = "a simple blocking and caching recursive dns server"
 	app.Authors = []cli.Author{{
 		Name:  "Joshua Rubin",
 		Email: "joshua@rubixconsulting.com",

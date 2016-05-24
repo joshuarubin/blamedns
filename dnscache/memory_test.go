@@ -135,9 +135,6 @@ func TestMemoryCache(t *testing.T) {
 		So(c.Len(), ShouldEqual, 0)
 		So(c.Logger, ShouldEqual, logger)
 
-		So(c.Set(&dns.Msg{}), ShouldEqual, 0)
-		So(c.Len(), ShouldEqual, 0)
-
 		So(c.Set(&dns.Msg{Question: []dns.Question{{}}}), ShouldEqual, 0)
 		So(c.Len(), ShouldEqual, 0)
 

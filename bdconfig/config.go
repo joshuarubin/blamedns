@@ -76,4 +76,5 @@ func (m Config) Start() error {
 func (m Config) Shutdown() {
 	m.DL.Shutdown()
 	m.DNS.Shutdown()
+	m.Log.Shutdown()
 }

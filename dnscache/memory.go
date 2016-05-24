@@ -160,6 +160,24 @@ func (c *Memory) get(q dns.Question) []dns.RR {
 	return nil
 }
 
+type cacheFn struct {
+	fn    func(dns.Question) *negativeEntry
+	build func(*dns.Msg, *negativeEntry) *dns.Msg
+	name  string
+}
+
+func (c *Memory) cacheFn() []cacheFn {
+	return []cacheFn{{
+		fn:    c.getNoData,
+		build: c.buildNoDataReply,
+		name:  "nodata",
+	}, {
+		fn:    c.getNxDomain,
+		build: c.buildNXReply,
+		name:  "nxdomain",
+	}}
+}
+
 func (c *Memory) Get(req *dns.Msg) *dns.Msg {
 	q := req.Question[0]
 
@@ -168,21 +186,14 @@ func (c *Memory) Get(req *dns.Msg) *dns.Msg {
 		return c.buildReply(req, ans)
 	}
 
-	if e := c.getNoData(q); e != nil {
-		if r := c.buildNoDataReply(req, e); r != nil {
-			lf := logFields(q, "hit")
-			lf["ttl"] = e.TTL().Seconds()
-			c.Logger.WithFields(lf).Debug("cache lookup (nodata)")
-			return r
-		}
-	}
-
-	if e := c.getNxDomain(q); e != nil {
-		if r := c.buildNXReply(req, e); r != nil {
-			lf := logFields(q, "hit")
-			lf["ttl"] = e.TTL().Seconds()
-			c.Logger.WithFields(lf).Debug("cache lookup (nxdomain)")
-			return r
+	for _, fn := range c.cacheFn() {
+		if e := fn.fn(q); e != nil {
+			if r := fn.build(req, e); r != nil {
+				lf := logFields(q, "hit")
+				lf["ttl"] = e.TTL().Seconds()
+				c.Logger.WithFields(lf).Debugf("cache lookup (%s)", fn.name)
+				return r
+			}
 		}
 	}
 

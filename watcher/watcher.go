@@ -64,7 +64,7 @@ func (w *Watcher) parse(file string) {
 		w.Logger.WithError(err).WithField("file", file).Warn("error opening file")
 		return
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	w.Parser.Reset(file)
 
@@ -154,10 +154,13 @@ func (w *Watcher) Start() {
 			case err := <-w.watcher.Errors:
 				w.Logger.WithError(err).Warn("watcher error")
 			case <-w.stopCh:
-				// TODO(jrubin) should we do this?
-				// defer w.Close()
-
 				close(w.stopCh)
+
+				// Watcher can't be restarted...
+				if err := w.watcher.Close(); err != nil {
+					w.Logger.WithError(err).Warn("error closing watcher")
+				}
+
 				return
 			}
 		}
