@@ -22,10 +22,9 @@ type DNSServer struct {
 	ClientTimeout     time.Duration
 	ServerTimeout     time.Duration
 	DialTimeout       time.Duration
-	Interval          time.Duration
+	ForwardInterval   time.Duration
 	Cache             dnscache.Cache
 	DisableDNSSEC     bool
-	DisableRecursion  bool
 	NotifyStartedFunc func() error
 }
 
@@ -60,10 +59,13 @@ func (d *DNSServer) parseDNSServer(val string, startCh chan<- struct{}) (*dns.Se
 		return nil, err
 	}
 
+	mux := dns.NewServeMux()
+	mux.Handle(".", d.Handler(u.Scheme))
+
 	return &dns.Server{
 		Addr:              u.Host,
 		Net:               u.Scheme,
-		Handler:           d.Handler(u.Scheme),
+		Handler:           mux,
 		NotifyStartedFunc: func() { startCh <- struct{}{} },
 		ReadTimeout:       d.ServerTimeout,
 		WriteTimeout:      d.ServerTimeout,

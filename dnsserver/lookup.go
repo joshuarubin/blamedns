@@ -20,7 +20,8 @@ func (d *DNSServer) Lookup(net string, req *dns.Msg) (resp *dns.Msg, err error) 
 		}
 	}
 
-	if !req.RecursionDesired || d.DisableRecursion {
+	if !req.RecursionDesired {
+		// TODO(jrubin) are stub zones considered recursion?
 		resp = &dns.Msg{}
 		resp.SetRcode(req, dns.RcodeRefused)
 		return
@@ -57,10 +58,10 @@ func (d *DNSServer) fastForward(net string, req *dns.Msg) (resp *dns.Msg, err er
 	respCh := make(chan *dns.Msg)
 	var wg sync.WaitGroup
 
-	ticker := time.NewTicker(d.Interval)
+	ticker := time.NewTicker(d.ForwardInterval)
 	defer ticker.Stop()
 
-	// start lookup on each nameserver top-down, every interval
+	// start lookup on each nameserver top-down, every ForwardInterval
 	for _, nameserver := range d.Forward {
 		wg.Add(1)
 		go d.forward(net, nameserver, req, respCh, &wg)

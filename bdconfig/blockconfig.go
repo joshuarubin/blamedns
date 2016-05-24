@@ -21,7 +21,7 @@ type BlockConfig struct {
 	Hosts          []string        `toml:"hosts" cli:",files in \"/etc/hosts\" format from which to derive blocked hostnames"`
 	Domains        []string        `toml:"domains" cli:",files with one domain per line to block"`
 	Whitelist      []string        `toml:"whitelist" cli:",domains to never block"`
-	DebugHTTP      bool            `toml:"debug-http" cli:",log http headers"`
+	DebugHTTP      bool            `toml:"debug_http" cli:",log http headers"`
 	dl             []*dl.DL
 	blocker        blocker.Blocker
 	watchers       []*watcher.Watcher

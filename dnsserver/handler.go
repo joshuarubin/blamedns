@@ -65,7 +65,7 @@ func (d *DNSServer) Handler(net string) dns.Handler {
 
 		d.ValidateDNSSEC(req, resp)
 		d.stripRRSIG(req, resp)
-		resp.RecursionAvailable = !d.DisableRecursion
+		resp.RecursionAvailable = true
 
 		if err = w.WriteMsg(resp); err != nil {
 			d.Logger.WithError(err).WithFields(logFields).Error("handler error")

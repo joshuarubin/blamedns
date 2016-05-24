@@ -15,4 +15,3 @@
     * and maybe if all forwards fail?
 1. dnssec validation
     * if validated, set resp.AuthenticatedData
-1. add zone parsing and authoritative responses for them
