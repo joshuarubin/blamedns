@@ -11,11 +11,9 @@ type LogConfig struct {
 	Level bdtype.LogLevel `toml:"level" cli:",set log level (debug, info, warning, error)"`
 }
 
-func defaultLogConfig() LogConfig {
-	return LogConfig{
-		File:  bdtype.DefaultLogFile(),
-		Level: bdtype.DefaultLogLevel,
-	}
+var defaultLogConfig = LogConfig{
+	File:  bdtype.DefaultLogFile(),
+	Level: bdtype.DefaultLogLevel,
 }
 
 func (cfg LogConfig) Init(root *Config) {

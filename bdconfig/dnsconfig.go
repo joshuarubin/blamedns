@@ -18,22 +18,20 @@ type DNSConfig struct {
 	Cache           DNSCacheConfig       `toml:"cache"`
 }
 
-func defaultDNSConfig() DNSConfig {
-	return DNSConfig{
-		Forward: []string{
-			"8.8.8.8",
-			"8.8.4.4",
-		},
-		Listen: []string{
-			"udp://[::]:53",
-			"tcp://[::]:53",
-		},
-		Block: defaultBlockConfig(),
-		Cache: defaultDNSCacheConfig(),
-	}
+var defaultDNSConfig = DNSConfig{
+	Forward: []string{
+		"8.8.8.8",
+		"8.8.4.4",
+	},
+	Listen: []string{
+		"udp://[::]:53",
+		"tcp://[::]:53",
+	},
+	Block: defaultBlockConfig,
+	Cache: defaultDNSCacheConfig,
 }
 
-func (cfg *DNSConfig) Init(root *Config) error {
+func (cfg *DNSConfig) Init(root *Config, onStart func()) error {
 	if err := cfg.Block.Init(root); err != nil {
 		return err
 	}
@@ -51,6 +49,7 @@ func (cfg *DNSConfig) Init(root *Config) error {
 		Logger:          root.Logger,
 		NotifyStartedFunc: func() error {
 			cfg.Cache.Start()
+			onStart()
 			return cfg.Block.Start()
 		},
 		DisableDNSSEC: cfg.DisableDNSSEC,

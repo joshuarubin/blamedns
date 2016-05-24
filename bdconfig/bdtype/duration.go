@@ -31,7 +31,7 @@ func (d Duration) Default(name string) interface{} {
 	switch name {
 	case "dns-block-ttl":
 		return defaultBlockTTL
-	case "dns-block-update-interval":
+	case "dl-update-interval":
 		return defaultUpdateInterval
 	case "dns-client-timeout":
 		return defaultDNSClientTimeout

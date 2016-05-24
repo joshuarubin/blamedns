@@ -14,10 +14,8 @@ type DNSCacheConfig struct {
 	Cache         *dnscache.Memory `toml:"-" cli:"-"`
 }
 
-func defaultDNSCacheConfig() DNSCacheConfig {
-	return DNSCacheConfig{
-		Size: defaultDNSCacheSize,
-	}
+var defaultDNSCacheConfig = DNSCacheConfig{
+	Size: defaultDNSCacheSize,
 }
 
 func (cfg *DNSCacheConfig) Init(root *Config) {

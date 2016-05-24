@@ -24,6 +24,7 @@ func defaultCacheDir(name string) string {
 type Config struct {
 	CacheDir        string            `toml:"cache_dir" cli:",directory in which to store cached data"`
 	Log             LogConfig         `toml:"log"`
+	DL              DLConfig          `toml:"dl"`
 	DNS             DNSConfig         `toml:"dns"`
 	ListenPixelserv string            `toml:"listen_pixelserv" cli:",address to run the pixel server on"`
 	Logger          *logrus.Logger    `toml:"-" cli:"-"`
@@ -43,8 +44,9 @@ func New(appName, appVersion string) *Config {
 func Default(appName, appVersion string) Config {
 	return Config{
 		CacheDir:        defaultCacheDir(appName),
-		Log:             defaultLogConfig(),
-		DNS:             defaultDNSConfig(),
+		Log:             defaultLogConfig,
+		DL:              defaultDLConfig,
+		DNS:             defaultDNSConfig,
 		ListenPixelserv: defaultListenPixelserv,
 		AppName:         appName,
 		AppVersion:      appVersion,
@@ -54,7 +56,10 @@ func Default(appName, appVersion string) Config {
 func (m *Config) Init() error {
 	m.Log.Init(m)
 	m.pixelServ = &pixelserv.Server{Logger: m.Logger}
-	return m.DNS.Init(m)
+	if err := m.DL.Init(m); err != nil {
+		return err
+	}
+	return m.DNS.Init(m, m.DL.Start)
 }
 
 func (m Config) Start() error {
@@ -69,5 +74,6 @@ func (m Config) Start() error {
 }
 
 func (m Config) Shutdown() {
+	m.DL.Shutdown()
 	m.DNS.Shutdown()
 }
