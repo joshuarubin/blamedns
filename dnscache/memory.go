@@ -99,14 +99,6 @@ func (c *Memory) Purge() {
 }
 
 func (c *Memory) Set(resp *dns.Msg) int {
-	if c == nil {
-		return 0
-	}
-
-	if len(resp.Question) != 1 {
-		return 0
-	}
-
 	q := resp.Question[0]
 	if q.Qclass != dns.ClassINET {
 		return 0
@@ -169,10 +161,6 @@ func (c *Memory) get(q dns.Question) []dns.RR {
 }
 
 func (c *Memory) Get(req *dns.Msg) *dns.Msg {
-	if c == nil || len(req.Question) != 1 {
-		return nil
-	}
-
 	q := req.Question[0]
 
 	if ans := c.get(q); ans != nil {

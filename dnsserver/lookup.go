@@ -21,7 +21,6 @@ func (d *DNSServer) Lookup(net string, addr []string, req *dns.Msg) (resp *dns.M
 	}
 
 	if !req.RecursionDesired {
-		// TODO(jrubin) are stub zones considered recursion?
 		resp = &dns.Msg{}
 		resp.SetRcode(req, dns.RcodeRefused)
 		return
@@ -33,7 +32,7 @@ func (d *DNSServer) Lookup(net string, addr []string, req *dns.Msg) (resp *dns.M
 		}
 	}()
 
-	// ensure all forward requests request dnssec
+	// ensure all requests request dnssec
 	if opt := req.IsEdns0(); opt == nil || !opt.Do() {
 		// only set it if it wasn't already set
 		req = req.Copy()
@@ -41,28 +40,28 @@ func (d *DNSServer) Lookup(net string, addr []string, req *dns.Msg) (resp *dns.M
 	}
 
 	if len(addr) > 0 {
-		resp, err = d.fastForward(net, addr, req)
+		resp, err = d.fastLookup(net, addr, req)
 		if err == nil {
 			return
 		}
 	}
 
-	// TODO(jrubin) resolve recursive requests using root.hints (if no forwards)
+	// TODO(jrubin) resolve recursive requests using root.hints (if no addr)
 	err = ResolvError{req.Question[0].Name, net, addr}
 	return
 }
 
-func (d *DNSServer) fastForward(net string, addr []string, req *dns.Msg) (resp *dns.Msg, err error) {
+func (d *DNSServer) fastLookup(net string, addr []string, req *dns.Msg) (resp *dns.Msg, err error) {
 	respCh := make(chan *dns.Msg)
 	var wg sync.WaitGroup
 
-	ticker := time.NewTicker(d.ForwardInterval)
+	ticker := time.NewTicker(d.LookupInterval)
 	defer ticker.Stop()
 
-	// start lookup on each nameserver top-down, every ForwardInterval
+	// start lookup on each nameserver top-down, every LookupInterval
 	for _, nameserver := range addr {
 		wg.Add(1)
-		go d.forward(net, nameserver, req, respCh, &wg)
+		go d.lookup(net, nameserver, req, respCh, &wg)
 
 		// but exit early, if we have an answer
 		select {
@@ -84,7 +83,7 @@ func (d *DNSServer) fastForward(net string, addr []string, req *dns.Msg) (resp *
 	}
 }
 
-func (d *DNSServer) forward(net, nameserver string, req *dns.Msg, respCh chan<- *dns.Msg, wg *sync.WaitGroup) {
+func (d *DNSServer) lookup(net, nameserver string, req *dns.Msg, respCh chan<- *dns.Msg, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	q := req.Question[0]

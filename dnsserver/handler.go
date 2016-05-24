@@ -23,24 +23,8 @@ func (d *DNSServer) RespondCode(net string, w dns.ResponseWriter, req *dns.Msg, 
 	}
 }
 
-func (d *DNSServer) StubHandler(net string, addr []string) dns.Handler {
+func (d *DNSServer) Handler(mux dns.Handler, net string, addr []string) dns.Handler {
 	return dns.HandlerFunc(func(w dns.ResponseWriter, req *dns.Msg) {
-		// TODO(jrubin)
-	})
-}
-
-func (d *DNSServer) ForwardHandler(net string, addr []string) dns.Handler {
-	return dns.HandlerFunc(func(w dns.ResponseWriter, req *dns.Msg) {
-		if len(req.Question) == 0 {
-			d.RespondCode(net, w, req, dns.RcodeFormatError)
-			return
-		}
-
-		if len(req.Question) > 1 {
-			d.RespondCode(net, w, req, dns.RcodeNotImplemented)
-			return
-		}
-
 		// refuse "any" and "rrsig" requests
 		switch req.Question[0].Qtype {
 		case dns.TypeANY, dns.TypeRRSIG:

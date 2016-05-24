@@ -42,13 +42,14 @@ func main() {
 
 func setup(c *cli.Context) error {
 	parseConfigFile(c)
-	if err := cc.Parse(c, cfg); err != nil {
-		return err
-	}
-	return cfg.Init()
+	return cc.Parse(c, cfg)
 }
 
 func run(c *cli.Context) error {
+	if err := cfg.Init(); err != nil {
+		return err
+	}
+
 	errCh := make(chan error, 1)
 	go func() { errCh <- cfg.Start() }()
 

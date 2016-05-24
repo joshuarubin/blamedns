@@ -13,7 +13,7 @@ const (
 	defaultUpdateInterval     = 24 * time.Hour
 	defaultDNSClientTimeout   = 5 * time.Second
 	defaultDNSServerTimeout   = 2 * time.Second
-	defaultDNSForwardInterval = 200 * time.Millisecond
+	defaultDNSLookupInterval  = 200 * time.Millisecond
 	defaultCachePruneInterval = 1 * time.Hour
 	defaultDialTimeout        = 2 * time.Second
 )
@@ -37,8 +37,8 @@ func (d Duration) Default(name string) interface{} {
 		return defaultDNSClientTimeout
 	case "dns-server-timeout":
 		return defaultDNSServerTimeout
-	case "dns-forward-interval":
-		return defaultDNSForwardInterval
+	case "dns-lookup-interval":
+		return defaultDNSLookupInterval
 	case "dns-cache-prune-interval":
 		return defaultCachePruneInterval
 	case "dns-dial-timeout":
