@@ -33,13 +33,11 @@ func (d *DNSServer) Lookup(net string, addr []string, req *dns.Msg) (resp *dns.M
 		}
 	}()
 
-	if !d.DisableDNSSEC {
-		// ensure all forward requests request dnssec
-		if opt := req.IsEdns0(); opt == nil || !opt.Do() {
-			// only set it if it wasn't already set
-			req = req.Copy()
-			req.SetEdns0(4096, true)
-		}
+	// ensure all forward requests request dnssec
+	if opt := req.IsEdns0(); opt == nil || !opt.Do() {
+		// only set it if it wasn't already set
+		req = req.Copy()
+		req.SetEdns0(4096, true)
 	}
 
 	if len(addr) > 0 {

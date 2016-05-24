@@ -81,10 +81,6 @@ func (d *DNSServer) ForwardHandler(net string, addr []string) dns.Handler {
 }
 
 func (d *DNSServer) ValidateDNSSEC(req, resp *dns.Msg) {
-	if d.DisableDNSSEC {
-		return
-	}
-
 	if req.CheckingDisabled {
 		return
 	}

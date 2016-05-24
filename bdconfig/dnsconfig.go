@@ -18,10 +18,10 @@ type DNSConfig struct {
 	DialTimeout     bdtype.Duration      `toml:"dial_timeout" cli:",time to wait to establish connection to remote server"`
 	ForwardInterval bdtype.Duration      `toml:"interval" cli:",concurrency interval for lookups in miliseconds"`
 	Server          *dnsserver.DNSServer `toml:"-" cli:"-"`
-	DisableDNSSEC   bool                 `toml:"disable_dnssec" cli:",disable dnssec validation"`
 	Cache           DNSCacheConfig       `toml:"cache"`
 	StubZone        []DNSZoneConfig      `toml:"stub_zone" cli:"-"`
 	ForwardZone     []DNSZoneConfig      `toml:"forward_zone" cli:"-"`
+	DomainInsecure  []string             `toml:"domain_insecure"`
 }
 
 var defaultDNSConfig = DNSConfig{
@@ -58,10 +58,10 @@ func (cfg *DNSConfig) Init(root *Config, onStart func()) error {
 			onStart()
 			return cfg.Block.Start()
 		},
-		DisableDNSSEC: cfg.DisableDNSSEC,
-		Cache:         cfg.Cache.Cache,
-		StubZones:     map[string][]string{},
-		ForwardZones:  map[string][]string{},
+		Cache:          cfg.Cache.Cache,
+		StubZones:      map[string][]string{},
+		ForwardZones:   map[string][]string{},
+		DomainInsecure: cfg.DomainInsecure,
 	}
 
 	for _, zone := range cfg.StubZone {

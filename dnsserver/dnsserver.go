@@ -23,10 +23,10 @@ type DNSServer struct {
 	DialTimeout       time.Duration
 	ForwardInterval   time.Duration
 	Cache             dnscache.Cache
-	DisableDNSSEC     bool
 	NotifyStartedFunc func() error
 	ForwardZones      map[string][]string
 	StubZones         map[string][]string
+	DomainInsecure    []string // TODO(jrubin)
 }
 
 const DefaultPort = 53
