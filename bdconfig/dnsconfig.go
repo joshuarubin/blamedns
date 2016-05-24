@@ -5,8 +5,12 @@ import (
 	"jrubin.io/blamedns/dnsserver"
 )
 
+type DNSZoneConfig struct {
+	Name string   `toml:"name"`
+	Addr []string `toml:"addr"`
+}
+
 type DNSConfig struct {
-	Forward         []string             `toml:"forward" cli:",dns server(s) to forward requests to"`
 	Listen          []string             `toml:"listen" cli:",url(s) to listen for dns requests on"`
 	Block           BlockConfig          `toml:"block"`
 	ClientTimeout   bdtype.Duration      `toml:"client_timeout" cli:",time to wait for remote servers to respond to queries"`
@@ -16,13 +20,11 @@ type DNSConfig struct {
 	Server          *dnsserver.DNSServer `toml:"-" cli:"-"`
 	DisableDNSSEC   bool                 `toml:"disable_dnssec" cli:",disable dnssec validation"`
 	Cache           DNSCacheConfig       `toml:"cache"`
+	StubZone        []DNSZoneConfig      `toml:"stub_zone" cli:"-"`
+	ForwardZone     []DNSZoneConfig      `toml:"forward_zone" cli:"-"`
 }
 
 var defaultDNSConfig = DNSConfig{
-	Forward: []string{
-		"8.8.8.8",
-		"8.8.4.4",
-	},
 	Listen: []string{
 		"udp://[::]:53",
 		"tcp://[::]:53",
@@ -30,6 +32,11 @@ var defaultDNSConfig = DNSConfig{
 	Block: defaultBlockConfig,
 	Cache: defaultDNSCacheConfig,
 }
+
+var defaultDNSForwardZones = []DNSZoneConfig{{
+	Name: ".",
+	Addr: []string{"8.8.8.8", "8.8.4.4"},
+}}
 
 func (cfg *DNSConfig) Init(root *Config, onStart func()) error {
 	if err := cfg.Block.Init(root); err != nil {
@@ -39,7 +46,6 @@ func (cfg *DNSConfig) Init(root *Config, onStart func()) error {
 	cfg.Cache.Init(root)
 
 	cfg.Server = &dnsserver.DNSServer{
-		Forward:         cfg.Forward,
 		Listen:          cfg.Listen,
 		Block:           cfg.Block.Block(),
 		ClientTimeout:   cfg.ClientTimeout.Duration(),
@@ -54,6 +60,16 @@ func (cfg *DNSConfig) Init(root *Config, onStart func()) error {
 		},
 		DisableDNSSEC: cfg.DisableDNSSEC,
 		Cache:         cfg.Cache.Cache,
+		StubZones:     map[string][]string{},
+		ForwardZones:  map[string][]string{},
+	}
+
+	for _, zone := range cfg.StubZone {
+		cfg.Server.StubZones[zone.Name] = zone.Addr
+	}
+
+	for _, zone := range cfg.ForwardZone {
+		cfg.Server.ForwardZones[zone.Name] = zone.Addr
 	}
 
 	return nil

@@ -13,7 +13,7 @@ import (
 // It returns an error if no request has succeeded.
 //
 // largely taken from github.com/looterz/grimd
-func (d *DNSServer) Lookup(net string, req *dns.Msg) (resp *dns.Msg, err error) {
+func (d *DNSServer) Lookup(net string, addr []string, req *dns.Msg) (resp *dns.Msg, err error) {
 	if d.Cache != nil {
 		if resp = d.Cache.Get(req); resp != nil {
 			return
@@ -42,19 +42,19 @@ func (d *DNSServer) Lookup(net string, req *dns.Msg) (resp *dns.Msg, err error) 
 		}
 	}
 
-	if len(d.Forward) > 0 {
-		resp, err = d.fastForward(net, req)
+	if len(addr) > 0 {
+		resp, err = d.fastForward(net, addr, req)
 		if err == nil {
 			return
 		}
 	}
 
 	// TODO(jrubin) resolve recursive requests using root.hints (if no forwards)
-	err = ResolvError{req.Question[0].Name, net, d.Forward}
+	err = ResolvError{req.Question[0].Name, net, addr}
 	return
 }
 
-func (d *DNSServer) fastForward(net string, req *dns.Msg) (resp *dns.Msg, err error) {
+func (d *DNSServer) fastForward(net string, addr []string, req *dns.Msg) (resp *dns.Msg, err error) {
 	respCh := make(chan *dns.Msg)
 	var wg sync.WaitGroup
 
@@ -62,7 +62,7 @@ func (d *DNSServer) fastForward(net string, req *dns.Msg) (resp *dns.Msg, err er
 	defer ticker.Stop()
 
 	// start lookup on each nameserver top-down, every ForwardInterval
-	for _, nameserver := range d.Forward {
+	for _, nameserver := range addr {
 		wg.Add(1)
 		go d.forward(net, nameserver, req, respCh, &wg)
 
@@ -81,7 +81,7 @@ func (d *DNSServer) fastForward(net string, req *dns.Msg) (resp *dns.Msg, err er
 	case resp = <-respCh:
 		return
 	default:
-		err = ResolvError{req.Question[0].Name, net, d.Forward}
+		err = ResolvError{req.Question[0].Name, net, addr}
 		return
 	}
 }

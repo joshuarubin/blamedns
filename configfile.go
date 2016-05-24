@@ -77,5 +77,7 @@ func setupWriteConfig(c *cli.Context) error {
 }
 
 func writeConfig(c *cli.Context) error {
-	return toml.NewEncoder(configOut).Encode(cfg)
+	enc := toml.NewEncoder(configOut)
+	enc.Indent = ""
+	return enc.Encode(cfg)
 }

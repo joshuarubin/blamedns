@@ -23,7 +23,13 @@ func (d *DNSServer) RespondCode(net string, w dns.ResponseWriter, req *dns.Msg, 
 	}
 }
 
-func (d *DNSServer) Handler(net string) dns.Handler {
+func (d *DNSServer) StubHandler(net string, addr []string) dns.Handler {
+	return dns.HandlerFunc(func(w dns.ResponseWriter, req *dns.Msg) {
+		// TODO(jrubin)
+	})
+}
+
+func (d *DNSServer) ForwardHandler(net string, addr []string) dns.Handler {
 	return dns.HandlerFunc(func(w dns.ResponseWriter, req *dns.Msg) {
 		if len(req.Question) == 0 {
 			d.RespondCode(net, w, req, dns.RcodeFormatError)
@@ -54,7 +60,7 @@ func (d *DNSServer) Handler(net string) dns.Handler {
 		if d.Block.Should(req) {
 			resp = d.Block.NewReply(req)
 			d.Logger.WithFields(logFields).Debug("blocked")
-		} else if resp, err = d.Lookup(net, req); err != nil {
+		} else if resp, err = d.Lookup(net, addr, req); err != nil {
 			d.Logger.WithError(err).WithFields(logFields).Warn("lookup error")
 		}
 

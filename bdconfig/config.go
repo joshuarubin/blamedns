@@ -38,6 +38,9 @@ func New(appName, appVersion string) *Config {
 		Logger:     logrus.New(),
 		AppName:    appName,
 		AppVersion: appVersion,
+		DNS: DNSConfig{
+			ForwardZone: defaultDNSForwardZones,
+		},
 	}
 }
 

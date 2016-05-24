@@ -14,7 +14,6 @@ import (
 )
 
 type DNSServer struct {
-	Forward           []string
 	Listen            []string
 	servers           []*dns.Server
 	Block             Block
@@ -26,6 +25,8 @@ type DNSServer struct {
 	Cache             dnscache.Cache
 	DisableDNSSEC     bool
 	NotifyStartedFunc func() error
+	ForwardZones      map[string][]string
+	StubZones         map[string][]string
 }
 
 const DefaultPort = 53
@@ -60,7 +61,33 @@ func (d *DNSServer) parseDNSServer(val string, startCh chan<- struct{}) (*dns.Se
 	}
 
 	mux := dns.NewServeMux()
-	mux.Handle(".", d.Handler(u.Scheme))
+
+	for i, zones := range []map[string][]string{d.StubZones, d.ForwardZones} {
+		for pattern, addr := range zones {
+			addr, err := addDefaultPort(addr)
+			if err != nil {
+				return nil, err
+			}
+
+			var zoneType string
+
+			switch i {
+			case 0:
+				zoneType = "stub"
+				mux.Handle(pattern, d.StubHandler(u.Scheme, addr))
+			case 1:
+				zoneType = "forward"
+				mux.Handle(pattern, d.ForwardHandler(u.Scheme, addr))
+			}
+
+			d.Logger.WithFields(logrus.Fields{
+				"zone": pattern,
+				"addr": strings.Join(addr, ","),
+				"net":  u.Scheme,
+				"type": zoneType,
+			}).Info("added zone")
+		}
+	}
 
 	return &dns.Server{
 		Addr:              u.Host,
@@ -111,12 +138,6 @@ func (d *DNSServer) ListenAndServe() error {
 	if err = d.createServers(d.startedListener()); err != nil {
 		return err
 	}
-
-	if d.Forward, err = addDefaultPort(d.Forward); err != nil {
-		return err
-	}
-
-	d.Logger.Infof("using forwarders: %s", strings.Join(d.Forward, ", "))
 
 	errCh := make(chan error, len(d.servers))
 
