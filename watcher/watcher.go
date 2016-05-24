@@ -91,7 +91,7 @@ func (w *Watcher) parse(file string) {
 
 // this much time must elapse without a file being further modified before it
 // will be parsed
-const debounce = 1 * time.Second
+const debounce = 2 * time.Second
 
 func (w *Watcher) setParseTimer(file string) {
 	w.mu.Lock()

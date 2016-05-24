@@ -20,25 +20,15 @@ func (s Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (s Server) logStart(addr string) {
-	if s.Logger == nil {
-		return
-	}
-
-	s.Logger.WithFields(logrus.Fields{
-		"addr": addr,
-	}).Info("starting pixelserv")
-}
-
 func (s Server) ListenAndServe(addr string) error {
 	srv := &http.Server{Addr: addr, Handler: s}
-	s.logStart(addr)
+	s.Logger.WithField("addr", addr).Info("starting pixelserv")
 	return srv.ListenAndServe()
 }
 
 func (s Server) Serve(l net.Listener) error {
 	srv := &http.Server{Handler: s}
-	s.logStart(l.Addr().String())
+	s.Logger.WithField("addr", l.Addr().String()).Info("starting pixelserv")
 	return srv.Serve(l)
 }
 
