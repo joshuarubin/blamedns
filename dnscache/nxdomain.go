@@ -93,7 +93,6 @@ func (c *Memory) buildNXReply(req *dns.Msg, e *negativeEntry) *dns.Msg {
 	}
 
 	if resp.Ns = c.get(q); resp.Ns != nil {
-		c.addDNSSEC(resp)
 		return resp
 	}
 

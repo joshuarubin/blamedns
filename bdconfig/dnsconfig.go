@@ -21,7 +21,6 @@ type DNSConfig struct {
 	Cache          DNSCacheConfig       `toml:"cache"`
 	Forward        []string             `toml:"forward" cli:",default dns server(s) to forward requests to"`
 	Zone           []DNSZoneConfig      `toml:"zone" cli:"-"`
-	DomainInsecure []string             `toml:"domain_insecure"`
 }
 
 var defaultDNSConfig = DNSConfig{
@@ -58,7 +57,6 @@ func (cfg *DNSConfig) Init(root *Config, onStart func()) error {
 		Zones: map[string][]string{
 			".": cfg.Forward,
 		},
-		DomainInsecure: cfg.DomainInsecure,
 	}
 
 	for _, zone := range cfg.Zone {

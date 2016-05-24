@@ -25,7 +25,6 @@ type DNSServer struct {
 	Cache             dnscache.Cache
 	NotifyStartedFunc func() error
 	Zones             map[string][]string
-	DomainInsecure    []string // TODO(jrubin)
 }
 
 const DefaultPort = 53
@@ -67,7 +66,7 @@ func (d *DNSServer) parseDNSServer(val string, startCh chan<- struct{}) (*dns.Se
 			return nil, err
 		}
 
-		mux.Handle(pattern, d.Handler(mux, u.Scheme, addr))
+		mux.Handle(pattern, d.Handler(u.Scheme, addr))
 
 		d.Logger.WithFields(logrus.Fields{
 			"zone": pattern,

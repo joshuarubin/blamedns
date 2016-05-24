@@ -190,46 +190,11 @@ func (c *Memory) Get(req *dns.Msg) *dns.Msg {
 	return nil
 }
 
-func (c *Memory) addDNSSEC(resp *dns.Msg) {
-	// add rrsig records (regardless of DNSSEC OK flag)
-	for i, set := range [][]dns.RR{resp.Answer, resp.Ns, resp.Extra} {
-		for _, rr := range set {
-			if rr.Header().Rrtype == dns.TypeRRSIG {
-				continue
-			}
-
-			q := dns.Question{
-				Name:   rr.Header().Name,
-				Qtype:  dns.TypeRRSIG,
-				Qclass: dns.ClassINET,
-			}
-
-			var lf logrus.Fields
-			if ans := c.get(q); ans != nil {
-				lf = logFields(q, "hit")
-
-				switch i {
-				case 0: // Answer
-					resp.Answer = append(resp.Answer, ans...)
-				case 1: // Ns
-					resp.Ns = append(resp.Ns, ans...)
-				case 2: // Extra
-					resp.Extra = append(resp.Extra, ans...)
-				}
-			} else {
-				lf = logFields(q, "miss")
-			}
-			c.Logger.WithFields(lf).Debug("cache lookup (rrsig)")
-		}
-	}
-}
-
 func (c *Memory) buildReply(req *dns.Msg, ans []dns.RR) *dns.Msg {
 	resp := &dns.Msg{}
 	resp.SetReply(req)
 	resp.Answer = ans
 
-	c.addDNSSEC(resp)
 	c.processAdditionalSection(resp)
 
 	// TODO(jrubin) ensure no duplicates of resp.Answer are in resp.Extra

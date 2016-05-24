@@ -32,13 +32,6 @@ func (d *DNSServer) Lookup(net string, addr []string, req *dns.Msg) (resp *dns.M
 		}
 	}()
 
-	// ensure all requests request dnssec
-	if opt := req.IsEdns0(); opt == nil || !opt.Do() {
-		// only set it if it wasn't already set
-		req = req.Copy()
-		req.SetEdns0(4096, true)
-	}
-
 	if len(addr) > 0 {
 		resp, err = d.fastLookup(net, addr, req)
 		if err == nil {

@@ -23,7 +23,7 @@ func (d *DNSServer) RespondCode(net string, w dns.ResponseWriter, req *dns.Msg, 
 	}
 }
 
-func (d *DNSServer) Handler(mux dns.Handler, net string, addr []string) dns.Handler {
+func (d *DNSServer) Handler(net string, addr []string) dns.Handler {
 	return dns.HandlerFunc(func(w dns.ResponseWriter, req *dns.Msg) {
 		// refuse "any" and "rrsig" requests
 		switch req.Question[0].Qtype {
@@ -53,8 +53,6 @@ func (d *DNSServer) Handler(mux dns.Handler, net string, addr []string) dns.Hand
 			return
 		}
 
-		d.ValidateDNSSEC(req, resp)
-		d.stripRRSIG(req, resp)
 		resp.RecursionAvailable = true
 
 		if err = w.WriteMsg(resp); err != nil {
@@ -62,49 +60,4 @@ func (d *DNSServer) Handler(mux dns.Handler, net string, addr []string) dns.Hand
 			dns.HandleFailed(w, req)
 		}
 	})
-}
-
-func (d *DNSServer) ValidateDNSSEC(req, resp *dns.Msg) {
-	if req.CheckingDisabled {
-		return
-	}
-
-	// TODO(jrubin) dnssec validation
-	// TODO(jrubin)if validated, set resp.AuthenticatedData
-}
-
-func (d *DNSServer) stripRRSIG(req, resp *dns.Msg) {
-	if req.Question[0].Qtype == dns.TypeRRSIG {
-		// it was an RRSIG request, don't strip
-		return
-	}
-
-	if opt := req.IsEdns0(); opt != nil && opt.Do() {
-		// DNSSEC OK (+dnssec) was set, keep rrsig values
-		return
-	}
-
-	for i, set := range [][]dns.RR{resp.Answer, resp.Ns, resp.Extra} {
-		var deleted int
-		for j := range set {
-			k := j - deleted
-			rr := set[k]
-
-			if rr.Header().Rrtype == dns.TypeRRSIG {
-				copy(set[k:], set[k+1:])
-				set[len(set)-1] = nil
-				set = set[:len(set)-1]
-				deleted++
-			}
-		}
-
-		switch i {
-		case 0: // Answer
-			resp.Answer = set
-		case 1: // Ns
-			resp.Ns = set
-		case 2: // Extra
-			resp.Extra = set
-		}
-	}
 }
