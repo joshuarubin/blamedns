@@ -131,23 +131,34 @@ func (c *Memory) Set(resp *dns.Msg) int {
 			e := NewRR(rr)
 			c.add(e)
 			n++
+
+			c.Logger.WithFields(logrus.Fields{
+				"type": dns.TypeToString[e.Header().Rrtype],
+				"name": e.Header().Name,
+				"ttl":  e.TTL().Seconds(),
+			}).Debug("stored in cache")
 		}
 	}
 
 	return n
 }
 
-func (c *Memory) get(q dns.Question, data []dns.RR) []dns.RR {
+func logFields(q dns.Question, cache string) logrus.Fields {
+	return logrus.Fields{
+		"class": dns.ClassToString[q.Qclass],
+		"type":  dns.TypeToString[q.Qtype],
+		"name":  q.Name,
+		"cache": cache,
+	}
+}
+
+func (c *Memory) get(q dns.Question) []dns.RR {
 	if q.Qclass != dns.ClassINET {
 		return nil
 	}
 
-	if data == nil {
-		data = []dns.RR{}
-	}
-
 	if elem, ok := c.data.Get(key{Host: q.Name, Type: q.Qtype}); ok {
-		if data = append(data, elem.(*RRSet).RR()...); len(data) > 0 {
+		if data := elem.(*RRSet).RR(); len(data) > 0 {
 			return data
 		}
 		return nil
@@ -161,10 +172,9 @@ func (c *Memory) get(q dns.Question, data []dns.RR) []dns.RR {
 	// there is a CNAME that resolves to the correct type
 
 	if elem, ok := c.data.Get(key{Host: q.Name, Type: dns.TypeCNAME}); ok {
-		cnames := elem.(*RRSet).RR()
-		data = append(data, cnames...)
+		data := elem.(*RRSet).RR()
 
-		for _, value := range cnames {
+		for _, value := range data {
 			cname := value.(*dns.CNAME)
 
 			req := &dns.Msg{
@@ -175,7 +185,11 @@ func (c *Memory) get(q dns.Question, data []dns.RR) []dns.RR {
 				}},
 			}
 
-			if resp := c.Get(req); resp != nil && len(resp.Answer) > 0 {
+			// we need to use the outside Get() so that NXDOMAIN and NODATA
+			// values are correct as well
+			if resp := c.Get(req); resp != nil {
+				// TODO(jrubin) only add answers not already existing
+				// if no new answers are added, return
 				data = append(data, resp.Answer...)
 			}
 		}
@@ -207,18 +221,23 @@ func (c *Memory) cacheFn() []cacheFn {
 func (c *Memory) Get(req *dns.Msg) *dns.Msg {
 	q := req.Question[0]
 
-	if ans := c.get(q, nil); ans != nil {
+	if ans := c.get(q); ans != nil {
+		c.Logger.WithFields(logFields(q, "hit")).Debug("cache lookup")
 		return c.buildReply(req, ans)
 	}
 
 	for _, fn := range c.cacheFn() {
 		if e := fn.fn(q); e != nil {
 			if r := fn.build(req, e); r != nil {
+				lf := logFields(q, "hit")
+				lf["ttl"] = e.TTL().Seconds()
+				c.Logger.WithFields(lf).Debugf("cache lookup (%s)", fn.name)
 				return r
 			}
 		}
 	}
 
+	c.Logger.WithFields(logFields(q, "miss")).Debug("cache lookup")
 	return nil
 }
 
@@ -271,9 +290,15 @@ func (c *Memory) processAdditionalSection(resp *dns.Msg) {
 	}
 
 	for _, q := range qs {
-		if extra := c.get(q, nil); extra != nil {
+		var lf logrus.Fields
+		if extra := c.get(q); extra != nil {
+			lf = logFields(q, "hit")
 			resp.Extra = append(resp.Extra, extra...)
+		} else {
+			lf = logFields(q, "miss")
 		}
+
+		c.Logger.WithFields(lf).Debug("cache lookup (additional)")
 	}
 }
 
