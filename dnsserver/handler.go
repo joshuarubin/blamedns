@@ -1,63 +1,128 @@
 package dnsserver
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
+	prom "github.com/prometheus/client_golang/prometheus"
 )
 
-func (d *DNSServer) RespondCode(net string, w dns.ResponseWriter, req *dns.Msg, code int) {
-	logFields := logrus.Fields{
-		"name":  req.Question[0].Name,
-		"type":  dns.TypeToString[req.Question[0].Qtype],
-		"net":   net,
-		"rcode": dns.RcodeToString[code],
+var handlerDuration = prom.NewSummaryVec(
+	prom.SummaryOpts{
+		Namespace: "blamedns",
+		Subsystem: "dns",
+		Name:      "handler_duration_nanoseconds",
+		Help:      "Total time spent serving dns requests.",
+	},
+	[]string{"rcode", "blocked", "cache"},
+)
+
+func init() {
+	prom.MustRegister(handlerDuration)
+}
+
+func observeHandler(begin time.Time, resp **dns.Msg, blocked *bool, cache *string) {
+	rcode := dns.RcodeServerFailure
+	if resp != nil && *resp != nil {
+		rcode = (*resp).Rcode
 	}
 
-	d.Logger.WithFields(logFields).Debug("responding with rcode")
+	handlerDuration.
+		WithLabelValues(dns.RcodeToString[rcode], fmt.Sprintf("%v", *blocked), *cache).
+		Observe(float64(time.Since(begin)))
+}
 
+func (d *DNSServer) respond(net string, w dns.ResponseWriter, req *dns.Msg, resp **dns.Msg, blocked *bool, cache *string) {
+	if resp == nil || *resp == nil {
+		tmp := &dns.Msg{}
+		tmp.SetRcode(req, dns.RcodeServerFailure)
+		resp = &tmp
+	}
+
+	(*resp).RecursionAvailable = true
+
+	lf := logFields(net, req, *resp, blocked, cache)
+
+	if (*resp).Rcode == dns.RcodeServerFailure {
+		d.Logger.WithFields(lf).Error("responded with error")
+	} else {
+		d.Logger.WithFields(lf).Debug("responded")
+	}
+
+	if err := w.WriteMsg(*resp); err != nil {
+		d.Logger.WithError(err).WithFields(lf).Error("error writing response")
+	}
+}
+
+func refused(req *dns.Msg) *dns.Msg {
 	resp := &dns.Msg{}
-	resp.SetRcode(req, code)
-	if err := w.WriteMsg(resp); err != nil {
-		d.Logger.WithError(err).WithFields(logFields).Error("handler error")
-		dns.HandleFailed(w, req)
+	resp.SetRcode(req, dns.RcodeRefused)
+	return resp
+}
+
+func logFields(net string, req, resp *dns.Msg, blocked *bool, cache *string) logrus.Fields {
+	ret := logrus.Fields{
+		"name": req.Question[0].Name,
+		"type": dns.TypeToString[req.Question[0].Qtype],
+		"net":  net,
 	}
+
+	if resp != nil {
+		ret["rcode"] = dns.RcodeToString[(*resp).Rcode]
+	}
+
+	if blocked != nil {
+		ret["blocked"] = *blocked
+	}
+
+	if cache != nil {
+		ret["cache"] = *cache
+	}
+
+	return ret
 }
 
 func (d *DNSServer) Handler(net string, addr []string) dns.Handler {
 	return dns.HandlerFunc(func(w dns.ResponseWriter, req *dns.Msg) {
+		var resp *dns.Msg
+		blocked := false
+		cache := "miss"
+
+		defer d.respond(net, w, req, &resp, &blocked, &cache)
+		defer observeHandler(time.Now(), &resp, &blocked, &cache)
+
 		// refuse "any" and "rrsig" requests
 		switch req.Question[0].Qtype {
 		case dns.TypeANY, dns.TypeRRSIG:
-			d.RespondCode(net, w, req, dns.RcodeRefused)
+			resp = refused(req)
 			return
 		}
-
-		logFields := logrus.Fields{
-			"name": req.Question[0].Name,
-			"type": dns.TypeToString[req.Question[0].Qtype],
-			"net":  net,
-		}
-
-		var resp *dns.Msg
-		var err error
 
 		if d.Block.Should(req) {
+			blocked = true
+			cache = "hit"
 			resp = d.Block.NewReply(req)
-			d.Logger.WithFields(logFields).Debug("blocked")
-		} else if resp, err = d.Lookup(net, addr, req); err != nil {
-			d.Logger.WithError(err).WithFields(logFields).Warn("lookup error")
-		}
-
-		if resp == nil {
-			dns.HandleFailed(w, req)
 			return
 		}
 
-		resp.RecursionAvailable = true
+		if d.Cache != nil {
+			if resp = d.Cache.Get(req); resp != nil {
+				cache = "hit"
+				return
+			}
+		}
 
-		if err = w.WriteMsg(resp); err != nil {
-			d.Logger.WithError(err).WithFields(logFields).Error("handler error")
-			dns.HandleFailed(w, req)
+		if !req.RecursionDesired {
+			resp = refused(req)
+			return
+		}
+
+		resp = d.fastLookup(net, addr, req)
+
+		if d.Cache != nil {
+			go d.Cache.Set(resp)
 		}
 	})
 }

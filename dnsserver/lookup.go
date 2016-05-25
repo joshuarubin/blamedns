@@ -4,38 +4,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 )
 
-// Lookup will ask each nameserver in top-to-bottom fashion, starting a new request
-// in every second, and return as early as possbile (have an answer).
-// It returns an error if no request has succeeded.
-//
-// largely taken from github.com/looterz/grimd
-func (d *DNSServer) Lookup(net string, addr []string, req *dns.Msg) (*dns.Msg, error) {
-	if d.Cache != nil {
-		if resp := d.Cache.Get(req); resp != nil {
-			return resp, nil
-		}
-	}
-
-	if !req.RecursionDesired {
-		resp := &dns.Msg{}
-		resp.SetRcode(req, dns.RcodeRefused)
-		return resp, nil
-	}
-
-	resp, err := d.fastLookup(net, addr, req)
-
-	if err == nil && d.Cache != nil {
-		go d.Cache.Set(resp)
-	}
-
-	return resp, err
-}
-
-func (d *DNSServer) fastLookup(net string, addr []string, req *dns.Msg) (resp *dns.Msg, err error) {
+func (d *DNSServer) fastLookup(net string, addr []string, req *dns.Msg) (resp *dns.Msg) {
 	respCh := make(chan *dns.Msg)
 	var wg sync.WaitGroup
 
@@ -62,23 +34,12 @@ func (d *DNSServer) fastLookup(net string, addr []string, req *dns.Msg) (resp *d
 	case resp = <-respCh:
 		return
 	default:
-		err = ResolvError{req.Question[0].Name, net, addr}
 		return
 	}
 }
 
 func (d *DNSServer) lookup(net, nameserver string, req *dns.Msg, respCh chan<- *dns.Msg, wg *sync.WaitGroup) {
 	defer wg.Done()
-
-	q := req.Question[0]
-
-	logFields := logrus.Fields{
-		"name":       unfqdn(q.Name),
-		"type":       dns.TypeToString[q.Qtype],
-		"class":      dns.ClassToString[q.Qclass],
-		"net":        net,
-		"nameserver": nameserver,
-	}
 
 	c := &dns.Client{
 		Net:          net,
@@ -89,17 +50,21 @@ func (d *DNSServer) lookup(net, nameserver string, req *dns.Msg, respCh chan<- *
 
 	resp, _, err := c.Exchange(req, nameserver)
 	if err != nil {
-		d.Logger.WithError(err).WithFields(logFields).Warn("socket error")
+		lf := logFields(net, req, nil, nil, nil)
+		lf["nameserver"] = nameserver
+
+		d.Logger.WithError(err).WithFields(lf).Warn("socket error")
 		return
 	}
 
 	if resp != nil && resp.Rcode != dns.RcodeSuccess && resp.Rcode != dns.RcodeNameError {
-		d.Logger.WithFields(logFields).Debugf("failed to get a valid answer")
+		lf := logFields(net, req, nil, nil, nil)
+		lf["nameserver"] = nameserver
+
+		d.Logger.WithFields(lf).Warn("failed to get a valid answer")
 		if resp.Rcode == dns.RcodeServerFailure {
 			return
 		}
-	} else {
-		d.Logger.WithFields(logFields).Debug("resolv")
 	}
 
 	select {

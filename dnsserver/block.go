@@ -41,8 +41,7 @@ func (b Block) Should(req *dns.Msg) bool {
 		return false
 	}
 
-	host := unfqdn(q.Name)
-	host = strings.ToLower(host)
+	host := strings.ToLower(unfqdn(q.Name))
 
 	if b.Passer.Pass(host) {
 		return false

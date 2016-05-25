@@ -3,7 +3,6 @@ package dnscache
 import (
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 )
 
@@ -62,12 +61,6 @@ func (c *Memory) setNxDomain(resp *dns.Msg) {
 	}
 
 	c.nxDomain.Add(q.Name, e)
-
-	c.Logger.WithFields(logrus.Fields{
-		"name": q.Name,
-		"soa":  e.SOA,
-		"ttl":  e.TTL().Seconds(),
-	}).Debug("stored nxdomain response in cache")
 }
 
 func (c *Memory) getNxDomain(q dns.Question) *negativeEntry {

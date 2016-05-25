@@ -6,6 +6,7 @@ import (
 	"net/http/pprof"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Server struct {
@@ -23,6 +24,8 @@ func Handler(server *Server) http.Handler {
 	ret.HandleFunc("/debug/pprof/profile", pprof.Profile)
 	ret.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	ret.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
+	ret.Handle("/metrics", prometheus.Handler())
 
 	ret.Handle("/v1/", v1Handler(server))
 

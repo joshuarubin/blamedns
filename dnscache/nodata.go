@@ -3,7 +3,6 @@ package dnscache
 import (
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 )
 
@@ -44,12 +43,6 @@ func (c *Memory) setNoData(resp *dns.Msg) {
 	}
 
 	c.noData.Add(k, e)
-
-	c.Logger.WithFields(logrus.Fields{
-		"name": q.Name,
-		"soa":  e.SOA,
-		"ttl":  e.TTL().Seconds(),
-	}).Debug("stored nodata response in cache")
 }
 
 func (c *Memory) getNoData(q dns.Question) *negativeEntry {
