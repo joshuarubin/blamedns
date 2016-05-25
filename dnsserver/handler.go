@@ -47,6 +47,8 @@ func (d *DNSServer) respond(net string, w dns.ResponseWriter, req *dns.Msg, resp
 
 	if (*resp).Rcode == dns.RcodeServerFailure {
 		d.Logger.WithFields(lf).Error("responded with error")
+	} else if cache != nil && *cache == "miss" {
+		d.Logger.WithFields(lf).Info("responded")
 	} else {
 		d.Logger.WithFields(lf).Debug("responded")
 	}

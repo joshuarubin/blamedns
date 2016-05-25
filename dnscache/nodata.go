@@ -72,7 +72,7 @@ func (c *Memory) buildNoDataReply(req *dns.Msg, e *negativeEntry) *dns.Msg {
 		Qclass: dns.ClassINET,
 	}
 
-	if resp.Ns = c.get(q); resp.Ns != nil {
+	if resp.Ns = c.get(q, nil); resp.Ns != nil {
 		return resp
 	}
 

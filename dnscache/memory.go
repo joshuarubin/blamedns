@@ -137,13 +137,50 @@ func (c *Memory) Set(resp *dns.Msg) int {
 	return n
 }
 
-func (c *Memory) get(q dns.Question) []dns.RR {
+func (c *Memory) get(q dns.Question, data []dns.RR) []dns.RR {
 	if q.Qclass != dns.ClassINET {
 		return nil
 	}
 
+	if data == nil {
+		data = []dns.RR{}
+	}
+
 	if elem, ok := c.data.Get(key{Host: q.Name, Type: q.Qtype}); ok {
-		return elem.(*RRSet).RR()
+		if data = append(data, elem.(*RRSet).RR()...); len(data) > 0 {
+			return data
+		}
+		return nil
+	}
+
+	if q.Qtype == dns.TypeCNAME {
+		return nil
+	}
+
+	// there was nothing in the cache that matched the RR Type requested, see if
+	// there is a CNAME that resolves to the correct type
+
+	if elem, ok := c.data.Get(key{Host: q.Name, Type: dns.TypeCNAME}); ok {
+		cnames := elem.(*RRSet).RR()
+		data = append(data, cnames...)
+
+		for _, value := range cnames {
+			cname := value.(*dns.CNAME)
+
+			req := &dns.Msg{
+				Question: []dns.Question{{
+					Name:   cname.Target,
+					Qtype:  q.Qtype,
+					Qclass: q.Qclass,
+				}},
+			}
+
+			if resp := c.Get(req); resp != nil && len(resp.Answer) > 0 {
+				data = append(data, resp.Answer...)
+			}
+		}
+
+		return data
 	}
 
 	return nil
@@ -170,7 +207,7 @@ func (c *Memory) cacheFn() []cacheFn {
 func (c *Memory) Get(req *dns.Msg) *dns.Msg {
 	q := req.Question[0]
 
-	if ans := c.get(q); ans != nil {
+	if ans := c.get(q, nil); ans != nil {
 		return c.buildReply(req, ans)
 	}
 
@@ -234,7 +271,7 @@ func (c *Memory) processAdditionalSection(resp *dns.Msg) {
 	}
 
 	for _, q := range qs {
-		if extra := c.get(q); extra != nil {
+		if extra := c.get(q, nil); extra != nil {
 			resp.Extra = append(resp.Extra, extra...)
 		}
 	}
