@@ -51,7 +51,7 @@ func (rs *RRSet) append(rr *RR) {
 
 func (rs *RRSet) delete(i int) {
 	copy((*rs)[i:], (*rs)[i+1:])
-	(*rs)[len((*rs))-1] = nil // or the zero value of T
+	(*rs)[len((*rs))-1] = nil
 	*rs = (*rs)[:len((*rs))-1]
 }
 

@@ -117,7 +117,7 @@ func (c *Memory) Set(resp *dns.Msg) int {
 		c.setNxDomain(resp)
 	} else if resp.Rcode != dns.RcodeSuccess {
 		return 0
-	} else if len(resp.Answer) == 0 {
+	} else if respNODATA(resp) {
 		// NODATA cache for only Qtype/Name conbination
 		c.setNoData(resp)
 	}
