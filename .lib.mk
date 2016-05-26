@@ -81,7 +81,7 @@ lint:
 metalint:
 	$(foreach pkg, $(GO_PKGS), $(METALINT) $(SRC_DIR)/$(pkg) || $(TRUE)${\n})
 
-test: $(GO_FILES)
+test:
 	$(GOTEST) -race $(GO_PKGS)
 
 save:
@@ -93,11 +93,11 @@ clean::
 
 install:: .install-stamp $(INSTALL_DEPS)
 
-.install-stamp: $(GO_FILES)
+.install-stamp: $(GO_FILES_NO_TESTS)
 	$(GO) install -v ./... || $(TRUE)
 	@$(TOUCH) .install-stamp
 
-$(INSTALL_DEPS): %: $(GO_FILES)
+$(INSTALL_DEPS): %: $(GO_FILES_NO_TESTS)
 	CGO_ENABLED=0 GOOS=$(word 3,$(subst -, ,$@)) GOARCH=$(word 4,$(subst -, ,$@)) $(GO) install -v ./... || $(TRUE)
 	@$(TOUCH) $@
 
