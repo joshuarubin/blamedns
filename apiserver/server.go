@@ -1,21 +1,37 @@
 package apiserver
 
 import (
-	"net"
 	"net/http"
 	"net/http/pprof"
+
+	"jrubin.io/blamedns/simpleserver"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// A Server defines parameters for running an apiserver http server.
 type Server struct {
-	Logger *logrus.Logger
+	simpleserver.Server
 }
 
-var DefaultServer = &Server{Logger: logrus.New()}
+const name = "apiserver"
 
-func Handler(server *Server) http.Handler {
+// New allocates a new apiserver Server.
+func New(addr string, logger *logrus.Logger) *Server {
+	return &Server{
+		Server: simpleserver.Server{
+			Name:    name,
+			Logger:  logger,
+			Addr:    addr,
+			Handler: Handler(logger),
+		},
+	}
+}
+
+// Handler returns an http.Handler that responds properly to all apiserver
+// routes.
+func Handler(logger *logrus.Logger) http.Handler {
 	ret := http.NewServeMux()
 
 	ret.HandleFunc("/debug/vars", expvarHandler)
@@ -27,27 +43,7 @@ func Handler(server *Server) http.Handler {
 
 	ret.Handle("/metrics", prometheus.Handler())
 
-	ret.Handle("/v1/", v1Handler(server))
+	ret.Handle("/v1/", v1Handler(logger))
 
 	return ret
-}
-
-func (s *Server) ListenAndServe(addr string) error {
-	srv := &http.Server{Addr: addr, Handler: Handler(s)}
-	s.Logger.WithField("addr", addr).Info("starting apiserver")
-	return srv.ListenAndServe()
-}
-
-func (s *Server) Serve(l net.Listener) error {
-	srv := &http.Server{Handler: Handler(s)}
-	s.Logger.WithField("addr", l.Addr().String()).Info("starting apiserver")
-	return srv.Serve(l)
-}
-
-func ListenAndServe(addr string) error {
-	return DefaultServer.ListenAndServe(addr)
-}
-
-func Serve(l net.Listener) error {
-	return DefaultServer.Serve(l)
 }
