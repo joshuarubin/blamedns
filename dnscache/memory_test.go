@@ -36,7 +36,7 @@ var (
 					Class:  dns.ClassINET,
 					Ttl:    60,
 				},
-				Target: "example.com.",
+				Target: "example.com",
 			},
 		},
 		Ns: []dns.RR{
@@ -217,6 +217,16 @@ func TestMemoryCache(t *testing.T) {
 			}
 		}
 
+		resp = c.Get(newReq(dns.TypeA, "cname.example.com"))
+		So(resp, ShouldNotBeNil)
+		So(resp.Answer, ShouldNotBeNil)
+		So(len(resp.Answer), ShouldEqual, 3)
+
+		resp = c.Get(newReq(dns.TypeAAAA, "cname.example.com"))
+		So(resp, ShouldNotBeNil)
+		So(resp.Answer, ShouldNotBeNil)
+		So(len(resp.Answer), ShouldEqual, 2)
+
 		resp = c.Get(newReq(dns.TypeAAAA, "example.com"))
 		So(resp, ShouldNotBeNil)
 		So(resp.Answer, ShouldNotBeNil)
@@ -320,34 +330,29 @@ func TestMemoryCache(t *testing.T) {
 			So(evictCounter, ShouldEqual, 1)
 		})
 
-		Convey("cname fallback responses should work", func() {
+		Convey("cname loops shouldnt kill the server", func() {
 			c := NewMemory(128, nil, nil)
 			// add a cname record
 			So(c.Set(msg1), ShouldEqual, 1)
 
 			// do an A lookup for it
 			r := testGet(c, dns.TypeA, "a.example.com")
-			So(r, ShouldNotBeNil)
-			So(len(r.Answer), ShouldEqual, 1)
-			So(r.Answer[0].Header().Rrtype, ShouldEqual, dns.TypeCNAME)
+			So(r, ShouldBeNil)
 
 			// now add a cname that points to a third record
 			So(c.Set(msg2), ShouldEqual, 1)
 			r = testGet(c, dns.TypeA, "b.example.com")
-			So(r, ShouldNotBeNil)
-			So(len(r.Answer), ShouldEqual, 1)
+			So(r, ShouldBeNil)
 
 			// getting the first record should return both
 			r = testGet(c, dns.TypeA, "a.example.com")
-			So(r, ShouldNotBeNil)
-			So(len(r.Answer), ShouldEqual, 2)
+			So(r, ShouldBeNil)
 
 			// finally add a cname that points back to the first record, making
 			// a cname loop
 			So(c.Set(msg3), ShouldEqual, 1)
 			r = testGet(c, dns.TypeA, "c.example.com")
-			So(r, ShouldNotBeNil)
-			So(len(r.Answer), ShouldEqual, 3)
+			So(r, ShouldBeNil)
 		})
 	})
 }

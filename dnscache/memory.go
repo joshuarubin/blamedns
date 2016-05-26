@@ -189,6 +189,7 @@ func (c *Memory) get(q dns.Question, resp *dns.Msg, field msgField) bool {
 	if elem, ok := c.data.Get(key{Host: q.Name, Type: dns.TypeCNAME}); ok {
 		newValues := appendResponseField(resp, field, elem.(*RRSet).RR())
 
+		var completed bool
 		for _, value := range newValues {
 			cname := value.(*dns.CNAME)
 
@@ -202,10 +203,12 @@ func (c *Memory) get(q dns.Question, resp *dns.Msg, field msgField) bool {
 
 			// we need to use the outside Get() so that NXDOMAIN and NODATA
 			// values are correct as well
-			c.outerGet(req, resp)
+			if c.outerGet(req, resp) {
+				completed = true
+			}
 		}
 
-		if len(newValues) > 0 {
+		if completed {
 			return true
 		}
 	}
