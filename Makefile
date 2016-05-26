@@ -19,10 +19,10 @@ GHR ?= ghr
 
 build: $(EXECUTABLE)
 
-$(EXECUTABLE): $(GO_FILES) .install-stamp
+$(EXECUTABLE): $(GO_FILES_NO_TESTS) .install-stamp
 	$(GO_BUILD) -o $(EXECUTABLE) $(BASE_PKG)
 
-$(DOCKER_EXECUTABLE): $(GO_FILES) .install-stamp-linux-amd64
+$(DOCKER_EXECUTABLE): $(GO_FILES_NO_TESTS) .install-stamp-linux-amd64
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO_BUILD) -o $(DOCKER_EXECUTABLE) $(BASE_PKG)
 
 image: .image-stamp
@@ -34,7 +34,7 @@ image: .image-stamp
 clean::
 	$(RM) -r $(EXECUTABLE) $(DOCKER_EXECUTABLE) .image-stamp $(DIST_DIR)
 
-$(DIST_TARGETS): %: $(GO_FILES) $(INSTALL_DEPS)
+$(DIST_TARGETS): %: $(GO_FILES_NO_TESTS) $(INSTALL_DEPS)
 	CGO_ENABLED=0 GOOS=$(word 2,$(subst _, ,$@)) GOARCH=$(word 3,$(subst _, ,$@)) $(GO_BUILD) -o $@ $(BASE_PKG)
 
 dist: $(DIST_TARGETS)

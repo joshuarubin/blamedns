@@ -150,7 +150,7 @@ func (d *DNSServer) Handler(net string, addr []string) dns.Handler {
 	return dns.HandlerFunc(func(w dns.ResponseWriter, req *dns.Msg) {
 		begin := time.Now()
 
-		ctx, _ := context.WithTimeout(context.Background(), d.DialTimeout+2*d.ClientTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), d.DialTimeout+2*d.ClientTimeout)
 		respCh := make(chan *hresp, 1)
 
 		go d.bgHandler(ctx, net, addr, req, respCh)
@@ -165,6 +165,7 @@ func (d *DNSServer) Handler(net string, addr []string) dns.Handler {
 			}
 		}
 
+		cancel()
 		r = d.respond(net, w, req, r)
 
 		handlerDuration.

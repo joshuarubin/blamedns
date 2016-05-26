@@ -64,6 +64,9 @@ find-files-with-extension = \
 # GO_FILES - a list of all .go files in any directory in $(ALL_DIRS)
 GO_FILES := $(call find-files-with-extension,go)
 
+# GO_FILES_NO_TESTS - $(GO_FILES) with test files removed
+GO_FILES_NO_TESTS := $(filter-out %_test.go,$(GO_FILES))
+
 define \n
 
 
