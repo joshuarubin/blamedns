@@ -50,9 +50,12 @@ func parseConfigFile(c *cli.Context) {
 	md, err := toml.DecodeFile(file, &cfg)
 	if err != nil {
 		perr, ok := err.(*os.PathError)
-		if !ok || perr.Err != syscall.ENOENT {
-			logger.WithError(err).Warn("error reading config file")
+		if ok && perr.Err == syscall.ENOENT && file == defaultConfigFile {
+			// ignore file not found error if the config file was the default one
+			return
 		}
+
+		logger.WithError(err).Warn("error reading config file")
 		return
 	}
 
