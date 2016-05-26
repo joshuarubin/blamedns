@@ -88,6 +88,59 @@ var (
 		},
 	}
 
+	msg1 = &dns.Msg{
+		Question: []dns.Question{{
+			Qclass: dns.ClassINET,
+		}},
+		Answer: []dns.RR{
+			&dns.CNAME{
+				Hdr: dns.RR_Header{
+					Name:   "a.example.com",
+					Rrtype: dns.TypeCNAME,
+					Class:  dns.ClassINET,
+					Ttl:    60,
+				},
+				Target: "b.example.com",
+			},
+		},
+	}
+
+	// intentionally make a cname loop with msg1
+	msg2 = &dns.Msg{
+		Question: []dns.Question{{
+			Qclass: dns.ClassINET,
+		}},
+		Answer: []dns.RR{
+			&dns.CNAME{
+				Hdr: dns.RR_Header{
+					Name:   "b.example.com",
+					Rrtype: dns.TypeCNAME,
+					Class:  dns.ClassINET,
+					Ttl:    60,
+				},
+				Target: "c.example.com",
+			},
+		},
+	}
+
+	// intentionally make a cname loop with msg1
+	msg3 = &dns.Msg{
+		Question: []dns.Question{{
+			Qclass: dns.ClassINET,
+		}},
+		Answer: []dns.RR{
+			&dns.CNAME{
+				Hdr: dns.RR_Header{
+					Name:   "c.example.com",
+					Rrtype: dns.TypeCNAME,
+					Class:  dns.ClassINET,
+					Ttl:    60,
+				},
+				Target: "a.example.com",
+			},
+		},
+	}
+
 	logger = logrus.New()
 )
 
@@ -266,5 +319,45 @@ func TestMemoryCache(t *testing.T) {
 			l.Set(newAMsg("1.example.com"))
 			So(evictCounter, ShouldEqual, 1)
 		})
+
+		Convey("cname fallback responses should work", func() {
+			c := NewMemory(128, nil, nil)
+			// add a cname record
+			So(c.Set(msg1), ShouldEqual, 1)
+
+			// do an A lookup for it
+			r := testGet(c, dns.TypeA, "a.example.com")
+			So(r, ShouldNotBeNil)
+			So(len(r.Answer), ShouldEqual, 1)
+			So(r.Answer[0].Header().Rrtype, ShouldEqual, dns.TypeCNAME)
+
+			// now add a cname that points to a third record
+			So(c.Set(msg2), ShouldEqual, 1)
+			r = testGet(c, dns.TypeA, "b.example.com")
+			So(r, ShouldNotBeNil)
+			So(len(r.Answer), ShouldEqual, 1)
+
+			// getting the first record should return both
+			r = testGet(c, dns.TypeA, "a.example.com")
+			So(r, ShouldNotBeNil)
+			So(len(r.Answer), ShouldEqual, 2)
+
+			// finally add a cname that points back to the first record, making
+			// a cname loop
+			So(c.Set(msg3), ShouldEqual, 1)
+			r = testGet(c, dns.TypeA, "c.example.com")
+			So(r, ShouldNotBeNil)
+			So(len(r.Answer), ShouldEqual, 3)
+		})
+	})
+}
+
+func testGet(c Cache, t uint16, host string) *dns.Msg {
+	return c.Get(&dns.Msg{
+		Question: []dns.Question{{
+			Name:   host,
+			Qtype:  t,
+			Qclass: dns.ClassINET,
+		}},
 	})
 }

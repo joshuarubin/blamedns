@@ -62,19 +62,19 @@ func (c *Memory) getNoData(q dns.Question) *negativeEntry {
 	return nil
 }
 
-func (c *Memory) buildNoDataReply(req *dns.Msg, e *negativeEntry) *dns.Msg {
-	resp := &dns.Msg{}
-	resp.SetReply(req)
+func (c *Memory) buildNegativeReply(rcode int) func(*dns.Msg, *negativeEntry, *dns.Msg) bool {
+	return func(req *dns.Msg, e *negativeEntry, resp *dns.Msg) bool {
+		q := dns.Question{
+			Name:   e.SOA,
+			Qtype:  dns.TypeSOA,
+			Qclass: dns.ClassINET,
+		}
 
-	q := dns.Question{
-		Name:   e.SOA,
-		Qtype:  dns.TypeSOA,
-		Qclass: dns.ClassINET,
+		if c.get(q, resp, fieldNs) {
+			resp.SetRcode(req, rcode)
+			return true
+		}
+
+		return false
 	}
-
-	if resp.Ns = c.get(q); resp.Ns != nil {
-		return resp
-	}
-
-	return nil
 }

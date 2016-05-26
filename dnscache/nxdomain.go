@@ -74,20 +74,3 @@ func (c *Memory) getNxDomain(q dns.Question) *negativeEntry {
 
 	return nil
 }
-
-func (c *Memory) buildNXReply(req *dns.Msg, e *negativeEntry) *dns.Msg {
-	resp := &dns.Msg{}
-	resp.SetRcode(req, dns.RcodeNameError)
-
-	q := dns.Question{
-		Name:   e.SOA,
-		Qtype:  dns.TypeSOA,
-		Qclass: dns.ClassINET,
-	}
-
-	if resp.Ns = c.get(q); resp.Ns != nil {
-		return resp
-	}
-
-	return nil
-}

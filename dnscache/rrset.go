@@ -103,3 +103,34 @@ func (rs RRSet) Len() int {
 	}
 	return ret
 }
+
+func appendRRSetIfNotExist(data, set []dns.RR) ([]dns.RR, []dns.RR) {
+	var newlyAppended []dns.RR
+
+	for _, rr := range set {
+		var appended bool
+		if data, appended = appendRRIfNotExist(data, rr); appended {
+			newlyAppended = append(newlyAppended, rr)
+		}
+	}
+
+	return data, newlyAppended
+}
+
+func appendRRIfNotExist(data []dns.RR, val dns.RR) ([]dns.RR, bool) {
+	rr := NewRR(val)
+
+	var found bool
+	for _, exist := range data {
+		if rr.Equal(NewRR(exist)) {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		data = append(data, val)
+	}
+
+	return data, !found
+}

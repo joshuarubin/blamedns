@@ -1,6 +1,7 @@
 package dnscache
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -124,57 +125,71 @@ func (c *Memory) Set(resp *dns.Msg) int {
 	var n int
 	for _, s := range [][]dns.RR{resp.Answer, resp.Ns, resp.Extra} {
 		for _, rr := range s {
-			if rr.Header().Class != dns.ClassINET {
-				continue
+			if rr.Header().Class == dns.ClassINET {
+				c.add(NewRR(rr))
+				n++
 			}
-
-			e := NewRR(rr)
-			c.add(e)
-			n++
-
-			c.Logger.WithFields(logrus.Fields{
-				"type": dns.TypeToString[e.Header().Rrtype],
-				"name": e.Header().Name,
-				"ttl":  e.TTL().Seconds(),
-			}).Debug("stored in cache")
 		}
 	}
-
 	return n
 }
 
-func logFields(q dns.Question, cache string) logrus.Fields {
-	return logrus.Fields{
-		"class": dns.ClassToString[q.Qclass],
-		"type":  dns.TypeToString[q.Qtype],
-		"name":  q.Name,
-		"cache": cache,
+type msgField int
+
+const (
+	fieldAnswer = iota
+	fieldNs
+	fieldExtra
+)
+
+func responseField(resp *dns.Msg, field msgField) []dns.RR {
+	switch field {
+	case fieldAnswer:
+		return resp.Answer
+	case fieldNs:
+		return resp.Ns
+	case fieldExtra:
+		return resp.Extra
 	}
+	panic(fmt.Errorf("invalid field: %d", field))
 }
 
-func (c *Memory) get(q dns.Question) []dns.RR {
+func appendResponseField(resp *dns.Msg, field msgField, value []dns.RR) []dns.RR {
+	var newValues []dns.RR
+	switch field {
+	case fieldAnswer:
+		resp.Answer, newValues = appendRRSetIfNotExist(resp.Answer, value)
+	case fieldNs:
+		resp.Ns, newValues = appendRRSetIfNotExist(resp.Ns, value)
+	case fieldExtra:
+		resp.Extra, newValues = appendRRSetIfNotExist(resp.Extra, value)
+	}
+	return newValues
+}
+
+func (c *Memory) get(q dns.Question, resp *dns.Msg, field msgField) bool {
 	if q.Qclass != dns.ClassINET {
-		return nil
+		return false
 	}
 
 	if elem, ok := c.data.Get(key{Host: q.Name, Type: q.Qtype}); ok {
-		if data := elem.(*RRSet).RR(); len(data) > 0 {
-			return data
+		if data := appendResponseField(resp, field, elem.(*RRSet).RR()); len(data) > 0 {
+			return true
 		}
-		return nil
+		return false
 	}
 
 	if q.Qtype == dns.TypeCNAME {
-		return nil
+		return false
 	}
 
 	// there was nothing in the cache that matched the RR Type requested, see if
 	// there is a CNAME that resolves to the correct type
 
 	if elem, ok := c.data.Get(key{Host: q.Name, Type: dns.TypeCNAME}); ok {
-		data := elem.(*RRSet).RR()
+		newValues := appendResponseField(resp, field, elem.(*RRSet).RR())
 
-		for _, value := range data {
+		for _, value := range newValues {
 			cname := value.(*dns.CNAME)
 
 			req := &dns.Msg{
@@ -187,70 +202,64 @@ func (c *Memory) get(q dns.Question) []dns.RR {
 
 			// we need to use the outside Get() so that NXDOMAIN and NODATA
 			// values are correct as well
-			if resp := c.Get(req); resp != nil {
-				// TODO(jrubin) only add answers not already existing
-				// if no new answers are added, return
-				data = append(data, resp.Answer...)
-			}
+			c.outerGet(req, resp)
 		}
 
-		return data
+		if len(newValues) > 0 {
+			return true
+		}
 	}
 
-	return nil
+	return false
 }
 
 type cacheFn struct {
 	fn    func(dns.Question) *negativeEntry
-	build func(*dns.Msg, *negativeEntry) *dns.Msg
+	build func(*dns.Msg, *negativeEntry, *dns.Msg) bool
 	name  string
 }
 
 func (c *Memory) cacheFn() []cacheFn {
 	return []cacheFn{{
 		fn:    c.getNoData,
-		build: c.buildNoDataReply,
+		build: c.buildNegativeReply(dns.RcodeSuccess),
 		name:  "nodata",
 	}, {
 		fn:    c.getNxDomain,
-		build: c.buildNXReply,
+		build: c.buildNegativeReply(dns.RcodeNameError),
 		name:  "nxdomain",
 	}}
 }
 
 func (c *Memory) Get(req *dns.Msg) *dns.Msg {
+	resp := &dns.Msg{}
+	if c.outerGet(req, resp) {
+		return resp
+	}
+	return nil
+}
+
+func (c *Memory) outerGet(req *dns.Msg, resp *dns.Msg) bool {
 	q := req.Question[0]
 
-	if ans := c.get(q); ans != nil {
-		c.Logger.WithFields(logFields(q, "hit")).Debug("cache lookup")
-		return c.buildReply(req, ans)
+	if c.get(q, resp, fieldAnswer) {
+		resp.SetReply(req)
+		c.processAdditionalSection(resp)
+		// TODO(jrubin) ensure no duplicates of resp.Answer are in resp.Extra
+		return true
 	}
+
+	// check for NXDOMAIN and NODATA
 
 	for _, fn := range c.cacheFn() {
 		if e := fn.fn(q); e != nil {
-			if r := fn.build(req, e); r != nil {
-				lf := logFields(q, "hit")
-				lf["ttl"] = e.TTL().Seconds()
-				c.Logger.WithFields(lf).Debugf("cache lookup (%s)", fn.name)
-				return r
+			if fn.build(req, e, resp) {
+				return true
 			}
 		}
 	}
 
-	c.Logger.WithFields(logFields(q, "miss")).Debug("cache lookup")
-	return nil
-}
-
-func (c *Memory) buildReply(req *dns.Msg, ans []dns.RR) *dns.Msg {
-	resp := &dns.Msg{}
-	resp.SetReply(req)
-	resp.Answer = ans
-
-	c.processAdditionalSection(resp)
-
-	// TODO(jrubin) ensure no duplicates of resp.Answer are in resp.Extra
-
-	return resp
+	return false
 }
 
 var additionalQTypes = []uint16{dns.TypeA, dns.TypeAAAA}
@@ -290,15 +299,7 @@ func (c *Memory) processAdditionalSection(resp *dns.Msg) {
 	}
 
 	for _, q := range qs {
-		var lf logrus.Fields
-		if extra := c.get(q); extra != nil {
-			lf = logFields(q, "hit")
-			resp.Extra = append(resp.Extra, extra...)
-		} else {
-			lf = logFields(q, "miss")
-		}
-
-		c.Logger.WithFields(lf).Debug("cache lookup (additional)")
+		c.get(q, resp, fieldExtra)
 	}
 }
 
