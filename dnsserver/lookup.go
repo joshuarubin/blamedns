@@ -53,7 +53,7 @@ func (d *DNSServer) lookup(net, nameserver string, req *dns.Msg, respCh chan<- *
 
 	resp, _, err := c.Exchange(req, nameserver)
 	if err != nil {
-		lf := logFields(net, req, nil, nil, nil)
+		lf := logFields(net, req, nil)
 		lf["nameserver"] = nameserver
 
 		d.Logger.WithError(err).WithFields(lf).Warn("socket error")
@@ -61,7 +61,7 @@ func (d *DNSServer) lookup(net, nameserver string, req *dns.Msg, respCh chan<- *
 	}
 
 	if resp != nil && resp.Rcode != dns.RcodeSuccess && resp.Rcode != dns.RcodeNameError {
-		lf := logFields(net, req, nil, nil, nil)
+		lf := logFields(net, req, nil)
 		lf["nameserver"] = nameserver
 
 		d.Logger.WithFields(lf).Warn("failed to get a valid answer")
