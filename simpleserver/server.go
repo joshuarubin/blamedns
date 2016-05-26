@@ -3,19 +3,25 @@ package simpleserver
 import (
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/Sirupsen/logrus"
+	"gopkg.in/tylerb/graceful.v1"
 )
 
 // A Server defines parameters for running a simple http server.
 // Addr is required (unless Serve(l) is used directly). Name is recommended.
 type Server struct {
-	Name    string
-	Logger  *logrus.Logger
-	Addr    string
-	Handler http.Handler
-	ln      net.Listener
+	Name        string
+	Logger      *logrus.Logger
+	Addr        string
+	Handler     http.Handler
+	StopTimeout time.Duration
+	ln          net.Listener
+	srv         *graceful.Server
 }
+
+const DefaultStopTimeout = 10 * time.Second
 
 // ServerName just returns the server name. Provided so that structs that stack
 // simpleserver will provide this method.
@@ -70,7 +76,19 @@ func (s *Server) Serve(l net.Listener) error {
 		s.Logger.WithFields(s.logFields()).Infof("starting")
 	}
 
-	return (&http.Server{Handler: s.Handler}).Serve(l)
+	s.srv = &graceful.Server{
+		Server:           &http.Server{Handler: s.Handler},
+		NoSignalHandling: true,
+	}
+
+	return s.srv.Serve(l)
+}
+
+func (s Server) stopTimeout() time.Duration {
+	if s.StopTimeout > 0 {
+		return s.StopTimeout
+	}
+	return DefaultStopTimeout
 }
 
 // Init prepares the Server for Start. If it does not return an error, then
@@ -92,18 +110,8 @@ func (s *Server) Start() error {
 	}
 
 	go func() {
-		if err := s.Serve(s.ln); err != nil {
-			if nerr, ok := err.(*net.OpError); ok {
-				// wish there was a better way to detect this...
-				// https://github.com/golang/go/issues/4373
-				if nerr.Op == "accept" && nerr.Net == "tcp" && nerr.Err.Error() == "use of closed network connection" {
-					// Close sometimes causes this...
-					return
-				}
-			}
-			if s.Logger != nil {
-				s.Logger.WithError(err).WithFields(s.logFields()).Warnf("serve error")
-			}
+		if err := s.Serve(s.ln); err != nil && s.Logger != nil {
+			s.Logger.WithError(err).WithFields(s.logFields()).Warnf("serve error")
 		}
 	}()
 
@@ -119,7 +127,7 @@ func (s *Server) logFields() logrus.Fields {
 
 // Close shuts down the server.
 func (s *Server) Close() error {
-	if s.ln == nil {
+	if s.srv == nil {
 		return nil
 	}
 
@@ -127,13 +135,12 @@ func (s *Server) Close() error {
 		s.Logger.WithFields(s.logFields()).Infof("stopping")
 	}
 
-	if err := s.ln.Close(); err != nil {
-		if s.Logger != nil {
-			s.Logger.WithError(err).WithFields(s.logFields()).Warn("error stopping")
-		}
-		return err
-	}
+	ch := s.srv.StopChan()
+	s.srv.Stop(s.stopTimeout())
+	<-ch
 
+	s.srv = nil
 	s.ln = nil
+
 	return nil
 }

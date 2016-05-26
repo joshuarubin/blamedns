@@ -79,13 +79,6 @@ func (m *Config) Init() error {
 	return m.DNS.Init(m, m.DL.Start)
 }
 
-func (m *Config) close() {
-	for _, server := range m.servers {
-		_ = server.Close()
-	}
-	m.servers = nil
-}
-
 func (m *Config) Start() error {
 	for _, server := range m.servers {
 		_ = server.Start()
@@ -95,7 +88,9 @@ func (m *Config) Start() error {
 }
 
 func (m *Config) Shutdown() {
-	m.close()
+	for _, server := range m.servers {
+		_ = server.Close()
+	}
 	m.DL.Shutdown()
 	m.DNS.Shutdown()
 	m.Log.Shutdown()
