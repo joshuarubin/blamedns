@@ -1,8 +1,11 @@
 package dnscache
 
-import "github.com/miekg/dns"
+import (
+	"github.com/miekg/dns"
+	"golang.org/x/net/context"
+)
 
 type Cache interface {
-	Get(*dns.Msg) *dns.Msg
+	Get(context.Context, *dns.Msg) *dns.Msg
 	Set(*dns.Msg) int
 }

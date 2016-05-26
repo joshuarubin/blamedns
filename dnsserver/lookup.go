@@ -4,10 +4,13 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/miekg/dns"
 )
 
-func (d *DNSServer) fastLookup(net string, addr []string, req *dns.Msg) (resp *dns.Msg) {
+// TODO use context
+func (d *DNSServer) fastLookup(ctx context.Context, net string, addr []string, req *dns.Msg) (resp *dns.Msg) {
 	respCh := make(chan *dns.Msg)
 	var wg sync.WaitGroup
 

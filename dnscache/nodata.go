@@ -3,6 +3,8 @@ package dnscache
 import (
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/miekg/dns"
 )
 
@@ -103,15 +105,15 @@ func (c *Memory) getNoData(q dns.Question) *negativeEntry {
 	return nil
 }
 
-func (c *Memory) buildNegativeReply(rcode int) func(*dns.Msg, *negativeEntry, *dns.Msg) bool {
-	return func(req *dns.Msg, e *negativeEntry, resp *dns.Msg) bool {
+func (c *Memory) buildNegativeReply(rcode int) func(context.Context, *dns.Msg, *negativeEntry, *dns.Msg) bool {
+	return func(ctx context.Context, req *dns.Msg, e *negativeEntry, resp *dns.Msg) bool {
 		q := dns.Question{
 			Name:   e.SOA,
 			Qtype:  dns.TypeSOA,
 			Qclass: dns.ClassINET,
 		}
 
-		if c.get(q, resp, fieldNs) {
+		if c.get(ctx, q, resp, fieldNs) {
 			resp.SetRcode(req, rcode)
 			return true
 		}

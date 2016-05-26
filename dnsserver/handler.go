@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 	prom "github.com/prometheus/client_golang/prometheus"
@@ -111,8 +113,10 @@ func (d *DNSServer) Handler(net string, addr []string) dns.Handler {
 			return
 		}
 
+		ctx, _ := context.WithTimeout(context.Background(), d.DialTimeout+2*d.ClientTimeout)
+
 		if d.Cache != nil {
-			if resp = d.Cache.Get(req); resp != nil {
+			if resp = d.Cache.Get(ctx, req); resp != nil {
 				cache = "hit"
 				return
 			}
@@ -123,7 +127,7 @@ func (d *DNSServer) Handler(net string, addr []string) dns.Handler {
 			return
 		}
 
-		resp = d.fastLookup(net, addr, req)
+		resp = d.fastLookup(ctx, net, addr, req)
 
 		if d.Cache != nil {
 			go d.Cache.Set(resp)

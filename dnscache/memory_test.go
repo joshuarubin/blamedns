@@ -38,6 +38,15 @@ var (
 				},
 				Target: "example.com",
 			},
+			&dns.A{
+				Hdr: dns.RR_Header{
+					Name:   "example.com",
+					Rrtype: dns.TypeA,
+					Class:  dns.ClassINET,
+					Ttl:    60,
+				},
+				A: net.ParseIP("127.0.0.1"),
+			},
 		},
 		Ns: []dns.RR{
 			&dns.SOA{
@@ -57,15 +66,6 @@ var (
 			},
 		},
 		Extra: []dns.RR{
-			&dns.A{
-				Hdr: dns.RR_Header{
-					Name:   "example.com",
-					Rrtype: dns.TypeA,
-					Class:  dns.ClassINET,
-					Ttl:    60,
-				},
-				A: net.ParseIP("127.0.0.1"),
-			},
 			&dns.A{
 				Hdr: dns.RR_Header{
 					Name:   "example.com",
@@ -197,7 +197,7 @@ func TestMemoryCache(t *testing.T) {
 		So(c.Len(), ShouldEqual, 5)
 		So(c.numEntries(), ShouldEqual, 5)
 
-		resp := c.Get(newReq(dns.TypeA, "example.com"))
+		resp := c.Get(nil, newReq(dns.TypeA, "example.com"))
 
 		So(resp, ShouldNotBeNil)
 		So(resp.Answer, ShouldNotBeNil)
@@ -217,17 +217,17 @@ func TestMemoryCache(t *testing.T) {
 			}
 		}
 
-		resp = c.Get(newReq(dns.TypeA, "cname.example.com"))
+		resp = c.Get(nil, newReq(dns.TypeA, "cname.example.com"))
 		So(resp, ShouldNotBeNil)
 		So(resp.Answer, ShouldNotBeNil)
 		So(len(resp.Answer), ShouldEqual, 3)
 
-		resp = c.Get(newReq(dns.TypeAAAA, "cname.example.com"))
+		resp = c.Get(nil, newReq(dns.TypeAAAA, "cname.example.com"))
 		So(resp, ShouldNotBeNil)
 		So(resp.Answer, ShouldNotBeNil)
 		So(len(resp.Answer), ShouldEqual, 2)
 
-		resp = c.Get(newReq(dns.TypeAAAA, "example.com"))
+		resp = c.Get(nil, newReq(dns.TypeAAAA, "example.com"))
 		So(resp, ShouldNotBeNil)
 		So(resp.Answer, ShouldNotBeNil)
 		So(len(resp.Answer), ShouldEqual, 1)
@@ -242,7 +242,7 @@ func TestMemoryCache(t *testing.T) {
 
 		time.Sleep(1 * time.Second)
 
-		resp = c.Get(newReq(dns.TypeAAAA, "example.com"))
+		resp = c.Get(nil, newReq(dns.TypeAAAA, "example.com"))
 		So(resp, ShouldBeNil)
 		So(c.Len(), ShouldEqual, 4)
 		So(c.numEntries(), ShouldEqual, 4)
@@ -253,10 +253,10 @@ func TestMemoryCache(t *testing.T) {
 
 		req := newReq(dns.TypeA, "example.com")
 		req.Question[0].Qclass = 0 // missing Qclass
-		resp = c.Get(req)
+		resp = c.Get(nil, req)
 		So(resp, ShouldBeNil)
 
-		resp = c.Get(newReq(dns.TypeA, "www.example.com"))
+		resp = c.Get(nil, newReq(dns.TypeA, "www.example.com"))
 		So(resp, ShouldBeNil)
 
 		So(c.Len(), ShouldEqual, 4)
@@ -301,12 +301,12 @@ func TestMemoryCache(t *testing.T) {
 			So(evictCounter, ShouldEqual, 128)
 
 			for i := 0; i < 128; i++ {
-				rr := l.Get(newReq(dns.TypeA, fmt.Sprintf("%d.example.com", i+128)))
+				rr := l.Get(nil, newReq(dns.TypeA, fmt.Sprintf("%d.example.com", i+128)))
 				So(rr, ShouldNotBeNil)
 			}
 
 			for i := 0; i < 128; i++ {
-				rr := l.Get(newReq(dns.TypeA, fmt.Sprintf("%d.example.com", i)))
+				rr := l.Get(nil, newReq(dns.TypeA, fmt.Sprintf("%d.example.com", i)))
 				So(rr, ShouldBeNil)
 			}
 
@@ -358,7 +358,7 @@ func TestMemoryCache(t *testing.T) {
 }
 
 func testGet(c Cache, t uint16, host string) *dns.Msg {
-	return c.Get(&dns.Msg{
+	return c.Get(nil, &dns.Msg{
 		Question: []dns.Question{{
 			Name:   host,
 			Qtype:  t,
