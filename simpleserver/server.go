@@ -1,6 +1,7 @@
 package simpleserver
 
 import (
+	"log"
 	"net"
 	"net/http"
 	"time"
@@ -72,16 +73,22 @@ func (s *Server) newListener() error {
 func (s *Server) Serve(l net.Listener) error {
 	s.ln = l
 
+	var logLogger *log.Logger
+
 	if s.Logger != nil {
 		s.Logger.WithFields(logrus.Fields{
 			"server": s.ServerName(),
 			"addr":   s.ServerAddr(),
 		}).Info("starting")
+
+		w := s.Logger.WriterLevel(logrus.DebugLevel)
+		logLogger = log.New(w, "", 0)
 	}
 
 	s.srv = &graceful.Server{
 		Server:           &http.Server{Handler: s.Handler},
 		NoSignalHandling: true,
+		Logger:           logLogger,
 	}
 
 	return s.srv.Serve(l)
