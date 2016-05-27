@@ -3,9 +3,11 @@ package main
 import (
 	"io"
 	"os"
+	"strconv"
 	"syscall"
 
 	"github.com/BurntSushi/toml"
+	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 )
 
@@ -60,7 +62,11 @@ func parseConfigFile(c *cli.Context) {
 	}
 
 	if undecoded := md.Undecoded(); len(undecoded) > 0 {
-		logger.Warnf("undecoded keys: %q", undecoded)
+		lf := logrus.Fields{}
+		for i, k := range undecoded {
+			lf["key_"+strconv.Itoa(i)] = k.String()
+		}
+		logger.WithFields(lf).Warn("undecoded keys")
 	}
 }
 

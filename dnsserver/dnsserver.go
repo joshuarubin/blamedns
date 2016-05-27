@@ -158,14 +158,14 @@ func (d *DNSServer) ListenAndServe() error {
 
 func (d *DNSServer) Shutdown() {
 	for _, server := range d.servers {
-		logFields := logrus.Fields{
+		ctxLog := d.Logger.WithFields(logrus.Fields{
 			"net":  server.Net,
 			"addr": server.Addr,
-		}
+		})
 		if err := server.Shutdown(); err != nil {
-			d.Logger.WithError(err).WithFields(logFields).Debug("error shutting down dns server")
+			ctxLog.WithError(err).Debug("error shutting down dns server")
 		} else {
-			d.Logger.WithFields(logFields).Debug("successfully shut down dns server")
+			ctxLog.Debug("successfully shut down dns server")
 		}
 	}
 }

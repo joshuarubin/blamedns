@@ -11,10 +11,16 @@ func ValidateHost(logger *logrus.Logger, fileName string, ln int, text string) b
 		return false
 	}
 
+	ctxLog := logger.WithFields(logrus.Fields{
+		"file": fileName,
+		"line": ln,
+		"host": text,
+	})
+
 	// the entire hostname (including the delimiting dots but not a trailing
 	// dot) has a maximum of 253 ascii characters
 	if len(text) > 253 {
-		logger.Warnf("%s:%d: hostname too long: %s", fileName, ln, text)
+		ctxLog.Warn("hostname too long")
 		return false
 	}
 
@@ -24,12 +30,12 @@ func ValidateHost(logger *logrus.Logger, fileName string, ln int, text string) b
 		l := len(label)
 
 		if l == 0 {
-			logger.Warnf("%s:%d: empty label: %s", fileName, ln, text)
+			ctxLog.Warn("hostname has empty label")
 			return false
 		}
 
 		if l > 63 {
-			logger.Warnf("%s:%d: label too long: %s (%s)", fileName, ln, label, text)
+			ctxLog.WithField("label", label).Warn("hostname has label that's too long")
 			return false
 		}
 
@@ -60,7 +66,7 @@ func ValidateHost(logger *logrus.Logger, fileName string, ln int, text string) b
 				continue
 			}
 
-			logger.Warnf("%s:%d: invalid character \"%c\" (%s)", fileName, ln, c, text)
+			ctxLog.WithField("char", c).Warn("hostname has invalid character")
 			return false
 		}
 	}

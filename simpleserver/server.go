@@ -73,7 +73,10 @@ func (s *Server) Serve(l net.Listener) error {
 	s.ln = l
 
 	if s.Logger != nil {
-		s.Logger.WithFields(s.logFields()).Infof("starting")
+		s.Logger.WithFields(logrus.Fields{
+			"server": s.ServerName(),
+			"addr":   s.ServerAddr(),
+		}).Info("starting")
 	}
 
 	s.srv = &graceful.Server{
@@ -111,18 +114,14 @@ func (s *Server) Start() error {
 
 	go func() {
 		if err := s.Serve(s.ln); err != nil && s.Logger != nil {
-			s.Logger.WithError(err).WithFields(s.logFields()).Warnf("serve error")
+			s.Logger.WithError(err).WithFields(logrus.Fields{
+				"server": s.ServerName(),
+				"addr":   s.ServerAddr(),
+			}).Warn("serve error")
 		}
 	}()
 
 	return nil
-}
-
-func (s *Server) logFields() logrus.Fields {
-	return logrus.Fields{
-		"server": s.ServerName(),
-		"addr":   s.ServerAddr(),
-	}
 }
 
 // Close shuts down the server.
@@ -132,7 +131,10 @@ func (s *Server) Close() error {
 	}
 
 	if s.Logger != nil {
-		s.Logger.WithFields(s.logFields()).Infof("stopping")
+		s.Logger.WithFields(logrus.Fields{
+			"server": s.ServerName(),
+			"addr":   s.ServerAddr(),
+		}).Info("stopping")
 	}
 
 	ch := s.srv.StopChan()

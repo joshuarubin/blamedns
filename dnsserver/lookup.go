@@ -5,6 +5,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 )
 
@@ -65,6 +66,13 @@ func (d *DNSServer) lookup(net, nameserver string, req *dns.Msg, respCh chan<- *
 		}
 	}
 
+	ctxLog := d.Logger.WithFields(logrus.Fields{
+		"name":       req.Question[0].Name,
+		"type":       dns.TypeToString[req.Question[0].Qtype],
+		"net":        net,
+		"nameserver": nameserver,
+	})
+
 	// TODO(jrubin)
 	// Exchange does not retry a failed query, nor will it fall back to TCP in
 	// case of truncation.
@@ -74,19 +82,13 @@ func (d *DNSServer) lookup(net, nameserver string, req *dns.Msg, respCh chan<- *
 	// of 512 bytes.
 	resp, _, err := c.Exchange(req, nameserver)
 	if err != nil {
-		lf := logFields(net, req, nil)
-		lf["nameserver"] = nameserver
-
-		d.Logger.WithError(err).WithFields(lf).Warn("socket error")
+		ctxLog.WithError(err).Warn("socket error")
 		sendResponse(nil)
 		return
 	}
 
 	if resp != nil && resp.Rcode != dns.RcodeSuccess && resp.Rcode != dns.RcodeNameError {
-		lf := logFields(net, req, nil)
-		lf["nameserver"] = nameserver
-
-		d.Logger.WithFields(lf).Warn("failed to get a valid answer")
+		ctxLog.Warn("failed to get a valid answer")
 		if resp.Rcode == dns.RcodeServerFailure {
 			sendResponse(nil)
 			return

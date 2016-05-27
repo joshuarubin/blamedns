@@ -26,7 +26,7 @@ func init() {
 	prom.MustRegister(handlerDuration)
 }
 
-func (d *DNSServer) respond(net string, w dns.ResponseWriter, req *dns.Msg, r *hresp) *hresp {
+func (d *DNSServer) respond(net string, w dns.ResponseWriter, req *dns.Msg, dur time.Duration, r *hresp) *hresp {
 	if r == nil {
 		r = &hresp{}
 	}
@@ -38,20 +38,30 @@ func (d *DNSServer) respond(net string, w dns.ResponseWriter, req *dns.Msg, r *h
 
 	r.resp.RecursionAvailable = true
 
-	lf := logFields(net, req, r)
+	ctxLog := d.Logger.WithFields(logrus.Fields{
+		"name":     req.Question[0].Name,
+		"type":     dns.TypeToString[req.Question[0].Qtype],
+		"net":      net,
+		"rcode":    dns.RcodeToString[r.resp.Rcode],
+		"blocked":  r.blocked,
+		"cache":    r.cache.String(),
+		"duration": dur,
+	})
 
-	if r.resp.Rcode == dns.RcodeServerFailure {
-		d.Logger.WithFields(lf).Error("responded with error")
-	} else if r.blocked {
-		d.Logger.WithFields(lf).Warn("responded")
-	} else if r.cache == cacheMiss {
-		d.Logger.WithFields(lf).Info("responded")
-	} else {
-		d.Logger.WithFields(lf).Debug("responded")
-	}
+	go func() {
+		if r.resp.Rcode == dns.RcodeServerFailure {
+			ctxLog.Error("responded with error")
+		} else if r.blocked {
+			ctxLog.Warn("responded")
+		} else if r.cache == cacheMiss {
+			ctxLog.Info("responded")
+		} else {
+			ctxLog.Debug("responded")
+		}
+	}()
 
 	if err := w.WriteMsg(r.resp); err != nil {
-		d.Logger.WithError(err).WithFields(lf).Error("error writing response")
+		ctxLog.WithError(err).Error("error writing response")
 	}
 
 	return r
@@ -64,25 +74,6 @@ func refused(req *dns.Msg) *hresp {
 		resp:  resp,
 		cache: cacheHit,
 	}
-}
-
-func logFields(net string, req *dns.Msg, r *hresp) logrus.Fields {
-	ret := logrus.Fields{
-		"name": req.Question[0].Name,
-		"type": dns.TypeToString[req.Question[0].Qtype],
-		"net":  net,
-	}
-
-	if r != nil {
-		if r.resp != nil {
-			ret["rcode"] = dns.RcodeToString[r.resp.Rcode]
-		}
-
-		ret["blocked"] = r.blocked
-		ret["cache"] = r.cache.String()
-	}
-
-	return ret
 }
 
 type cacheStatus int
@@ -166,7 +157,8 @@ func (d *DNSServer) Handler(net string, addr []string) dns.Handler {
 		}
 
 		cancel()
-		r = d.respond(net, w, req, r)
+		dur := time.Since(begin)
+		r = d.respond(net, w, req, dur, r)
 
 		handlerDuration.
 			WithLabelValues(
@@ -174,6 +166,6 @@ func (d *DNSServer) Handler(net string, addr []string) dns.Handler {
 				fmt.Sprintf("%v", r.blocked),
 				r.cache.String(),
 			).
-			Observe(float64(time.Since(begin)))
+			Observe(float64(dur))
 	})
 }

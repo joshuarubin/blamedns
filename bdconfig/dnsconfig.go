@@ -67,7 +67,7 @@ func (cfg *DNSConfig) Init(root *Config, onStart func()) error {
 }
 
 func (cfg DNSConfig) Start() error {
-	// cfg.Block  and cfg.Cache are started by DNSServer.NotifyStartedFunc
+	// cfg.Block and cfg.Cache are started by DNSServer.NotifyStartedFunc
 	return cfg.Server.ListenAndServe()
 }
 

@@ -123,11 +123,11 @@ func (d *DL) Update() (updated bool, err error) {
 		return false, err
 	}
 
-	logFields := logrus.Fields{
+	ctxLog := d.Logger.WithFields(logrus.Fields{
 		"fileName": d.fileName,
 		"URL":      d.URL,
 		"interval": d.UpdateInterval,
-	}
+	})
 
 	if !os.IsNotExist(err) {
 		if info.IsDir() {
@@ -136,14 +136,14 @@ func (d *DL) Update() (updated bool, err error) {
 
 		if info.ModTime().After(time.Now().Add(-d.UpdateInterval)) {
 			// file exists and does not need to be updated
-			d.Logger.WithFields(logFields).Debugf("file does not need to be updated yet")
+			ctxLog.Debug("file does not need to be updated yet")
 			return false, nil
 		}
 	}
 
 	// file doesn't exist or needs to be updated
 
-	d.Logger.WithFields(logFields).Debug("downloading file")
+	ctxLog.Debug("downloading file")
 
 	req, _ := http.NewRequest("GET", d.URL.String(), nil)
 	req.Header.Set("User-Agent", fmt.Sprintf("%s/%s", d.AppName, d.AppVersion))
@@ -160,7 +160,7 @@ func (d *DL) Update() (updated bool, err error) {
 
 	if res.StatusCode != http.StatusOK {
 		err = NewErrStatusCode(res.StatusCode)
-		d.Logger.WithError(err).WithFields(logFields).Warn("error updating file")
+		ctxLog.WithError(err).Warn("error updating file")
 		return false, err
 	}
 
@@ -176,11 +176,11 @@ func (d *DL) Update() (updated bool, err error) {
 
 	_, err = io.Copy(f, res.Body)
 	if err != nil {
-		d.Logger.WithError(err).WithFields(logFields).Warn("error updating file")
+		ctxLog.WithError(err).Warn("error updating file")
 		return false, err
 	}
 
-	d.Logger.WithFields(logFields).Debug("successfully updated file")
+	ctxLog.Debug("successfully updated file")
 	return true, nil
 }
 
