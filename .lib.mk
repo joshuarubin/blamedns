@@ -147,7 +147,7 @@ $(PROFILES): %: $(GO_FILES)
 
 .profile: $(PROFILES)
 	@$(ECHO) "mode: set" > .profile
-	@$(foreach profile, $(PROFILES), $(CAT) $(profile) >> .profile || $(TRUE);)
+	@$(foreach profile, $(PROFILES), $(CAT) $(profile) | $(EGREP) -v "mode: set" >> .profile || $(TRUE);)
 
 coverage: .profile
 
