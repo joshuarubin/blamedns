@@ -44,7 +44,7 @@ func (b *BlockConfig) Init(root *Config) error {
 	hostsDir := path.Join(root.CacheDir, "hosts")
 	domainsDir := path.Join(root.CacheDir, "domains")
 
-	b.blocker = &blocker.HashBlocker{}
+	b.blocker = &blocker.RadixBlocker{}
 
 	hostsFileParser := parser.HostsFileParser{
 		HostAdder: b.blocker,

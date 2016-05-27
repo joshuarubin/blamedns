@@ -7,8 +7,8 @@ import (
 )
 
 func TestBlocker(t *testing.T) {
-	Convey("trie should work", t, func() {
-		for _, t := range []Blocker{&TrieBlocker{}, &HashBlocker{}, &SliceBlocker{}} {
+	Convey("blockers should work", t, func() {
+		for _, t := range []Blocker{&RadixBlocker{}, &HashBlocker{}, &SliceBlocker{}} {
 			So(t.Len(), ShouldEqual, 0)
 
 			t.AddHost("the source", "www.example.com")
