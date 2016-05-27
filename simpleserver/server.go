@@ -42,7 +42,7 @@ func (s Server) ServerAddr() string {
 // ServeHTTP exists so Server itself satisfies the http.Handler interface. It
 // just proxies to Server.Handler.
 func (s Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	s.Handler.ServeHTTP(w, req)
+	s.logHandler().ServeHTTP(w, req)
 }
 
 // ListenAndServe listens on the TCP network address srv.Addr and then
@@ -73,7 +73,7 @@ func (s *Server) newListener() error {
 func (s *Server) Serve(l net.Listener) error {
 	s.ln = l
 
-	var logLogger *log.Logger
+	var debugLogger, errorLogger *log.Logger
 
 	if s.Logger != nil {
 		s.Logger.WithFields(logrus.Fields{
@@ -82,13 +82,19 @@ func (s *Server) Serve(l net.Listener) error {
 		}).Info("starting")
 
 		w := s.Logger.WriterLevel(logrus.DebugLevel)
-		logLogger = log.New(w, "", 0)
+		debugLogger = log.New(w, "", 0)
+
+		w = s.Logger.WriterLevel(logrus.ErrorLevel)
+		errorLogger = log.New(w, "", 0)
 	}
 
 	s.srv = &graceful.Server{
-		Server:           &http.Server{Handler: s.Handler},
+		Server: &http.Server{
+			Handler:  s.logHandler(),
+			ErrorLog: errorLogger,
+		},
 		NoSignalHandling: true,
-		Logger:           logLogger,
+		Logger:           debugLogger,
 	}
 
 	return s.srv.Serve(l)
