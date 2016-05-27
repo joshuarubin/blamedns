@@ -22,8 +22,8 @@
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "v1.17.0-16-g7f0ca9a",
-			"Rev": "7f0ca9a34958d6702ac8f38530d19001fa5b1560"
+			"Comment": "v1.17.0-42-g595ba45",
+			"Rev": "595ba45e735c1e9c1f9ddc9e2ef21997fca893f2"
 		},
 		{
 			"ImportPath": "github.com/fsnotify/fsnotify",
@@ -110,8 +110,21 @@
 			"Rev": "cc5d85f4f15bd2163abf0fe6e6753356dde72aa2"
 		},
 		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "dfd9ed699ea197b58a32e0d1dcfa2be66f127ec4"
+		},
+		{
+			"ImportPath": "golang.org/x/net/netutil",
+			"Rev": "dfd9ed699ea197b58a32e0d1dcfa2be66f127ec4"
+		},
+		{
 			"ImportPath": "golang.org/x/sys/unix",
 			"Rev": "d4feaf1a7e61e1d9e79e6c4e76c6349e9cab0a03"
+		},
+		{
+			"ImportPath": "gopkg.in/tylerb/graceful.v1",
+			"Comment": "v1.2.5",
+			"Rev": "9a3d4236b03bb5d26f7951134d248f9d5510d599"
 		},
 		{
 			"ImportPath": "jrubin.io/cliconfig",
