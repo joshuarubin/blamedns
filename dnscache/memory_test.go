@@ -315,7 +315,7 @@ func TestMemoryCache(t *testing.T) {
 		})
 
 		Convey("lru add", func() {
-			// Test that Add returns true/false if an eviction occured
+			// Test that Add returns true/false if an eviction occurred
 			evictCounter := 0
 			onEvicted := lru.ElementerFunc(func(k, value interface{}) {
 				evictCounter++

@@ -76,3 +76,7 @@ func (cfg DNSConfig) Shutdown() {
 	cfg.Block.Shutdown()
 	cfg.Server.Shutdown()
 }
+
+func (cfg DNSConfig) SIGUSR1() {
+	cfg.Cache.SIGUSR1()
+}

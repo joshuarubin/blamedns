@@ -54,17 +54,23 @@ func run(c *cli.Context) error {
 	go func() { errCh <- cfg.Start() }()
 
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGUSR1)
 
-	select {
-	case err := <-errCh:
-		if err != nil {
-			return err
+	for {
+		select {
+		case err := <-errCh:
+			if err != nil {
+				return err
+			}
+		case sig := <-sigs:
+			logger.WithField("signal", sig).Debug("received signal")
+			switch sig {
+			case syscall.SIGUSR1:
+				cfg.SIGUSR1()
+			default:
+				cfg.Shutdown()
+				return nil
+			}
 		}
-	case sig := <-sigs:
-		logger.WithField("signal", sig).Debug("received signal")
-		cfg.Shutdown()
 	}
-
-	return nil
 }

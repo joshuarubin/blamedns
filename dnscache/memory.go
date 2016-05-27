@@ -30,7 +30,7 @@ func NewMemory(size int, logger *logrus.Logger, onEvict lru.Elementer) *Memory {
 	}
 
 	// TODO(jrubin) should each lru be sized differently?
-	// TODO(jrubin) shoudl onEvict be called for ttl expiration?
+	// TODO(jrubin) should onEvict be called for ttl expiration?
 	return &Memory{
 		Logger:   logger,
 		data:     lru.New(size, onEvict),
@@ -104,6 +104,7 @@ func (c *Memory) add(rr *RR) {
 }
 
 func (c *Memory) Purge() {
+	c.Logger.Info("purging dns cache")
 	for _, lru := range []*lru.LRU{c.data, c.nxDomain, c.noData} {
 		lru.Purge()
 	}

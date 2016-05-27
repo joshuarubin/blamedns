@@ -95,3 +95,7 @@ func (m *Config) Shutdown() {
 	m.DNS.Shutdown()
 	m.Log.Shutdown()
 }
+
+func (m *Config) SIGUSR1() {
+	m.DNS.SIGUSR1()
+}

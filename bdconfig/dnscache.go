@@ -35,3 +35,7 @@ func (cfg DNSCacheConfig) Shutdown() {
 		cfg.Cache.Stop()
 	}
 }
+
+func (cfg *DNSCacheConfig) SIGUSR1() {
+	cfg.Cache.Purge()
+}
