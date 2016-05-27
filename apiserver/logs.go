@@ -1,6 +1,7 @@
 package apiserver
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -66,15 +67,19 @@ func (hook *wsLogHook) deleteConnNoLock(ws *websocket.Conn) {
 }
 
 type wsMessage struct {
-	Data    logrus.Fields
+	Data    map[string]string
 	Time    time.Time
 	Level   logrus.Level
 	Message string
 }
 
 func newWSMessage(entry *logrus.Entry) *wsMessage {
+	data := make(map[string]string, len(entry.Data))
+	for key, value := range entry.Data {
+		data[key] = fmt.Sprintf("%v", value)
+	}
 	return &wsMessage{
-		Data:    entry.Data,
+		Data:    data,
 		Time:    entry.Time,
 		Level:   entry.Level,
 		Message: entry.Message,
