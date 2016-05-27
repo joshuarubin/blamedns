@@ -153,18 +153,6 @@ const (
 	fieldExtra
 )
 
-func responseField(resp *dns.Msg, field msgField) []dns.RR {
-	switch field {
-	case fieldAnswer:
-		return resp.Answer
-	case fieldNs:
-		return resp.Ns
-	case fieldExtra:
-		return resp.Extra
-	}
-	panic(fmt.Errorf("invalid field: %d", field))
-}
-
 func appendResponseField(resp *dns.Msg, field msgField, value []dns.RR) []dns.RR {
 	var newValues []dns.RR
 	switch field {
@@ -230,18 +218,15 @@ func (c *Memory) get(ctx context.Context, q dns.Question, resp *dns.Msg, field m
 type cacheFn struct {
 	fn    func(dns.Question) *negativeEntry
 	build func(context.Context, *dns.Msg, *negativeEntry, *dns.Msg) bool
-	name  string
 }
 
 func (c *Memory) cacheFn() []cacheFn {
 	return []cacheFn{{
 		fn:    c.getNoData,
 		build: c.buildNegativeReply(dns.RcodeSuccess),
-		name:  "nodata",
 	}, {
 		fn:    c.getNxDomain,
 		build: c.buildNegativeReply(dns.RcodeNameError),
-		name:  "nxdomain",
 	}}
 }
 

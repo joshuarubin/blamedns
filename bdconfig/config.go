@@ -33,7 +33,7 @@ type Config struct {
 	DL              DLConfig       `toml:"dl"`
 	DNS             DNSConfig      `toml:"dns"`
 	ListenPixelserv string         `toml:"listen_pixelserv" cli:",address to run the pixel server on"`
-	ListenApiServer string         `toml:"listen_api_server" cli:",address to run the api server on"`
+	ListenAPIServer string         `toml:"listen_api_server" cli:",address to run the api server on"`
 	Logger          *logrus.Logger `toml:"-" cli:"-"`
 	AppName         string         `toml:"-" cli:"-"`
 	AppVersion      string         `toml:"-" cli:"-"`
@@ -64,7 +64,7 @@ func (m *Config) Init() error {
 
 	m.servers = []server{
 		pixelserv.New(m.ListenPixelserv, m.Logger),
-		apiserver.New(m.ListenApiServer, m.Logger),
+		apiserver.New(m.ListenAPIServer, m.Logger),
 	}
 
 	for _, server := range m.servers {
