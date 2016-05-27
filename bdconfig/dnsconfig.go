@@ -42,7 +42,7 @@ func (cfg *DNSConfig) Init(root *Config, onStart func()) error {
 
 	cfg.Server = &dnsserver.DNSServer{
 		Listen:         cfg.Listen,
-		Block:          cfg.Block.Block(),
+		Block:          cfg.Block.Block(root),
 		ClientTimeout:  cfg.ClientTimeout.Duration(),
 		ServerTimeout:  cfg.ServerTimeout.Duration(),
 		DialTimeout:    cfg.DialTimeout.Duration(),

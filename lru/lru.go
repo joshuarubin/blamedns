@@ -2,8 +2,9 @@ package lru
 
 import (
 	"container/list"
-	"errors"
 	"sync"
+
+	"github.com/Sirupsen/logrus"
 )
 
 type Elementer interface {
@@ -22,6 +23,7 @@ type lruEntry struct {
 }
 
 type LRU struct {
+	Logger *logrus.Logger
 	sync.RWMutex
 	size      int
 	evictList *list.List
@@ -29,12 +31,13 @@ type LRU struct {
 	onEvict   Elementer
 }
 
-func New(size int, onEvict Elementer) *LRU {
+func New(size int, logger *logrus.Logger, onEvict Elementer) *LRU {
 	if size <= 0 {
-		panic(errors.New("lru must have a positive size"))
+		logger.WithField("size", size).Panic("lru must have positive size")
 	}
 
 	return &LRU{
+		Logger:    logger,
 		size:      size,
 		evictList: list.New(),
 		data:      map[interface{}]*list.Element{},

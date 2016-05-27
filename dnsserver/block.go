@@ -1,11 +1,11 @@
 package dnsserver
 
 import (
-	"fmt"
 	"net"
 	"strings"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 )
 
@@ -22,6 +22,7 @@ type Block struct {
 	TTL        time.Duration
 	Blocker    Blocker
 	Passer     Passer
+	Logger     *logrus.Logger
 }
 
 func unfqdn(s string) string {
@@ -66,7 +67,9 @@ func (b Block) NewReply(req *dns.Msg) *dns.Msg {
 	case dns.TypeAAAA:
 		msg = newAAAA(b.IPv6, hdr)
 	default:
-		panic(fmt.Errorf("unexpected question type: %d (%s)", qType, dns.TypeToString[qType]))
+		b.Logger.WithFields(logrus.Fields{
+			"type": dns.TypeToString[qType],
+		}).Panic("unexpected question type")
 	}
 
 	return msg.SetReply(req)

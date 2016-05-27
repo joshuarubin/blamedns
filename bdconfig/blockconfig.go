@@ -29,13 +29,14 @@ var defaultBlockConfig = BlockConfig{
 	},
 }
 
-func (b BlockConfig) Block() dnsserver.Block {
+func (b BlockConfig) Block(root *Config) dnsserver.Block {
 	return dnsserver.Block{
 		IPv4:    b.IPv4.IP(),
 		IPv6:    b.IPv6.IP(),
 		TTL:     b.TTL.Duration(),
 		Blocker: b.blocker,
 		Passer:  whitelist.New(b.Whitelist),
+		Logger:  root.Logger,
 	}
 }
 

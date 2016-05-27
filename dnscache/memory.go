@@ -1,7 +1,6 @@
 package dnscache
 
 import (
-	"fmt"
 	"time"
 
 	"golang.org/x/net/context"
@@ -33,9 +32,9 @@ func NewMemory(size int, logger *logrus.Logger, onEvict lru.Elementer) *Memory {
 	// TODO(jrubin) should onEvict be called for ttl expiration?
 	return &Memory{
 		Logger:   logger,
-		data:     lru.New(size, onEvict),
-		nxDomain: lru.New(size, onEvict),
-		noData:   lru.New(size, onEvict),
+		data:     lru.New(size, logger, onEvict),
+		nxDomain: lru.New(size, logger, onEvict),
+		noData:   lru.New(size, logger, onEvict),
 	}
 }
 
@@ -50,7 +49,7 @@ func (c *Memory) Len() int {
 			case *negativeEntry:
 				n++
 			default:
-				panic(fmt.Errorf("invalid type stored in cache"))
+				c.Logger.WithField("value", value).Panic("invalid type stored in dns memory cache")
 			}
 		}))
 	}

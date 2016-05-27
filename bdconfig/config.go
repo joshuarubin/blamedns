@@ -33,7 +33,7 @@ type Config struct {
 	DL              DLConfig       `toml:"dl"`
 	DNS             DNSConfig      `toml:"dns"`
 	ListenPixelserv string         `toml:"listen_pixelserv" cli:",address to run the pixel server on"`
-	ListenAPIServer string         `toml:"listen_api_server" cli:",address to run the api server on"`
+	ListenAPIServer string         `toml:"listen_apiserver" cli:",address to run the api server on"`
 	Logger          *logrus.Logger `toml:"-" cli:"-"`
 	AppName         string         `toml:"-" cli:"-"`
 	AppVersion      string         `toml:"-" cli:"-"`
@@ -88,10 +88,12 @@ func (m *Config) Start() error {
 }
 
 func (m *Config) Shutdown() {
+	m.DL.Shutdown()
+
 	for _, server := range m.servers {
 		_ = server.Close()
 	}
-	m.DL.Shutdown()
+
 	m.DNS.Shutdown()
 	m.Log.Shutdown()
 }
