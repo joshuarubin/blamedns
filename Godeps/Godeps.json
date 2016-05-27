@@ -111,11 +111,15 @@
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
-			"Rev": "dfd9ed699ea197b58a32e0d1dcfa2be66f127ec4"
+			"Rev": "30db96677b74e24b967e23f911eb3364fc61a011"
 		},
 		{
 			"ImportPath": "golang.org/x/net/netutil",
-			"Rev": "dfd9ed699ea197b58a32e0d1dcfa2be66f127ec4"
+			"Rev": "30db96677b74e24b967e23f911eb3364fc61a011"
+		},
+		{
+			"ImportPath": "golang.org/x/net/websocket",
+			"Rev": "30db96677b74e24b967e23f911eb3364fc61a011"
 		},
 		{
 			"ImportPath": "golang.org/x/sys/unix",
