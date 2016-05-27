@@ -45,6 +45,6 @@ func (s Server) logHandler() http.Handler {
 			"ip":         clientIP(r),
 			"latency":    time.Since(begin),
 			"user-agent": r.UserAgent(),
-		}).Infof("%s request", s.ServerName())
+		}).Debugf("%s request", s.ServerName())
 	})
 }
