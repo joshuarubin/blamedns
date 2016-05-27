@@ -34,7 +34,7 @@ image: .image-stamp
 clean::
 	$(RM) -r $(EXECUTABLE) $(DOCKER_EXECUTABLE) .image-stamp $(DIST_DIR)
 
-circle: coveralls image dist
+circle: coveralls
 
 $(DIST_TARGETS): %: $(GO_FILES_NO_TESTS) $(INSTALL_DEPS)
 	CGO_ENABLED=0 GOOS=$(word 2,$(subst _, ,$@)) GOARCH=$(word 3,$(subst _, ,$@)) $(GO_BUILD) -o $@ $(BASE_PKG)
