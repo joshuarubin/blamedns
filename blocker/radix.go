@@ -73,6 +73,7 @@ func (b *RadixBlocker) Reset(source string) {
 		return
 	}
 
+	del := []string{}
 	b.data.Walk(func(key string, value interface{}) bool {
 		if value == nil {
 			return false
@@ -80,10 +81,14 @@ func (b *RadixBlocker) Reset(source string) {
 
 		if s, ok := value.(*sources); ok {
 			if s.Remove(source) && s.Len() == 0 {
-				b.data.Delete(key)
+				del = append(del, key)
 			}
 		}
 
 		return false
 	})
+
+	for _, key := range del {
+		b.data.Delete(key)
+	}
 }
