@@ -31,6 +31,11 @@
 			"Rev": "30411dbcefb7a1da7e84f75530ad3abe4011b4f8"
 		},
 		{
+			"ImportPath": "github.com/go-zoo/bone",
+			"Comment": "v1.1-27-g2b727a8",
+			"Rev": "2b727a8601bc7a74fac33a9583ebba67779c502d"
+		},
+		{
 			"ImportPath": "github.com/golang/protobuf/proto",
 			"Rev": "9e6977f30c91c78396e719e164e57f9287fff42c"
 		},

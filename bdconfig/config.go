@@ -76,6 +76,7 @@ func (m *Config) Init() error {
 	if err := m.DL.Init(m); err != nil {
 		return err
 	}
+
 	return m.DNS.Init(m, m.DL.Start)
 }
 

@@ -2,6 +2,7 @@ package bdtype
 
 import (
 	"encoding"
+	"strconv"
 	"unicode"
 	"unicode/utf8"
 
@@ -31,7 +32,7 @@ func (l LogLevel) UnmarshalCLIConfig(text string) (interface{}, error) {
 
 func (l LogLevel) Equal(val interface{}) bool {
 	if sval, ok := val.(string); ok {
-		return l == parseLogLevel(sval)
+		return l == ParseLogLevel(sval)
 	}
 	return false
 }
@@ -49,7 +50,7 @@ func (l LogLevel) MarshalText() ([]byte, error) {
 }
 
 func (l *LogLevel) UnmarshalText(text []byte) error {
-	*l = parseLogLevel(string(text))
+	*l = ParseLogLevel(string(text))
 	return nil
 }
 
@@ -57,10 +58,18 @@ func (l LogLevel) Default(name string) interface{} {
 	return DefaultLogLevel.String()
 }
 
-func parseLogLevel(level string) LogLevel {
+func ParseLogLevel(level string) LogLevel {
 	ret := DefaultLogLevel
 
 	if len(level) > 0 {
+		if i, err := strconv.Atoi(level); err == nil {
+			if i >= 0 && i <= int(logrus.DebugLevel) {
+				return LogLevel(i)
+			}
+
+			return DefaultLogLevel
+		}
+
 		r, _ := utf8.DecodeRuneInString(level)
 		r = unicode.ToLower(r)
 

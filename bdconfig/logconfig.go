@@ -27,7 +27,7 @@ func (cfg LogConfig) Init(root *Config) {
 		}
 	}
 
-	l := logrus.Level(cfg.Level)
+	l := cfg.Level.Level()
 	logger.Level = l
 	logger.WithField("level", l).Debug("log level set")
 }

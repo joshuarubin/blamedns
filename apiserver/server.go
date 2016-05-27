@@ -43,7 +43,7 @@ func Handler(logger *logrus.Logger) http.Handler {
 
 	ret.Handle("/metrics", prometheus.Handler())
 
-	ret.Handle("/v1/", v1Handler(logger))
+	ret.Handle("/v1/", v1Handler(logger, "/v1"))
 
 	return ret
 }

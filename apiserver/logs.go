@@ -8,31 +8,42 @@ import (
 	"golang.org/x/net/websocket"
 )
 
+type chanLevel struct {
+	ch    chan struct{}
+	level logrus.Level
+}
+
 type wsLogHook struct {
 	sync.Mutex
-	conn   map[*websocket.Conn]chan struct{}
+	data   map[*websocket.Conn]chanLevel
 	logger *logrus.Logger
 }
 
 func newWSLogHook(logger *logrus.Logger) *wsLogHook {
 	return &wsLogHook{
 		logger: logger,
-		conn:   map[*websocket.Conn]chan struct{}{},
+		data:   map[*websocket.Conn]chanLevel{},
 	}
 }
 
-func (hook *wsLogHook) addConn(ws *websocket.Conn) <-chan struct{} {
+func (hook *wsLogHook) addConn(ws *websocket.Conn, level logrus.Level) <-chan struct{} {
 	hook.Lock()
 	defer hook.Unlock()
+
 	ch := make(chan struct{})
-	hook.conn[ws] = ch
+	hook.data[ws] = chanLevel{
+		ch:    ch,
+		level: level,
+	}
+
 	return ch
 }
 
 func (hook *wsLogHook) Levels() []logrus.Level {
-	ret := make([]logrus.Level, hook.logger.Level+1)
+	ret := make([]logrus.Level, logrus.DebugLevel+1)
 
-	for i := logrus.PanicLevel; i <= hook.logger.Level; i++ {
+	// add all levels
+	for i := logrus.PanicLevel; i <= logrus.DebugLevel; i++ {
 		ret[i] = i
 	}
 
@@ -40,15 +51,16 @@ func (hook *wsLogHook) Levels() []logrus.Level {
 }
 
 func (hook *wsLogHook) deleteConnNoLock(ws *websocket.Conn) {
-	ch, ok := hook.conn[ws]
+	cl, ok := hook.data[ws]
 	if !ok {
 		return
 	}
 
-	delete(hook.conn, ws)
+	delete(hook.data, ws)
 
+	// let the handler return
 	select {
-	case ch <- struct{}{}:
+	case cl.ch <- struct{}{}:
 	default:
 	}
 }
@@ -76,9 +88,13 @@ func (hook *wsLogHook) Fire(entry *logrus.Entry) error {
 
 		msg := newWSMessage(entry)
 
-		for ws := range hook.conn {
+		for ws, cl := range hook.data {
 			if ws == nil {
 				hook.deleteConnNoLock(ws)
+				continue
+			}
+
+			if cl.level < entry.Level {
 				continue
 			}
 
