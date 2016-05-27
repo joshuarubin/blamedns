@@ -36,10 +36,6 @@ func v1Logs(logger *logrus.Logger) websocket.Handler {
 		level := logger.Level
 		if val := bone.GetValue(ws.Request(), "level"); len(val) > 0 {
 			level = bdtype.ParseLogLevel(val).Level()
-
-			if level > logger.Level {
-				logger.Level = level
-			}
 		}
 
 		<-wsLogger.addConn(ws, level)
