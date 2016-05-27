@@ -34,6 +34,8 @@ image: .image-stamp
 clean::
 	$(RM) -r $(EXECUTABLE) $(DOCKER_EXECUTABLE) .image-stamp $(DIST_DIR)
 
+circle: coveralls image dist
+
 $(DIST_TARGETS): %: $(GO_FILES_NO_TESTS) $(INSTALL_DEPS)
 	CGO_ENABLED=0 GOOS=$(word 2,$(subst _, ,$@)) GOARCH=$(word 3,$(subst _, ,$@)) $(GO_BUILD) -o $@ $(BASE_PKG)
 
@@ -43,6 +45,6 @@ github-release: dist
 	$(call check_defined,GITHUB_API_TOKEN)
 	$(GHR) --token "$(GITHUB_API_TOKEN)" --username "$(REPO_USER)" --repository "$(REPO_NAME)" --replace "v$(VERSION)" $(DIST_DIR)
 
-deploy: .push_image github-release
+deploy:
 
 .PHONY: all build image clean dist github-release deploy

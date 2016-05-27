@@ -3,4 +3,6 @@
 /config.toml
 /.image-stamp
 /.install-*
+/.profile*
+/.push_*
 /dist/
