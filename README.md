@@ -5,6 +5,8 @@
 ## TODO
 
 1. api server
+    * clear cache
+    * add to whitelist
 1. web interface
 1. testing
 1. documentation

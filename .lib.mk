@@ -78,12 +78,18 @@ export GO15VENDOREXPERIMENT=1
 # $(call exclude,test_string,exclude_strings
 exclude = $(foreach 1,$1,$(if $(sort $(foreach 2,$2,$(if $(findstring $2,$1),$1))),,$1))
 
+GO_PKGS_VENDOR := \
+	$(strip \
+	$(foreach pkg, \
+		$(shell $(GO) list ./... 2>/dev/null), \
+		$(call exclude,$(pkg),/Gododir)))
+
 # GO_PKGS - a list of go packages excluding vendor
 GO_PKGS := \
 	$(strip \
 	$(foreach pkg, \
-		$(shell $(GO) list ./... 2>/dev/null), \
-		$(call exclude,$(pkg),/vendor/ /Gododir)))
+		$(GO_PKGS_VENDOR), \
+		$(call exclude,$(pkg),/vendor/)))
 
 # PROFILES - a list of profile files to expect from the coverage test
 # a profile file is simply .profile_$(pkg).out where $(pkg) is the go package
@@ -188,11 +194,11 @@ install-go: $(INSTALL_GO_DEPS)
 install:: .install-stamp $(INSTALL_DEPS)
 
 .install-stamp: $(GO_FILES_NO_TESTS)
-	$(GO) install -v ./... || $(TRUE)
+	$(GO) install -v $(GO_PKGS_VENDOR) || $(TRUE)
 	@$(TOUCH) .install-stamp
 
 $(INSTALL_DEPS): %: $(GO_FILES_NO_TESTS)
-	CGO_ENABLED=0 GOOS=$(word 3,$(subst -, ,$@)) GOARCH=$(word 4,$(subst -, ,$@)) $(GO) install -v ./... || $(TRUE)
+	CGO_ENABLED=0 GOOS=$(word 3,$(subst -, ,$@)) GOARCH=$(word 4,$(subst -, ,$@)) $(GO) install -v $(GO_PKGS_VENDOR) || $(TRUE)
 	@$(TOUCH) $@
 
 .push_image: .image-stamp

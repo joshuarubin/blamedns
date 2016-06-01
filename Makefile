@@ -44,7 +44,9 @@ clean::
 
 circle: test coveralls
 
-fix-circle::
+fix-circle:: touch
+
+touch:
 	$(TOUCH) \
 		.npm-install-stamp \
 		.bower-install-stamp \
@@ -95,4 +97,4 @@ bower-install: .bower-install-stamp
 watch:
 	godo start --watch
 
-.PHONY: all build image clean dist github-release deploy generate npm-install bower-install webpack watch circle-touch
+.PHONY: all build image clean dist github-release deploy generate npm-install bower-install webpack watch touch
