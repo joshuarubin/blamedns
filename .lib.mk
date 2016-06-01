@@ -64,7 +64,7 @@ INSTALL_DEPS        := $(foreach os,$(DIST_OS),$(foreach arch,$(DIST_ARCH),.inst
 
 ## if go needed to be installed, ensure that the installation completes before
 ## installing build dependencies
-BUILD_DEPS_DEPS := $(if $(INSTALL_GO_DEPS),install_go)
+BUILD_DEPS_DEPS := $(if $(INSTALL_GO_DEPS),install-go)
 
 ifeq ($(CIRCLECI),true)
 	CI_SERVICE = circle-ci
@@ -183,7 +183,7 @@ $(INSTALL_GO_BIN_DIR)/go: $(INSTALL_GO_FULLFILE)
 	@$(ECHO) GOPATH=$(GOPATH)
 	@$(TOUCH) $(INSTALL_GO_BIN_DIR)/go
 
-install_go: $(INSTALL_GO_DEPS)
+install-go: $(INSTALL_GO_DEPS)
 
 install:: .install-stamp $(INSTALL_DEPS)
 
@@ -217,7 +217,7 @@ $(PUSH_TARGETS): .push_%: .image-stamp
 
 	@$(TOUCH) $@
 
-fix_circle:
+fix-circle::
 	$(call check_equal,CIRCLECI,true)
 
 	$(RM) -r $(HOME)/.go_workspace/src/jrubin.io/$(REPO_NAME)
@@ -229,18 +229,18 @@ go_bin_exists        = $(call file_exists,$(FIRST_GOPATH)/bin/$(notdir $1))
 go_bin_not_installed = $(if $(call go_bin_exists,$1),,$1)
 go_deps_to_install  := $(strip $(foreach dep,$(BUILD_DEPS),$(call go_bin_not_installed,$(dep))))
 
-docker_login:
+docker-login:
 ifeq ($(call is_defined,DOCKER_EMAIL DOCKER_USER DOCKER_PASS),1)
 	$(DOCKER) login -e "$(DOCKER_EMAIL)" -u "$(DOCKER_USER)" -p "$(DOCKER_PASS)"
 endif
 
-build_deps: $(BUILD_DEPS_DEPS)
+build-deps: $(BUILD_DEPS_DEPS)
 	$(if $(go_deps_to_install),$(GO) get -v $(go_deps_to_install))
 
-circle_deps: docker_login build_deps
+circle-deps: docker-login build-deps
 
 version:
 	$(call check_defined,VERSION)
 	@$(ECHO) $(VERSION)
 
-.PHONY: lint metalint test profiles coverage coveralls save clean install_go install fix_circle docker_login build_deps circle_deps version
+.PHONY: lint metalint test profiles coverage coveralls save clean install-go install fix-circle docker-login build-deps circle-deps version

@@ -10,15 +10,14 @@ machine:
 
 checkout:
   post:
-    - make fix_circle
+    - make fix-circle
 
 dependencies:
   cache_directories:
     - ~/.go
     - ~/.cache/go-test-cache
   override:
-    - make circle-touch
-    - make circle_deps
+    - make circle-deps
 
 test:
   override:

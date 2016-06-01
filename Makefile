@@ -44,7 +44,7 @@ clean::
 
 circle: test coveralls
 
-circle-touch:
+fix-circle::
 	$(TOUCH) .npm-install-stamp .bower-install-stamp $(WEBPACK_TARGETS) $(APISERVER_GENERATE_TARGET)
 
 $(DIST_TARGETS): %: .generate-stamp $(GO_FILES_NO_TESTS) $(INSTALL_DEPS)
