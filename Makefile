@@ -45,7 +45,13 @@ clean::
 circle: test coveralls
 
 fix-circle::
-	$(TOUCH) .npm-install-stamp .bower-install-stamp $(WEBPACK_TARGETS) $(APISERVER_GENERATE_TARGET) .generate-stamp
+	$(TOUCH) \
+		.npm-install-stamp \
+		.bower-install-stamp \
+		$(WEBPACK_TARGETS) \
+		.webpack-stamp \
+		$(APISERVER_GENERATE_TARGET) \
+		.generate-stamp
 
 $(DIST_TARGETS): %: .generate-stamp $(GO_FILES_NO_TESTS) $(INSTALL_DEPS)
 	CGO_ENABLED=0 GOOS=$(word 2,$(subst _, ,$@)) GOARCH=$(word 3,$(subst _, ,$@)) $(GO_BUILD) -o $@ $(BASE_PKG)
