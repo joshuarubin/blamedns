@@ -15,11 +15,7 @@ import (
 func v1Handler(logger *logrus.Logger, prefix string) http.Handler {
 	ret := bone.New().Prefix(prefix)
 	ret.GetFunc("/ping", v1PingHandler)
-
-	logsHandler := v1Logs(logger)
-
-	ret.Get("/logs", logsHandler)
-	ret.Get("/logs/:level", logsHandler)
+	ret.Get("/logs/:level", v1Logs(logger))
 
 	return ret
 }
@@ -33,10 +29,11 @@ func v1Logs(logger *logrus.Logger) websocket.Handler {
 	logger.Hooks.Add(wsLogger)
 
 	return func(ws *websocket.Conn) {
-		level := logger.Level
-		if val := bone.GetValue(ws.Request(), "level"); len(val) > 0 {
-			level = bdtype.ParseLogLevel(val).Level()
+		val := bone.GetValue(ws.Request(), "level")
+		if len(val) == 0 {
+			panic(fmt.Errorf("could not determine log level"))
 		}
+		level := bdtype.ParseLogLevel(val).Level()
 
 		<-wsLogger.addConn(ws, level)
 	}

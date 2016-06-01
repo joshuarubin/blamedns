@@ -19,7 +19,7 @@ WEBPACK_TARGETS           := $(UI_DIR)/public/js/bundle.js $(UI_DIR)/public/css/
 APISERVER_GENERATE_TARGET := apiserver/bindata_assetfs.go
 WEBPACK_CONFIG            := $(UI_DIR)/webpack.config.js
 INDEX_FILE                := $(UI_DIR)/public/index.html
-JSX_FILES                 := $(wildcard $(UI_DIR)/app/jsx/*.jsx)
+JSX_FILES                 := $(call find-files-with-extension,$(UI_DIR)/app/js,js)
 SCSS_FILES                := $(wildcard $(UI_DIR)/app/sass/*.scss)
 WEBPACK_DEPS              := $(WEBPACK_CONFIG) $(JSX_FILES) $(SCSS_FILES)
 
@@ -83,4 +83,7 @@ bower-install: .bower-install-stamp
 	(cd $(UI_DIR) && bower install)
 	@$(TOUCH) .bower-install-stamp
 
-.PHONY: all build image clean dist github-release deploy generate npm-install bower-install webpack
+watch:
+	godo start --watch
+
+.PHONY: all build image clean dist github-release deploy generate npm-install bower-install webpack watch

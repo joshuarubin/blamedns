@@ -29,7 +29,7 @@ METALINT           := gometalinter --cyclo-over=10 --deadline=10s -t
 REPO_NAME          := $(notdir $(CURDIR))
 SRC_DIR            := $(realpath $(CURDIR)/../..)
 BASE_PKG           := jrubin.io/$(REPO_NAME)
-EXCLUDE_DIRS       := ./vendor ./Godeps ./.git
+EXCLUDE_DIRS       := ./vendor ./Godeps ./.git ./Gododir
 GIT_COMMIT         := $(shell $(GIT) rev-parse --short HEAD 2>/dev/null)
 DATE_TAG           := $(shell $(DATE) -u +%Y%m%d-%H%M%S)
 BUILD_DATE         := $(shell $(DATE) -u +%Y-%m-%dT%H:%M:%S+00:00)
@@ -92,27 +92,29 @@ PROFILES := \
 	$(patsubst %,.profile_%.out, \
 	$(subst /,__,$(GO_PKGS)))
 
-# ALL_DIRS - a list of directories, recursive, from $(CURDIR) excluding
-# anything containing any of $(EXCLUDE_DIRS)
-ALL_DIRS := \
+find-dirs = \
 	$(patsubst ./%, %, \
 	$(sort \
 	$(foreach dir, \
-		$(shell $(FIND) . -type d), \
+		$(shell $(FIND) $1 -type d), \
 		$(call exclude,$(dir),$(EXCLUDE_DIRS)))))
 
-# get all files in $(ALL_DIRS) that have the given extension
+# ALL_DIRS - a list of directories, recursive, from $(CURDIR) excluding
+# anything containing any of $(EXCLUDE_DIRS)
+ALL_DIRS := $(call find-dirs,.)
+
+# get all files that have the given extension
 #
-# $(call find-files-with-extension,$(extension))
+# $(call find-files-with-extension,$(dir),$(extension))
 find-files-with-extension = \
 	$(strip \
 	$(patsubst ./%, %, \
 	$(foreach dir, \
-		$(ALL_DIRS), \
-		$(wildcard $(dir)/*.$1))))
+		$(call find-dirs,$1), \
+		$(wildcard $(dir)/*.$2))))
 
 # GO_FILES - a list of all .go files in any directory in $(ALL_DIRS)
-GO_FILES := $(call find-files-with-extension,go)
+GO_FILES := $(call find-files-with-extension,.,go)
 
 # GO_FILES_NO_TESTS - $(GO_FILES) with test files removed
 GO_FILES_NO_TESTS := $(filter-out %_test.go,$(GO_FILES))
@@ -131,10 +133,10 @@ file_exists    = $(if $(wildcard $1),$1)
 check_installed = $(if $(shell $(WHICH) $1),,$(error $1 is not installed))
 
 lint:
-	$(foreach pkg, $(GO_PKGS), $(foreach cmd, $(GO_LINTERS), $(subst \_, , $(cmd)) $(pkg) || $(TRUE)${\n}))
+	$(foreach pkg, $(GO_PKGS), $(foreach cmd, $(GO_LINTERS), $(subst \_, , $(cmd)) $(pkg) | $(EGREP) -v '\.pb\.go:|/bindata\.go:|/bindata_assetfs\.go:' || $(TRUE)${\n}))
 
 metalint:
-	$(foreach pkg, $(GO_PKGS), $(METALINT) $(SRC_DIR)/$(pkg) || $(TRUE)${\n})
+	$(foreach pkg, $(GO_PKGS), $(METALINT) $(SRC_DIR)/$(pkg) | $(EGREP) -v '\.pb\.go:|/bindata\.go:|/bindata_assetfs\.go:' || $(TRUE)${\n})
 
 test:
 	$(GOTEST) -race $(GO_PKGS)
@@ -147,7 +149,7 @@ $(PROFILES): %: $(GO_FILES)
 
 .profile: $(PROFILES)
 	@$(ECHO) "mode: set" > .profile
-	@$(foreach profile, $(PROFILES), $(CAT) $(profile) | $(EGREP) -v "mode: set" >> .profile || $(TRUE);)
+	@$(foreach profile, $(PROFILES), $(CAT) $(profile) | $(EGREP) -v "mode: set|\.pb\.go:|/bindata\.go:|/bindata_assetfs.go:" >> .profile || $(TRUE);)
 
 coverage: .profile
 

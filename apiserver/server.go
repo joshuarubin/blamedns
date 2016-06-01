@@ -45,6 +45,7 @@ func Handler(logger *logrus.Logger) http.Handler {
 	ret.Handle("/ui/", uiHandler("/ui"))
 
 	ret.Handle("/v1/", v1Handler(logger, "/v1"))
+	ret.Handle("/", http.RedirectHandler("/ui/", http.StatusFound))
 
 	return ret
 }

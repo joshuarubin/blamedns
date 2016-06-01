@@ -3,9 +3,10 @@ var path = require('path');
 var ExtractTextPlugin = require("extract-text-webpack-plugin");
 
 module.exports = {
-    entry: './app/jsx/index.jsx',
+    devtool: 'cheap-module-source-map',
+    entry: './app/js',
     output: {
-        path: "./public",
+        path: path.join(__dirname, 'public'),
         filename: 'js/bundle.js'
     },
     module: {
@@ -16,12 +17,13 @@ module.exports = {
             test: /\.css$/,
             loader: ExtractTextPlugin.extract("style", "css")
         },{
-            test: /\.jsx?/,
+            test: /\.js?/,
             include: path.resolve(__dirname, 'app'),
             loader: 'babel'
         }]
     },
     plugins: [
+        new webpack.optimize.OccurrenceOrderPlugin(),
         new ExtractTextPlugin("css/style.css", {
             allChunks: true
         }),

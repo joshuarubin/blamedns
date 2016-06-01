@@ -1,34 +1,14 @@
-import React from 'react';
-import moment from 'moment';
+import React, { PropTypes, Component } from 'react'
+import moment from 'moment'
+import { levelToString } from "../lib"
 
-const levelToString = (level) => {
-    switch (level) {
-    case 0:
-        return "PANIC";
-    case 1:
-        return "FATAL";
-    case 2:
-        return "ERROR";
-    case 3:
-        return "WARN";
-    case 4:
-        return "INFO";
-    case 5:
-        return "DEBUG";
-    }
-}
-
-export default React.createClass({
-    propTypes: {
-        message: React.PropTypes.object.isRequired,
-    },
-
+class Log extends Component {
     render() {
-        var msg = this.props.message;
-        var data = [];
-        for (var key in msg.Data) {
+        let msg = this.props.entry
+        let data = []
+        for (let key in msg.Data) {
             if (msg.Data.hasOwnProperty(key)) {
-                data.push({key: key, value: msg.Data[key]});
+                data.push({key: key, value: msg.Data[key]})
             }
         }
 
@@ -50,10 +30,21 @@ export default React.createClass({
                                 <span className="log-data-key">{d.key}</span>
                                 <span className="log-data-value">{d.value}</span>
                             </span>
-                        );
+                        )
                     })}
                 </div>
             </div>
-        );
+        )
     }
-});
+}
+
+Log.propTypes = {
+    entry: PropTypes.shape({
+        Data: PropTypes.object,
+        Level: PropTypes.number.isRequired,
+        Time: PropTypes.string.isRequired,
+        Message: PropTypes.string.isRequired
+    }).isRequired
+}
+
+export default Log
