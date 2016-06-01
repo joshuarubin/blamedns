@@ -1,6 +1,6 @@
 import React from 'react'
 import { render } from 'react-dom'
-import { Router, Route, browserHistory } from 'react-router'
+import { Router, Route, Redirect, browserHistory } from 'react-router'
 import { createStore, combineReducers } from 'redux'
 import { Provider } from 'react-redux'
 import { syncHistoryWithStore, routerReducer } from 'react-router-redux'
@@ -23,8 +23,9 @@ const history = syncHistoryWithStore(browserHistory, store)
 render((
     <Provider store={store}>
         <Router history={history}>
-            <Route path="/ui"                component={App}  />
-            <Route path="/ui/logs/:logLevel" component={LogsApp} />
+            <Route    path="/ui"                component={App}  />
+            <Route    path="/ui/logs/:logLevel" component={LogsApp} />
+            <Redirect from="/ui/logs" to="/ui/logs/warn" />
             <Route path="*"                  component={NoMatch} />
         </Router>
     </Provider>

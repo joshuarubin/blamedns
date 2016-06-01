@@ -4,14 +4,9 @@ import Log from './Log'
 
 class Logs extends Component {
     render() {
-        let entries = []
-        for (let i = this.props.entries.length-1; i >=0; i--) {
-            entries.push(this.props.entries[i])
-        }
-
         return (
             <div>
-                {entries.map((entry, idx) => <Log key={idx} entry={entry} />)}
+                {this.props.entries.map((entry, idx) => <Log key={idx} entry={entry} />)}
             </div>
         )
     }

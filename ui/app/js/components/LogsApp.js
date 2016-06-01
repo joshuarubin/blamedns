@@ -38,10 +38,7 @@ class LogsApp extends Component {
     }
 
     onLevelChange(ev) {
-        let logLevel = parseInt(ev.target.value)
-        let path = "/ui/logs/" + levelToString(logLevel).toLowerCase()
-
-        this.props.router.push(path)
+        this.props.router.push(this.props.route.path.replace(":logLevel", levelToString(parseInt(ev.target.value)).toLowerCase()))
     }
 
     render() {
