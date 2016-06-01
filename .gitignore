@@ -1,8 +1,11 @@
 /blamedns
 /Docker/blamedns
 /config.toml
-/.image-stamp
+/.*-stamp
 /.install-*
 /.profile*
 /.push_*
 /dist/
+/ui/node_modules/
+/ui/app/vendor/
+/Gododir/godobin-*

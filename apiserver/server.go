@@ -42,8 +42,22 @@ func Handler(logger *logrus.Logger) http.Handler {
 	ret.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
 	ret.Handle("/metrics", prometheus.Handler())
+	ret.Handle("/ui/", uiHandler("/ui"))
 
 	ret.Handle("/v1/", v1Handler(logger, "/v1"))
 
 	return ret
 }
+
+func uiHandler(prefix string) http.Handler {
+	fs := http.FileServer(assetFS())
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.URL.Path = r.URL.Path[len(prefix):]
+		if _, ok := _bindata["public"+r.URL.Path]; !ok {
+			r.URL.Path = "/"
+		}
+		fs.ServeHTTP(w, r)
+	})
+}
+
+//go:generate go-bindata-assetfs -nometadata -pkg apiserver -prefix ../ui ../ui/public/...

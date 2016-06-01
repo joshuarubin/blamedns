@@ -1,0 +1,65 @@
+.container {
+  max-width: 100%;
+  width: 98%;
+}
+
+.log-form {
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  display: block;
+  left: 0;
+  position: fixed;
+  top: 0;
+  width: 100%;
+}
+
+.log-messages {
+  margin-top: 12rem;
+}
+
+@media (min-width: 550px) {
+  .button-primary[type="submit"] {
+    margin-top: 2.9rem;
+  }
+}
+
+.log-entry {
+  font-family: monospace;
+}
+
+.log-level-0 {
+  // panic
+  background-color: #f2dede;
+}
+
+.log-level-1 {
+  // fatal
+  background-color: #f2dede;
+}
+
+.log-level-2 {
+  // error
+  background-color: #f2dede;
+}
+
+.log-level-3 {
+  // warn
+  background-color: #fcf8e3;
+}
+
+.log-level-4 {
+  // info
+}
+
+.log-level-5 {
+  // debug
+  background-color: #f5f5f5;
+}
+
+.log-data-value::before {
+  content: '=';
+}
+
+.log-data-value::after {
+  content: '\00a0';
+}
