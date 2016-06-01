@@ -17,10 +17,14 @@
   margin-top: 12rem;
 }
 
-@media (min-width: 550px) {
-  .button-primary[type="submit"] {
-    margin-top: 2.9rem;
-  }
+.log-data-pair,
+.log-data-key,
+.log-data-value {
+  display: inline-block;
+}
+
+.log-data-key {
+  color: #2e6da4;
 }
 
 .log-entry {

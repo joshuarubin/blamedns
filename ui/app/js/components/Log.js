@@ -26,10 +26,10 @@ class Log extends Component {
                 <div className="seven columns log-data">
                     {data.map(function(d, idx) {
                         return (
-                            <span key={idx}>
-                                <span className="log-data-key">{d.key}</span>
-                                <span className="log-data-value">{d.value}</span>
-                            </span>
+                            <div className="log-data-pair" key={idx}>
+                                <div className="log-data-key">{d.key}</div>
+                                <div className="log-data-value">{d.value}</div>
+                            </div>
                         )
                     })}
                 </div>
