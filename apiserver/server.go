@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 
+	"jrubin.io/blamedns/bdconfig/bdtype"
 	"jrubin.io/blamedns/simpleserver"
 
 	"github.com/Sirupsen/logrus"
@@ -42,12 +43,19 @@ func Handler(logger *logrus.Logger) http.Handler {
 	ret.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
 	ret.Handle("/metrics", prometheus.Handler())
-	ret.Handle("/ui/", uiHandler("/ui"))
 
-	ret.Handle("/v1/", v1Handler(logger, "/v1"))
+	ret.Handle("/logs/", LogsHandler(logger, reqLeveler("/logs/")))
+
+	ret.Handle("/ui/", uiHandler("/ui"))
 	ret.Handle("/", http.RedirectHandler("/ui/", http.StatusFound))
 
 	return ret
+}
+
+func reqLeveler(prefix string) LevelerFunc {
+	return func(req *http.Request) logrus.Level {
+		return bdtype.ParseLogLevel(req.URL.Path[len(prefix):]).Level()
+	}
 }
 
 func uiHandler(prefix string) http.Handler {

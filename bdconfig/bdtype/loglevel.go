@@ -74,12 +74,18 @@ func ParseLogLevel(level string) LogLevel {
 		r = unicode.ToLower(r)
 
 		switch r {
-		case 'e':
-			return LogLevel(logrus.ErrorLevel)
-		case 'i':
-			return LogLevel(logrus.InfoLevel)
 		case 'd':
 			return LogLevel(logrus.DebugLevel)
+		case 'i':
+			return LogLevel(logrus.InfoLevel)
+		case 'w':
+			return LogLevel(logrus.WarnLevel)
+		case 'e':
+			return LogLevel(logrus.ErrorLevel)
+		case 'f':
+			return LogLevel(logrus.FatalLevel)
+		case 'p':
+			return LogLevel(logrus.PanicLevel)
 		}
 	}
 

@@ -2,12 +2,47 @@ package apiserver
 
 import (
 	"fmt"
+	"net/http"
 	"sync"
 	"time"
 
 	"github.com/Sirupsen/logrus"
 	"golang.org/x/net/websocket"
 )
+
+// A Leveler is used to determine from an http.Request the logLevel that should
+// be used for the websocket.
+type Leveler interface {
+	Level(req *http.Request) logrus.Level
+}
+
+// LevelerFunc is a convenience wrapper to create a Leveler.
+type LevelerFunc func(*http.Request) logrus.Level
+
+// Level implements the Leveler interface.
+func (f LevelerFunc) Level(req *http.Request) logrus.Level {
+	return f(req)
+}
+
+// LogsHandler returns an http.Handler that will push JSON formatted log
+// messages to the client. Handler should only be called once per logger. By
+// default, each request is configured to receive logs at logger.Level or
+// higher. If you would like to be able to set a custom logLevel per websocket
+// connection, use the Leveler interface to determine what level the request
+// should use.
+func LogsHandler(logger *logrus.Logger, leveler Leveler) http.Handler {
+	wsLogger := newWSLogHook(logger)
+	logger.Hooks.Add(wsLogger)
+
+	return websocket.Handler(func(ws *websocket.Conn) {
+		level := logger.Level
+		if leveler != nil {
+			level = leveler.Level(ws.Request())
+		}
+
+		<-wsLogger.addConn(ws, level)
+	})
+}
 
 type chanLevel struct {
 	ch    chan struct{}

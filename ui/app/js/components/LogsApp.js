@@ -11,7 +11,7 @@ class LogsApp extends Component {
     open() {
         this.close()
 
-        let endpoint = "ws://" + location.host + "/v1/logs/" + this.props.params.logLevel
+        let endpoint = "ws://" + location.host + "/logs/" + this.props.params.logLevel
 
         this.ws = new ReconnectingWebSocket(endpoint)
         this.ws.onmessage = data => {
