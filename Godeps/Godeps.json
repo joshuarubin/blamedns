@@ -3,7 +3,21 @@
 	"GoVersion": "go1.6",
 	"GodepVersion": "v62",
 	"Packages": [
-		"./..."
+		"jrubin.io/blamedns",
+		"jrubin.io/blamedns/apiserver",
+		"jrubin.io/blamedns/bdconfig",
+		"jrubin.io/blamedns/bdconfig/bdtype",
+		"jrubin.io/blamedns/blocker",
+		"jrubin.io/blamedns/dl",
+		"jrubin.io/blamedns/dnscache",
+		"jrubin.io/blamedns/dnsserver",
+		"jrubin.io/blamedns/lru",
+		"jrubin.io/blamedns/parser",
+		"jrubin.io/blamedns/pixelserv",
+		"jrubin.io/blamedns/simpleserver",
+		"jrubin.io/blamedns/textmodifier",
+		"jrubin.io/blamedns/watcher",
+		"jrubin.io/blamedns/whitelist"
 	],
 	"Deps": [
 		{
@@ -28,6 +42,10 @@
 			"ImportPath": "github.com/codegangsta/cli",
 			"Comment": "v1.17.0-42-g595ba45",
 			"Rev": "595ba45e735c1e9c1f9ddc9e2ef21997fca893f2"
+		},
+		{
+			"ImportPath": "github.com/elazarl/go-bindata-assetfs",
+			"Rev": "57eb5e1fc594ad4b0b1dbea7b286d299e0cb43c2"
 		},
 		{
 			"ImportPath": "github.com/fsnotify/fsnotify",

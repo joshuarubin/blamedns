@@ -42,7 +42,10 @@ image: .image-stamp
 clean::
 	$(RM) -r $(EXECUTABLE) $(DOCKER_EXECUTABLE) .image-stamp $(DIST_DIR)
 
-circle: test coveralls
+circle: circle-touch test coveralls
+
+circle-touch:
+	@$(TOUCH) $(WEBPACK_TARGETS) $(APISERVER_GENERATE_TARGET)
 
 $(DIST_TARGETS): %: .generate-stamp $(GO_FILES_NO_TESTS) $(INSTALL_DEPS)
 	CGO_ENABLED=0 GOOS=$(word 2,$(subst _, ,$@)) GOARCH=$(word 3,$(subst _, ,$@)) $(GO_BUILD) -o $@ $(BASE_PKG)
@@ -86,4 +89,4 @@ bower-install: .bower-install-stamp
 watch:
 	godo start --watch
 
-.PHONY: all build image clean dist github-release deploy generate npm-install bower-install webpack watch
+.PHONY: all build image clean dist github-release deploy generate npm-install bower-install webpack watch circle-touch

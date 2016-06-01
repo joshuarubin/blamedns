@@ -83,7 +83,7 @@ GO_PKGS := \
 	$(strip \
 	$(foreach pkg, \
 		$(shell $(GO) list ./... 2>/dev/null), \
-		$(call exclude,$(pkg),/vendor/)))
+		$(call exclude,$(pkg),/vendor/ /Gododir)))
 
 # PROFILES - a list of profile files to expect from the coverage test
 # a profile file is simply .profile_$(pkg).out where $(pkg) is the go package
@@ -162,7 +162,7 @@ coveralls: .coveralls-stamp
 
 save:
 	$(RM) -r ./Godeps ./vendor
-	GOOS=linux GOARCH=amd64 $(GODEP) save ./...
+	GOOS=linux GOARCH=amd64 $(GODEP) save $(GO_PKGS)
 
 clean::
 	$(RM) $(PROFILES) ./.profile ./.coveralls-stamp ./.install-stamp $(INSTALL_DEPS)
