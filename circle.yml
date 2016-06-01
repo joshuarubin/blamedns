@@ -17,6 +17,7 @@ dependencies:
     - ~/.go
     - ~/.cache/go-test-cache
   override:
+    - make circle-touch
     - make circle_deps
 
 test:
