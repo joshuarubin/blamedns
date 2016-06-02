@@ -11,7 +11,6 @@
 		"jrubin.io/blamedns/dl",
 		"jrubin.io/blamedns/dnscache",
 		"jrubin.io/blamedns/dnsserver",
-		"jrubin.io/blamedns/lru",
 		"jrubin.io/blamedns/parser",
 		"jrubin.io/blamedns/pixelserv",
 		"jrubin.io/blamedns/simpleserver",
@@ -60,6 +59,14 @@
 			"ImportPath": "github.com/gopherjs/gopherjs/js",
 			"Comment": "go1.5-45-g19e100e",
 			"Rev": "19e100e9652485a76176bc5fd2669f57d3a2743c"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/golang-lru",
+			"Rev": "a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4"
+		},
+		{
+			"ImportPath": "github.com/hashicorp/golang-lru/simplelru",
+			"Rev": "a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4"
 		},
 		{
 			"ImportPath": "github.com/jtolds/gls",

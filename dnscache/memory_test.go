@@ -1,12 +1,14 @@
 package dnscache
 
 import (
+	"crypto/rand"
 	"fmt"
+	"math/big"
 	"net"
 	"testing"
 	"time"
 
-	"jrubin.io/blamedns/lru"
+	"golang.org/x/net/context"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
@@ -15,9 +17,21 @@ import (
 
 func (c *Memory) numEntries() int {
 	var n int
-	c.data.Each(lru.ElementerFunc(func(k, value interface{}) {
-		n += len(*value.(*RRSet))
-	}))
+	for _, key := range c.cache.Keys() {
+		value, ok := c.cache.Get(key)
+		if !ok {
+			continue
+		}
+
+		switch v := value.(type) {
+		case *RRSet:
+			n += len(v.data)
+		case *negativeEntry:
+			n++
+		default:
+			panic(fmt.Errorf("invalid type stored in dns memory cache"))
+		}
+	}
 	return n
 }
 
@@ -148,43 +162,14 @@ func init() {
 	logger.Level = logrus.DebugLevel
 }
 
-func newAMsg(host string) *dns.Msg {
-	return &dns.Msg{
-		Question: []dns.Question{{
-			Qclass: dns.ClassINET,
-		}},
-		Answer: []dns.RR{
-			&dns.A{
-				Hdr: dns.RR_Header{
-					Name:   host,
-					Rrtype: dns.TypeA,
-					Class:  dns.ClassINET,
-					Ttl:    60,
-				},
-				A: net.ParseIP("127.0.0.1"),
-			},
-		},
-	}
-}
-
-func newReq(typ uint16, host string) *dns.Msg {
-	return &dns.Msg{
-		Question: []dns.Question{{
-			Qclass: dns.ClassINET,
-			Name:   host,
-			Qtype:  typ,
-		}},
-	}
-}
-
 func TestMemoryCache(t *testing.T) {
 	Convey("dns memory cache should work", t, func() {
-		So(func() { NewMemory(0, nil, nil) }, ShouldPanic)
+		So(func() { NewMemory(0, nil) }, ShouldPanic)
 
-		c := NewMemory(1, nil, nil)
+		c := NewMemory(1, nil)
 		So(c.Logger, ShouldNotEqual, logger)
 
-		c = NewMemory(64, logger, nil)
+		c = NewMemory(64, logger)
 		So(c.Len(), ShouldEqual, 0)
 		So(c.Logger, ShouldEqual, logger)
 
@@ -197,7 +182,7 @@ func TestMemoryCache(t *testing.T) {
 		So(c.Len(), ShouldEqual, 5)
 		So(c.numEntries(), ShouldEqual, 5)
 
-		resp := c.Get(nil, newReq(dns.TypeA, "example.com"))
+		resp := testGet(c, dns.TypeA, "example.com")
 
 		So(resp, ShouldNotBeNil)
 		So(resp.Answer, ShouldNotBeNil)
@@ -217,17 +202,17 @@ func TestMemoryCache(t *testing.T) {
 			}
 		}
 
-		resp = c.Get(nil, newReq(dns.TypeA, "cname.example.com"))
+		resp = testGet(c, dns.TypeA, "cname.example.com")
 		So(resp, ShouldNotBeNil)
 		So(resp.Answer, ShouldNotBeNil)
 		So(len(resp.Answer), ShouldEqual, 3)
 
-		resp = c.Get(nil, newReq(dns.TypeAAAA, "cname.example.com"))
+		resp = testGet(c, dns.TypeAAAA, "cname.example.com")
 		So(resp, ShouldNotBeNil)
 		So(resp.Answer, ShouldNotBeNil)
 		So(len(resp.Answer), ShouldEqual, 2)
 
-		resp = c.Get(nil, newReq(dns.TypeAAAA, "example.com"))
+		resp = testGet(c, dns.TypeAAAA, "example.com")
 		So(resp, ShouldNotBeNil)
 		So(resp.Answer, ShouldNotBeNil)
 		So(len(resp.Answer), ShouldEqual, 1)
@@ -242,7 +227,7 @@ func TestMemoryCache(t *testing.T) {
 
 		time.Sleep(1 * time.Second)
 
-		resp = c.Get(nil, newReq(dns.TypeAAAA, "example.com"))
+		resp = testGet(c, dns.TypeAAAA, "example.com")
 		So(resp, ShouldBeNil)
 		So(c.Len(), ShouldEqual, 4)
 		So(c.numEntries(), ShouldEqual, 4)
@@ -251,12 +236,12 @@ func TestMemoryCache(t *testing.T) {
 		So(c.Len(), ShouldEqual, 4)
 		So(c.numEntries(), ShouldEqual, 4)
 
-		req := newReq(dns.TypeA, "example.com")
+		req := testGet(c, dns.TypeA, "example.com")
 		req.Question[0].Qclass = 0 // missing Qclass
 		resp = c.Get(nil, req)
 		So(resp, ShouldBeNil)
 
-		resp = c.Get(nil, newReq(dns.TypeA, "www.example.com"))
+		resp = testGet(c, dns.TypeA, "www.example.com")
 		So(resp, ShouldBeNil)
 
 		So(c.Len(), ShouldEqual, 4)
@@ -268,45 +253,21 @@ func TestMemoryCache(t *testing.T) {
 
 	Convey("test lru", t, func() {
 		Convey("lru should work", func() {
-			evictCounter := 0
-			onEvicted := lru.ElementerFunc(func(k, value interface{}) {
-				typ := k.(key).Type
-				host := k.(key).Host
-				rr := value.(*RRSet).RR()
-
-				if evictCounter < 128 {
-					So(typ, ShouldEqual, dns.TypeA)
-					So(host, ShouldEqual, fmt.Sprintf("%d.example.com", evictCounter))
-					So(len(rr), ShouldEqual, 1)
-					So(rr[0], ShouldResemble, &dns.A{
-						Hdr: dns.RR_Header{
-							Name:   fmt.Sprintf("%d.example.com", evictCounter),
-							Rrtype: dns.TypeA,
-							Class:  dns.ClassINET,
-							Ttl:    59,
-						},
-						A: net.ParseIP("127.0.0.1"),
-					})
-				}
-				evictCounter++
-			})
-
-			l := NewMemory(128, nil, onEvicted)
+			l := NewMemory(128, nil)
 
 			for i := 0; i < 256; i++ {
-				l.Set(newAMsg(fmt.Sprintf("%d.example.com", i)))
+				testSetA(l, fmt.Sprintf("%d.example.com", i), nil, 0)
 			}
 
 			So(l.Len(), ShouldEqual, 128)
-			So(evictCounter, ShouldEqual, 128)
 
 			for i := 0; i < 128; i++ {
-				rr := l.Get(nil, newReq(dns.TypeA, fmt.Sprintf("%d.example.com", i+128)))
+				rr := testGet(l, dns.TypeA, fmt.Sprintf("%d.example.com", i+128))
 				So(rr, ShouldNotBeNil)
 			}
 
 			for i := 0; i < 128; i++ {
-				rr := l.Get(nil, newReq(dns.TypeA, fmt.Sprintf("%d.example.com", i)))
+				rr := testGet(l, dns.TypeA, fmt.Sprintf("%d.example.com", i))
 				So(rr, ShouldBeNil)
 			}
 
@@ -314,24 +275,8 @@ func TestMemoryCache(t *testing.T) {
 			So(l.Len(), ShouldEqual, 0)
 		})
 
-		Convey("lru add", func() {
-			// Test that Add returns true/false if an eviction occurred
-			evictCounter := 0
-			onEvicted := lru.ElementerFunc(func(k, value interface{}) {
-				evictCounter++
-			})
-
-			l := NewMemory(1, nil, onEvicted)
-
-			l.Set(newAMsg("0.example.com"))
-			So(evictCounter, ShouldEqual, 0)
-
-			l.Set(newAMsg("1.example.com"))
-			So(evictCounter, ShouldEqual, 1)
-		})
-
 		Convey("cname loops shouldnt kill the server", func() {
-			c := NewMemory(128, nil, nil)
+			c := NewMemory(128, nil)
 			// add a cname record
 			So(c.Set(msg1), ShouldEqual, 1)
 
@@ -354,6 +299,91 @@ func TestMemoryCache(t *testing.T) {
 			r = testGet(c, dns.TypeA, "c.example.com")
 			So(r, ShouldBeNil)
 		})
+	})
+
+	Convey("memory cache should not have any races", t, func() {
+		// start 4 goroutines, 2 setting values and 2 getting values
+		n := 1024
+		c := NewMemory(n, nil)
+		c.Start(1 * time.Second) // prune every second
+		hosts := genHosts(n)
+		ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+		for i := 0; i < 2; i++ {
+			go fastSetter(ctx, c, hosts)
+			go fastGetter(ctx, c, hosts)
+		}
+		<-ctx.Done()
+	})
+}
+
+func genHosts(n int) []string {
+	ret := make([]string, n)
+	for i := 0; i < n; i++ {
+		ret[i] = fmt.Sprintf("%d.example.com", i)
+	}
+	return ret
+}
+
+func getRandInt(max int) int {
+	i, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
+	if err != nil {
+		panic(err)
+	}
+	return int(i.Int64())
+}
+
+func fastSetter(ctx context.Context, c Cache, hosts []string) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		i := getRandInt(len(hosts))
+		ttl := TTL(getRandInt(int(5 * time.Second)))
+
+		testSetA(c, hosts[i], nil, ttl)
+	}
+}
+
+func fastGetter(ctx context.Context, c Cache, hosts []string) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		i := getRandInt(len(hosts))
+		testGet(c, dns.TypeA, hosts[i])
+	}
+}
+
+func testSetA(c Cache, host string, ip net.IP, ttl TTL) {
+	if ip == nil {
+		ip = net.ParseIP("127.0.0.1")
+	}
+
+	if ttl.Seconds() < 1 {
+		ttl = TTL(60 * time.Second)
+	}
+
+	c.Set(&dns.Msg{
+		Question: []dns.Question{{
+			Qclass: dns.ClassINET,
+		}},
+		Answer: []dns.RR{
+			&dns.A{
+				Hdr: dns.RR_Header{
+					Name:   host,
+					Rrtype: dns.TypeA,
+					Class:  dns.ClassINET,
+					Ttl:    ttl.Seconds(),
+				},
+				A: ip,
+			},
+		},
 	})
 }
 

@@ -1,13 +1,14 @@
 package dnscache
 
 import (
+	"sync"
 	"time"
 
 	"golang.org/x/net/context"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/hashicorp/golang-lru"
 	"github.com/miekg/dns"
-	"jrubin.io/blamedns/lru"
 )
 
 type key struct {
@@ -15,65 +16,85 @@ type key struct {
 	Type uint16
 }
 
-type Memory struct {
-	Logger   *logrus.Logger
-	data     *lru.LRU
-	nxDomain *lru.LRU
-	noData   *lru.LRU
-	stopCh   chan struct{}
+type lrui interface {
+	Keys() []interface{}
+	Get(key interface{}) (interface{}, bool)
+	Remove(key interface{})
+	Add(key, value interface{})
+	Purge()
 }
 
-func NewMemory(size int, logger *logrus.Logger, onEvict lru.Elementer) *Memory {
+type Memory struct {
+	mu     sync.Mutex
+	Logger *logrus.Logger
+	cache  lrui
+	stopCh chan struct{}
+}
+
+func NewMemory(size int, logger *logrus.Logger) *Memory {
 	if logger == nil {
 		logger = logrus.New()
 	}
 
-	// TODO(jrubin) should each lru be sized differently?
-	// TODO(jrubin) should onEvict be called for ttl expiration?
+	cache, err := lru.NewARC(size)
+	if err != nil {
+		logger.WithError(err).Panic("error creating dns memory cache")
+	}
+
 	return &Memory{
-		Logger:   logger,
-		data:     lru.New(size, logger, onEvict),
-		nxDomain: lru.New(size, logger, onEvict),
-		noData:   lru.New(size, logger, onEvict),
+		Logger: logger,
+		cache:  cache,
 	}
 }
 
 func (c *Memory) Len() int {
 	var n int
 
-	for _, l := range []*lru.LRU{c.data, c.nxDomain, c.noData} {
-		l.Each(lru.ElementerFunc(func(k, value interface{}) {
-			switch v := value.(type) {
-			case *RRSet:
-				n += v.Len()
-			case *negativeEntry:
-				n++
-			default:
-				c.Logger.WithField("value", value).Panic("invalid type stored in dns memory cache")
-			}
-		}))
+	for _, key := range c.cache.Keys() {
+		value, ok := c.cache.Get(key)
+		if !ok {
+			continue
+		}
+
+		switch v := value.(type) {
+		case *RRSet:
+			n += v.Len()
+		case *negativeEntry:
+			n++
+		default:
+			c.Logger.WithField("value", value).Panic("invalid type stored in dns memory cache")
+		}
 	}
 
 	return n
 }
 
 func (c *Memory) Prune() int {
-	var n int
-	c.data.Each(lru.ElementerFunc(func(k, value interface{}) {
-		set := value.(*RRSet)
-		n += set.Prune()
-		if set.Len() == 0 {
-			c.data.RemoveNoLock(k)
-		}
-	}))
+	// there is a race between getting a value and removing it, however, it is
+	// not something that can cause a panic and we prefer not to have to lock
+	// the whole Prune function
 
-	for _, l := range []*lru.LRU{c.nxDomain, c.noData} {
-		l.Each(lru.ElementerFunc(func(k, value interface{}) {
-			if value.(*negativeEntry).Expired() {
-				n++
-				l.RemoveNoLock(k)
+	var n int
+	for _, key := range c.cache.Keys() {
+		value, ok := c.cache.Get(key)
+		if !ok {
+			continue
+		}
+
+		switch v := value.(type) {
+		case *RRSet:
+			n += v.Prune()
+			if v.Len() == 0 {
+				c.cache.Remove(key)
 			}
-		}))
+		case *negativeEntry:
+			if v.Expired() {
+				n++
+				c.cache.Remove(key)
+			}
+		default:
+			c.Logger.WithField("value", value).Panic("invalid type stored in dns memory cache")
+		}
 	}
 
 	return n
@@ -85,28 +106,39 @@ func (c *Memory) add(rr *RR) {
 		Type: rr.Header().Rrtype,
 	}
 
-	value, ok := c.data.Get(k)
-	var set *RRSet
-	if ok {
-		set = value.(*RRSet)
-	} else {
-		set = &RRSet{}
-		if !c.data.AddIfNotContains(k, set) {
-			c.add(rr)
+	// first try getting without the lock
+
+	if value, ok := c.cache.Get(k); ok {
+		if set, ok := value.(*RRSet); ok {
+			set.Add(rr)
 			return
 		}
 	}
 
-	c.data.Lock()
-	defer c.data.Unlock()
+	// wasn't there the first time, so now, get the lock and check again
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if value, ok := c.cache.Get(k); ok {
+		if set, ok := value.(*RRSet); ok {
+			set.Add(rr)
+			return
+		}
+	}
+
+	// still wasn't there, add it
+
+	set := &RRSet{}
 	set.Add(rr)
+
+	// this may clobber a negativeEntry, that's OK
+	c.cache.Add(k, set)
 }
 
 func (c *Memory) Purge() {
 	c.Logger.Info("purging dns cache")
-	for _, lru := range []*lru.LRU{c.data, c.nxDomain, c.noData} {
-		lru.Purge()
-	}
+	c.cache.Purge()
 }
 
 func (c *Memory) Set(resp *dns.Msg) int {
@@ -147,7 +179,7 @@ func (c *Memory) Set(resp *dns.Msg) int {
 type msgField int
 
 const (
-	fieldAnswer = iota
+	fieldAnswer msgField = iota
 	fieldNs
 	fieldExtra
 )
@@ -170,9 +202,11 @@ func (c *Memory) get(ctx context.Context, q dns.Question, resp *dns.Msg, field m
 		return false
 	}
 
-	if elem, ok := c.data.Get(key{Host: q.Name, Type: q.Qtype}); ok {
-		if data := appendResponseField(resp, field, elem.(*RRSet).RR()); len(data) > 0 {
-			return true
+	if elem, ok := c.cache.Get(key{Host: q.Name, Type: q.Qtype}); ok {
+		if set, ok := elem.(*RRSet); ok {
+			if data := appendResponseField(resp, field, set.RR()); len(data) > 0 {
+				return true
+			}
 		}
 		return false
 	}
@@ -184,30 +218,32 @@ func (c *Memory) get(ctx context.Context, q dns.Question, resp *dns.Msg, field m
 	// there was nothing in the cache that matched the RR Type requested, see if
 	// there is a CNAME that resolves to the correct type
 
-	if elem, ok := c.data.Get(key{Host: q.Name, Type: dns.TypeCNAME}); ok {
-		newValues := appendResponseField(resp, field, elem.(*RRSet).RR())
+	if elem, ok := c.cache.Get(key{Host: q.Name, Type: dns.TypeCNAME}); ok {
+		if set, ok := elem.(*RRSet); ok {
+			newValues := appendResponseField(resp, field, set.RR())
 
-		var completed bool
-		for _, value := range newValues {
-			cname := value.(*dns.CNAME)
+			var completed bool
+			for _, value := range newValues {
+				cname := value.(*dns.CNAME)
 
-			req := &dns.Msg{
-				Question: []dns.Question{{
-					Name:   cname.Target,
-					Qtype:  q.Qtype,
-					Qclass: q.Qclass,
-				}},
+				req := &dns.Msg{
+					Question: []dns.Question{{
+						Name:   cname.Target,
+						Qtype:  q.Qtype,
+						Qclass: q.Qclass,
+					}},
+				}
+
+				// we need to use the outside Get() so that NXDOMAIN and NODATA
+				// values are correct as well
+				if c.outerGet(ctx, req, resp) {
+					completed = true
+				}
 			}
 
-			// we need to use the outside Get() so that NXDOMAIN and NODATA
-			// values are correct as well
-			if c.outerGet(ctx, req, resp) {
-				completed = true
+			if completed {
+				return true
 			}
-		}
-
-		if completed {
-			return true
 		}
 	}
 

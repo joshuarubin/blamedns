@@ -20,7 +20,7 @@ var defaultDNSCacheConfig = DNSCacheConfig{
 
 func (cfg *DNSCacheConfig) Init(root *Config) {
 	if !cfg.Disable {
-		cfg.Cache = dnscache.NewMemory(cfg.Size, root.Logger, nil)
+		cfg.Cache = dnscache.NewMemory(cfg.Size, root.Logger)
 	}
 }
 
