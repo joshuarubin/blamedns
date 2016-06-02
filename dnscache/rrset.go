@@ -38,7 +38,7 @@ func (rs *RRSet) Add(r *RR) {
 		// keep only the one with the lower ttl
 
 		if r.Expires.Before(t.Expires) {
-			rs.setNoLock(i, r)
+			rs.setNoLock(j, r)
 		}
 	}
 
