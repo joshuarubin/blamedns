@@ -17,13 +17,20 @@ import (
 
 func (c *Memory) numEntries() int {
 	var n int
-	for _, key := range c.data.Keys() {
-		value, ok := c.data.Get(key)
+	for _, key := range c.cache.Keys() {
+		value, ok := c.cache.Get(key)
 		if !ok {
 			continue
 		}
 
-		n += len(value.(*RRSet).data)
+		switch v := value.(type) {
+		case *RRSet:
+			n += len(v.data)
+		case *negativeEntry:
+			n++
+		default:
+			panic(fmt.Errorf("invalid type stored in dns memory cache"))
+		}
 	}
 	return n
 }

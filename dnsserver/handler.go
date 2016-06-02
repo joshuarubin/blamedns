@@ -79,7 +79,7 @@ func refused(req *dns.Msg) *hresp {
 type cacheStatus int
 
 const (
-	cacheMiss = iota
+	cacheMiss cacheStatus = iota
 	cacheHit
 )
 

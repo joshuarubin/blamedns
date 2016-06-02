@@ -73,10 +73,12 @@ func (c *Memory) setNoData(resp *dns.Msg) {
 		Type: q.Qtype,
 	}
 
-	if value, ok := c.noData.Get(k); ok {
-		// it already exists, only update to lower the ttl
-		if value.(*negativeEntry).Expires.Before(expires) {
-			return
+	if value, ok := c.cache.Get(k); ok {
+		if ne, ok := value.(*negativeEntry); ok {
+			// it already exists, only update to lower the ttl
+			if ne.Expires.Before(expires) {
+				return
+			}
 		}
 	}
 
@@ -85,7 +87,7 @@ func (c *Memory) setNoData(resp *dns.Msg) {
 		Expires: expires,
 	}
 
-	c.noData.Add(k, e)
+	c.cache.Add(k, e)
 }
 
 func (c *Memory) getNoData(q dns.Question) *negativeEntry {
@@ -94,12 +96,14 @@ func (c *Memory) getNoData(q dns.Question) *negativeEntry {
 		Type: q.Qtype,
 	}
 
-	if value, ok := c.noData.Get(k); ok {
-		if e := value.(*negativeEntry); !e.Expired() {
-			return e
-		}
+	if value, ok := c.cache.Get(k); ok {
+		if ne, ok := value.(*negativeEntry); ok {
+			if !ne.Expired() {
+				return ne
+			}
 
-		c.noData.Remove(k)
+			c.cache.Remove(k)
+		}
 	}
 
 	return nil

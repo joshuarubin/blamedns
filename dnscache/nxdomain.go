@@ -48,10 +48,12 @@ func (c *Memory) setNxDomain(resp *dns.Msg) {
 
 	q := resp.Question[0]
 
-	if value, ok := c.nxDomain.Get(q.Name); ok {
-		// it already exists, only update to lower the ttl
-		if value.(*negativeEntry).Expires.Before(expires) {
-			return
+	if value, ok := c.cache.Get(q.Name); ok {
+		if ne, ok := value.(*negativeEntry); ok {
+			// it already exists, only update to lower the ttl
+			if ne.Expires.Before(expires) {
+				return
+			}
 		}
 	}
 
@@ -60,16 +62,18 @@ func (c *Memory) setNxDomain(resp *dns.Msg) {
 		Expires: expires,
 	}
 
-	c.nxDomain.Add(q.Name, e)
+	c.cache.Add(q.Name, e)
 }
 
 func (c *Memory) getNxDomain(q dns.Question) *negativeEntry {
-	if value, ok := c.nxDomain.Get(q.Name); ok {
-		if e := value.(*negativeEntry); !e.Expired() {
-			return e
-		}
+	if value, ok := c.cache.Get(q.Name); ok {
+		if ne, ok := value.(*negativeEntry); ok {
+			if !ne.Expired() {
+				return ne
+			}
 
-		c.nxDomain.Remove(q.Name)
+			c.cache.Remove(q.Name)
+		}
 	}
 
 	return nil

@@ -25,12 +25,10 @@ type lrui interface {
 }
 
 type Memory struct {
-	mu       sync.Mutex
-	Logger   *logrus.Logger
-	data     lrui
-	nxDomain lrui
-	noData   lrui
-	stopCh   chan struct{}
+	mu     sync.Mutex
+	Logger *logrus.Logger
+	cache  lrui
+	stopCh chan struct{}
 }
 
 func NewMemory(size int, logger *logrus.Logger) *Memory {
@@ -38,43 +36,33 @@ func NewMemory(size int, logger *logrus.Logger) *Memory {
 		logger = logrus.New()
 	}
 
-	if size <= 0 {
-		logger.WithField("size", size).Panic("dnscache must have positive size")
+	cache, err := lru.NewARC(size)
+	if err != nil {
+		logger.WithError(err).Panic("error creating dns memory cache")
 	}
 
-	// TODO(jrubin) should each lru be sized differently?
-	// TODO(jrubin) use a single lru
-	// TODO(jrubin) should onEvict be called for ttl expiration?
-	data, _ := lru.NewARC(size)
-	nxDomain, _ := lru.NewARC(size)
-	noData, _ := lru.NewARC(size)
-
 	return &Memory{
-		Logger:   logger,
-		data:     data,
-		nxDomain: nxDomain,
-		noData:   noData,
+		Logger: logger,
+		cache:  cache,
 	}
 }
 
 func (c *Memory) Len() int {
 	var n int
 
-	for _, l := range []lrui{c.data, c.nxDomain, c.noData} {
-		for _, key := range l.Keys() {
-			value, ok := l.Get(key)
-			if !ok {
-				continue
-			}
+	for _, key := range c.cache.Keys() {
+		value, ok := c.cache.Get(key)
+		if !ok {
+			continue
+		}
 
-			switch v := value.(type) {
-			case *RRSet:
-				n += v.Len()
-			case *negativeEntry:
-				n++
-			default:
-				c.Logger.WithField("value", value).Panic("invalid type stored in dns memory cache")
-			}
+		switch v := value.(type) {
+		case *RRSet:
+			n += v.Len()
+		case *negativeEntry:
+			n++
+		default:
+			c.Logger.WithField("value", value).Panic("invalid type stored in dns memory cache")
 		}
 	}
 
@@ -82,31 +70,30 @@ func (c *Memory) Len() int {
 }
 
 func (c *Memory) Prune() int {
+	// there is a race between getting a value and removing it, however, it is
+	// not something that can cause a panic and we prefer not to have to lock
+	// the whole Prune function
+
 	var n int
-	for _, key := range c.data.Keys() {
-		value, ok := c.data.Get(key)
+	for _, key := range c.cache.Keys() {
+		value, ok := c.cache.Get(key)
 		if !ok {
 			continue
 		}
 
-		set := value.(*RRSet)
-		n += set.Prune()
-		if set.Len() == 0 {
-			c.data.Remove(key)
-		}
-	}
-
-	for _, l := range []lrui{c.nxDomain, c.noData} {
-		for _, key := range l.Keys() {
-			value, ok := l.Get(key)
-			if !ok {
-				continue
+		switch v := value.(type) {
+		case *RRSet:
+			n += v.Prune()
+			if v.Len() == 0 {
+				c.cache.Remove(key)
 			}
-
-			if value.(*negativeEntry).Expired() {
+		case *negativeEntry:
+			if v.Expired() {
 				n++
-				l.Remove(key)
+				c.cache.Remove(key)
 			}
+		default:
+			c.Logger.WithField("value", value).Panic("invalid type stored in dns memory cache")
 		}
 	}
 
@@ -121,9 +108,11 @@ func (c *Memory) add(rr *RR) {
 
 	// first try getting without the lock
 
-	if value, ok := c.data.Get(k); ok {
-		value.(*RRSet).Add(rr)
-		return
+	if value, ok := c.cache.Get(k); ok {
+		if set, ok := value.(*RRSet); ok {
+			set.Add(rr)
+			return
+		}
 	}
 
 	// wasn't there the first time, so now, get the lock and check again
@@ -131,23 +120,25 @@ func (c *Memory) add(rr *RR) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if value, ok := c.data.Get(k); ok {
-		value.(*RRSet).Add(rr)
-		return
+	if value, ok := c.cache.Get(k); ok {
+		if set, ok := value.(*RRSet); ok {
+			set.Add(rr)
+			return
+		}
 	}
 
 	// still wasn't there, add it
 
 	set := &RRSet{}
 	set.Add(rr)
-	c.data.Add(k, set)
+
+	// this may clobber a negativeEntry, that's OK
+	c.cache.Add(k, set)
 }
 
 func (c *Memory) Purge() {
 	c.Logger.Info("purging dns cache")
-	for _, lru := range []lrui{c.data, c.nxDomain, c.noData} {
-		lru.Purge()
-	}
+	c.cache.Purge()
 }
 
 func (c *Memory) Set(resp *dns.Msg) int {
@@ -188,7 +179,7 @@ func (c *Memory) Set(resp *dns.Msg) int {
 type msgField int
 
 const (
-	fieldAnswer = iota
+	fieldAnswer msgField = iota
 	fieldNs
 	fieldExtra
 )
@@ -211,9 +202,11 @@ func (c *Memory) get(ctx context.Context, q dns.Question, resp *dns.Msg, field m
 		return false
 	}
 
-	if elem, ok := c.data.Get(key{Host: q.Name, Type: q.Qtype}); ok {
-		if data := appendResponseField(resp, field, elem.(*RRSet).RR()); len(data) > 0 {
-			return true
+	if elem, ok := c.cache.Get(key{Host: q.Name, Type: q.Qtype}); ok {
+		if set, ok := elem.(*RRSet); ok {
+			if data := appendResponseField(resp, field, set.RR()); len(data) > 0 {
+				return true
+			}
 		}
 		return false
 	}
@@ -225,30 +218,32 @@ func (c *Memory) get(ctx context.Context, q dns.Question, resp *dns.Msg, field m
 	// there was nothing in the cache that matched the RR Type requested, see if
 	// there is a CNAME that resolves to the correct type
 
-	if elem, ok := c.data.Get(key{Host: q.Name, Type: dns.TypeCNAME}); ok {
-		newValues := appendResponseField(resp, field, elem.(*RRSet).RR())
+	if elem, ok := c.cache.Get(key{Host: q.Name, Type: dns.TypeCNAME}); ok {
+		if set, ok := elem.(*RRSet); ok {
+			newValues := appendResponseField(resp, field, set.RR())
 
-		var completed bool
-		for _, value := range newValues {
-			cname := value.(*dns.CNAME)
+			var completed bool
+			for _, value := range newValues {
+				cname := value.(*dns.CNAME)
 
-			req := &dns.Msg{
-				Question: []dns.Question{{
-					Name:   cname.Target,
-					Qtype:  q.Qtype,
-					Qclass: q.Qclass,
-				}},
+				req := &dns.Msg{
+					Question: []dns.Question{{
+						Name:   cname.Target,
+						Qtype:  q.Qtype,
+						Qclass: q.Qclass,
+					}},
+				}
+
+				// we need to use the outside Get() so that NXDOMAIN and NODATA
+				// values are correct as well
+				if c.outerGet(ctx, req, resp) {
+					completed = true
+				}
 			}
 
-			// we need to use the outside Get() so that NXDOMAIN and NODATA
-			// values are correct as well
-			if c.outerGet(ctx, req, resp) {
-				completed = true
+			if completed {
+				return true
 			}
-		}
-
-		if completed {
-			return true
 		}
 	}
 
