@@ -148,35 +148,6 @@ func init() {
 	logger.Level = logrus.DebugLevel
 }
 
-func newAMsg(host string) *dns.Msg {
-	return &dns.Msg{
-		Question: []dns.Question{{
-			Qclass: dns.ClassINET,
-		}},
-		Answer: []dns.RR{
-			&dns.A{
-				Hdr: dns.RR_Header{
-					Name:   host,
-					Rrtype: dns.TypeA,
-					Class:  dns.ClassINET,
-					Ttl:    60,
-				},
-				A: net.ParseIP("127.0.0.1"),
-			},
-		},
-	}
-}
-
-func newReq(typ uint16, host string) *dns.Msg {
-	return &dns.Msg{
-		Question: []dns.Question{{
-			Qclass: dns.ClassINET,
-			Name:   host,
-			Qtype:  typ,
-		}},
-	}
-}
-
 func TestMemoryCache(t *testing.T) {
 	Convey("dns memory cache should work", t, func() {
 		So(func() { NewMemory(0, nil, nil) }, ShouldPanic)
@@ -197,7 +168,7 @@ func TestMemoryCache(t *testing.T) {
 		So(c.Len(), ShouldEqual, 5)
 		So(c.numEntries(), ShouldEqual, 5)
 
-		resp := c.Get(nil, newReq(dns.TypeA, "example.com"))
+		resp := testGet(c, dns.TypeA, "example.com")
 
 		So(resp, ShouldNotBeNil)
 		So(resp.Answer, ShouldNotBeNil)
@@ -217,17 +188,17 @@ func TestMemoryCache(t *testing.T) {
 			}
 		}
 
-		resp = c.Get(nil, newReq(dns.TypeA, "cname.example.com"))
+		resp = testGet(c, dns.TypeA, "cname.example.com")
 		So(resp, ShouldNotBeNil)
 		So(resp.Answer, ShouldNotBeNil)
 		So(len(resp.Answer), ShouldEqual, 3)
 
-		resp = c.Get(nil, newReq(dns.TypeAAAA, "cname.example.com"))
+		resp = testGet(c, dns.TypeAAAA, "cname.example.com")
 		So(resp, ShouldNotBeNil)
 		So(resp.Answer, ShouldNotBeNil)
 		So(len(resp.Answer), ShouldEqual, 2)
 
-		resp = c.Get(nil, newReq(dns.TypeAAAA, "example.com"))
+		resp = testGet(c, dns.TypeAAAA, "example.com")
 		So(resp, ShouldNotBeNil)
 		So(resp.Answer, ShouldNotBeNil)
 		So(len(resp.Answer), ShouldEqual, 1)
@@ -242,7 +213,7 @@ func TestMemoryCache(t *testing.T) {
 
 		time.Sleep(1 * time.Second)
 
-		resp = c.Get(nil, newReq(dns.TypeAAAA, "example.com"))
+		resp = testGet(c, dns.TypeAAAA, "example.com")
 		So(resp, ShouldBeNil)
 		So(c.Len(), ShouldEqual, 4)
 		So(c.numEntries(), ShouldEqual, 4)
@@ -251,12 +222,12 @@ func TestMemoryCache(t *testing.T) {
 		So(c.Len(), ShouldEqual, 4)
 		So(c.numEntries(), ShouldEqual, 4)
 
-		req := newReq(dns.TypeA, "example.com")
+		req := testGet(c, dns.TypeA, "example.com")
 		req.Question[0].Qclass = 0 // missing Qclass
 		resp = c.Get(nil, req)
 		So(resp, ShouldBeNil)
 
-		resp = c.Get(nil, newReq(dns.TypeA, "www.example.com"))
+		resp = testGet(c, dns.TypeA, "www.example.com")
 		So(resp, ShouldBeNil)
 
 		So(c.Len(), ShouldEqual, 4)
@@ -294,19 +265,19 @@ func TestMemoryCache(t *testing.T) {
 			l := NewMemory(128, nil, onEvicted)
 
 			for i := 0; i < 256; i++ {
-				l.Set(newAMsg(fmt.Sprintf("%d.example.com", i)))
+				testSetA(l, fmt.Sprintf("%d.example.com", i), nil, 0)
 			}
 
 			So(l.Len(), ShouldEqual, 128)
 			So(evictCounter, ShouldEqual, 128)
 
 			for i := 0; i < 128; i++ {
-				rr := l.Get(nil, newReq(dns.TypeA, fmt.Sprintf("%d.example.com", i+128)))
+				rr := testGet(l, dns.TypeA, fmt.Sprintf("%d.example.com", i+128))
 				So(rr, ShouldNotBeNil)
 			}
 
 			for i := 0; i < 128; i++ {
-				rr := l.Get(nil, newReq(dns.TypeA, fmt.Sprintf("%d.example.com", i)))
+				rr := testGet(l, dns.TypeA, fmt.Sprintf("%d.example.com", i))
 				So(rr, ShouldBeNil)
 			}
 
@@ -323,10 +294,10 @@ func TestMemoryCache(t *testing.T) {
 
 			l := NewMemory(1, nil, onEvicted)
 
-			l.Set(newAMsg("0.example.com"))
+			testSetA(l, "0.example.com", nil, 0)
 			So(evictCounter, ShouldEqual, 0)
 
-			l.Set(newAMsg("1.example.com"))
+			testSetA(l, "1.example.com", nil, 0)
 			So(evictCounter, ShouldEqual, 1)
 		})
 
@@ -354,6 +325,36 @@ func TestMemoryCache(t *testing.T) {
 			r = testGet(c, dns.TypeA, "c.example.com")
 			So(r, ShouldBeNil)
 		})
+	})
+
+	Convey("memory cache should not have any races", t, func() {
+	})
+}
+
+func testSetA(c Cache, host string, ip net.IP, ttl uint32) {
+	if ip == nil {
+		ip = net.ParseIP("127.0.0.1")
+	}
+
+	if ttl <= 0 {
+		ttl = 60
+	}
+
+	c.Set(&dns.Msg{
+		Question: []dns.Question{{
+			Qclass: dns.ClassINET,
+		}},
+		Answer: []dns.RR{
+			&dns.A{
+				Hdr: dns.RR_Header{
+					Name:   host,
+					Rrtype: dns.TypeA,
+					Class:  dns.ClassINET,
+					Ttl:    ttl,
+				},
+				A: ip,
+			},
+		},
 	})
 }
 
