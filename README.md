@@ -4,6 +4,7 @@
 
 ## TODO
 
+1. dns override list (e.g. specific host that always responds with a particular ip)
 1. api server
     * clear cache
     * add to whitelist

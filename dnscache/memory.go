@@ -142,7 +142,7 @@ func (c *Memory) Purge() {
 }
 
 func (c *Memory) Set(resp *dns.Msg) int {
-	if resp == nil {
+	if resp == nil || len(resp.Question) == 0 {
 		return 0
 	}
 
