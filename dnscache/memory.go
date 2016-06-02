@@ -1,13 +1,14 @@
 package dnscache
 
 import (
+	"sync"
 	"time"
 
 	"golang.org/x/net/context"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/hashicorp/golang-lru"
 	"github.com/miekg/dns"
-	"jrubin.io/blamedns/lru"
 )
 
 type key struct {
@@ -15,34 +16,57 @@ type key struct {
 	Type uint16
 }
 
+type lrui interface {
+	Keys() []interface{}
+	Get(key interface{}) (interface{}, bool)
+	Remove(key interface{})
+	Add(key, value interface{})
+	Purge()
+}
+
 type Memory struct {
+	mu       sync.Mutex
 	Logger   *logrus.Logger
-	data     *lru.LRU
-	nxDomain *lru.LRU
-	noData   *lru.LRU
+	data     lrui
+	nxDomain lrui
+	noData   lrui
 	stopCh   chan struct{}
 }
 
-func NewMemory(size int, logger *logrus.Logger, onEvict lru.Elementer) *Memory {
+func NewMemory(size int, logger *logrus.Logger) *Memory {
 	if logger == nil {
 		logger = logrus.New()
 	}
 
+	if size <= 0 {
+		logger.WithField("size", size).Panic("dnscache must have positive size")
+	}
+
 	// TODO(jrubin) should each lru be sized differently?
+	// TODO(jrubin) use a single lru
 	// TODO(jrubin) should onEvict be called for ttl expiration?
+	data, _ := lru.NewARC(size)
+	nxDomain, _ := lru.NewARC(size)
+	noData, _ := lru.NewARC(size)
+
 	return &Memory{
 		Logger:   logger,
-		data:     lru.New(size, logger, onEvict),
-		nxDomain: lru.New(size, logger, onEvict),
-		noData:   lru.New(size, logger, onEvict),
+		data:     data,
+		nxDomain: nxDomain,
+		noData:   noData,
 	}
 }
 
 func (c *Memory) Len() int {
 	var n int
 
-	for _, l := range []*lru.LRU{c.data, c.nxDomain, c.noData} {
-		l.Each(lru.ElementerFunc(func(k, value interface{}) {
+	for _, l := range []lrui{c.data, c.nxDomain, c.noData} {
+		for _, key := range l.Keys() {
+			value, ok := l.Get(key)
+			if !ok {
+				continue
+			}
+
 			switch v := value.(type) {
 			case *RRSet:
 				n += v.Len()
@@ -51,7 +75,7 @@ func (c *Memory) Len() int {
 			default:
 				c.Logger.WithField("value", value).Panic("invalid type stored in dns memory cache")
 			}
-		}))
+		}
 	}
 
 	return n
@@ -59,21 +83,31 @@ func (c *Memory) Len() int {
 
 func (c *Memory) Prune() int {
 	var n int
-	c.data.Each(lru.ElementerFunc(func(k, value interface{}) {
+	for _, key := range c.data.Keys() {
+		value, ok := c.data.Get(key)
+		if !ok {
+			continue
+		}
+
 		set := value.(*RRSet)
 		n += set.Prune()
 		if set.Len() == 0 {
-			c.data.RemoveNoLock(k)
+			c.data.Remove(key)
 		}
-	}))
+	}
 
-	for _, l := range []*lru.LRU{c.nxDomain, c.noData} {
-		l.Each(lru.ElementerFunc(func(k, value interface{}) {
+	for _, l := range []lrui{c.nxDomain, c.noData} {
+		for _, key := range l.Keys() {
+			value, ok := l.Get(key)
+			if !ok {
+				continue
+			}
+
 			if value.(*negativeEntry).Expired() {
 				n++
-				l.RemoveNoLock(k)
+				l.Remove(key)
 			}
-		}))
+		}
 	}
 
 	return n
@@ -85,26 +119,33 @@ func (c *Memory) add(rr *RR) {
 		Type: rr.Header().Rrtype,
 	}
 
-	value, ok := c.data.Get(k)
-	var set *RRSet
-	if ok {
-		set = value.(*RRSet)
-	} else {
-		set = &RRSet{}
-		if !c.data.AddIfNotContains(k, set) {
-			c.add(rr)
-			return
-		}
+	// first try getting without the lock
+
+	if value, ok := c.data.Get(k); ok {
+		value.(*RRSet).Add(rr)
+		return
 	}
 
-	c.data.Lock()
-	defer c.data.Unlock()
+	// wasn't there the first time, so now, get the lock and check again
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if value, ok := c.data.Get(k); ok {
+		value.(*RRSet).Add(rr)
+		return
+	}
+
+	// still wasn't there, add it
+
+	set := &RRSet{}
 	set.Add(rr)
+	c.data.Add(k, set)
 }
 
 func (c *Memory) Purge() {
 	c.Logger.Info("purging dns cache")
-	for _, lru := range []*lru.LRU{c.data, c.nxDomain, c.noData} {
+	for _, lru := range []lrui{c.data, c.nxDomain, c.noData} {
 		lru.Purge()
 	}
 }

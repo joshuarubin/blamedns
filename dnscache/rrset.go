@@ -1,17 +1,27 @@
 package dnscache
 
-import "github.com/miekg/dns"
+import (
+	"sync"
 
-type RRSet []*RR
+	"github.com/miekg/dns"
+)
+
+type RRSet struct {
+	sync.Mutex
+	data []*RR
+}
 
 func (rs *RRSet) Add(r *RR) {
+	rs.Lock()
+	defer rs.Unlock()
+
 	var deleted int
 	var added bool
-	for i := range *rs {
+	for i := range rs.data {
 		j := i - deleted
 
 		// might as well prune since we are here
-		t, pruned := rs.prune(j)
+		t, pruned := rs.pruneNoLock(j)
 
 		if pruned {
 			deleted++
@@ -28,43 +38,46 @@ func (rs *RRSet) Add(r *RR) {
 		// keep only the one with the lower ttl
 
 		if r.Expires.Before(t.Expires) {
-			rs.set(j, r)
+			rs.setNoLock(i, r)
 		}
 	}
 
 	if !added {
-		rs.append(r)
+		rs.appendNoLock(r)
 	}
 }
 
-func (rs *RRSet) get(i int) *RR {
-	return (*rs)[i]
+func (rs *RRSet) getNoLock(i int) *RR {
+	return rs.data[i]
 }
 
-func (rs *RRSet) set(i int, r *RR) {
-	(*rs)[i] = r
+func (rs *RRSet) setNoLock(i int, r *RR) {
+	rs.data[i] = r
 }
 
-func (rs *RRSet) append(rr *RR) {
-	*rs = append(*rs, rr)
+func (rs *RRSet) appendNoLock(rr *RR) {
+	rs.data = append(rs.data, rr)
 }
 
-func (rs *RRSet) delete(i int) {
-	copy((*rs)[i:], (*rs)[i+1:])
-	(*rs)[len((*rs))-1] = nil
-	*rs = (*rs)[:len((*rs))-1]
+func (rs *RRSet) deleteNoLock(i int) {
+	copy(rs.data[i:], rs.data[i+1:])
+	rs.data[len(rs.data)-1] = nil
+	rs.data = rs.data[:len(rs.data)-1]
 }
 
 func (rs *RRSet) RR() []dns.RR {
+	rs.Lock()
+	defer rs.Unlock()
+
 	var deleted int
-	ret := make([]dns.RR, 0, len(*rs))
-	for i := range *rs {
+	ret := make([]dns.RR, 0, len(rs.data))
+	for i := range rs.data {
 		j := i - deleted
-		if _, ok := rs.prune(j); ok {
+		if _, ok := rs.pruneNoLock(j); ok {
 			deleted++
 			continue
 		}
-		ret = append(ret, (*rs)[j].RR())
+		ret = append(ret, rs.getNoLock(j).RR())
 	}
 
 	if len(ret) == 0 {
@@ -74,29 +87,35 @@ func (rs *RRSet) RR() []dns.RR {
 	return ret
 }
 
-func (rs *RRSet) prune(i int) (*RR, bool) {
-	rr := rs.get(i)
+func (rs *RRSet) pruneNoLock(i int) (*RR, bool) {
+	rr := rs.getNoLock(i)
 	if rr.Expired() {
-		rs.delete(i)
+		rs.deleteNoLock(i)
 		return rr, true
 	}
 	return rr, false
 }
 
 func (rs *RRSet) Prune() int {
+	rs.Lock()
+	defer rs.Unlock()
+
 	var deleted int
-	for i := range *rs {
+	for i := range rs.data {
 		j := i - deleted
-		if _, ok := rs.prune(j); ok {
+		if _, ok := rs.pruneNoLock(j); ok {
 			deleted++
 		}
 	}
 	return deleted
 }
 
-func (rs RRSet) Len() int {
+func (rs *RRSet) Len() int {
+	rs.Lock()
+	defer rs.Unlock()
+
 	var ret int
-	for _, rr := range rs {
+	for _, rr := range rs.data {
 		if !rr.Expired() {
 			ret++
 		}
