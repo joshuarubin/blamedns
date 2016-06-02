@@ -1,0 +1,11 @@
+[Unit]
+Description=A simple forwarding, blocking, caching DNS server
+After=network.target
+
+[Service]
+User=blamedns
+ExecStart=/usr/local/bin/blamedns
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

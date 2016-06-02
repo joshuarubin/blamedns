@@ -58,13 +58,13 @@ func (rs *RRSet) delete(i int) {
 func (rs *RRSet) RR() []dns.RR {
 	var deleted int
 	ret := make([]dns.RR, 0, len(*rs))
-	for i, rr := range *rs {
+	for i := range *rs {
 		j := i - deleted
 		if _, ok := rs.prune(j); ok {
 			deleted++
 			continue
 		}
-		ret = append(ret, rr.RR())
+		ret = append(ret, (*rs)[j].RR())
 	}
 
 	if len(ret) == 0 {
