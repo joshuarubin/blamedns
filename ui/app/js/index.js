@@ -7,8 +7,7 @@ import { syncHistoryWithStore, routerReducer } from 'react-router-redux'
 import { App, LogsApp, NoMatch } from './components'
 import * as reducers from './reducers'
 
-require("../vendor/skeleton/css/normalize.css")
-require("../vendor/skeleton/css/skeleton.css")
+require("bootstrap/dist/css/bootstrap.css")
 require("../sass/style.scss")
 
 const store = createStore(

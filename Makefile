@@ -49,7 +49,6 @@ fix-circle:: touch
 touch:
 	$(TOUCH) \
 		.npm-install-stamp \
-		.bower-install-stamp \
 		$(WEBPACK_TARGETS) \
 		.webpack-stamp \
 		$(APISERVER_GENERATE_TARGET) \
@@ -71,7 +70,7 @@ webpack: .webpack-stamp
 .webpack-stamp: $(WEBPACK_TARGETS)
 	@$(TOUCH) .webpack-stamp
 
-$(WEBPACK_TARGETS): .npm-install-stamp .bower-install-stamp $(WEBPACK_DEPS)
+$(WEBPACK_TARGETS): .npm-install-stamp $(WEBPACK_DEPS)
 	(cd $(UI_DIR) && npm run build)
 
 $(APISERVER_GENERATE_TARGET): .webpack-stamp $(INDEX_FILE)
@@ -88,13 +87,7 @@ npm-install: .npm-install-stamp
 	(cd $(UI_DIR) && npm install)
 	@$(TOUCH) .npm-install-stamp
 
-bower-install: .bower-install-stamp
-
-.bower-install-stamp: $(UI_DIR)/bower.json $(UI_DIR)/.bowerrc
-	(cd $(UI_DIR) && bower install)
-	@$(TOUCH) .bower-install-stamp
-
 watch:
 	godo start --watch
 
-.PHONY: all build image clean dist github-release deploy generate npm-install bower-install webpack watch touch
+.PHONY: all build image clean dist github-release deploy generate npm-install webpack watch touch

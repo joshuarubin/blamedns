@@ -9,8 +9,6 @@ import (
 func tasks(p *do.Project) {
 	watch := []string{
 		"ui/package.json",
-		"ui/bower.json",
-		"ui/.bowerrc",
 		"ui/webpack.config.js",
 		"ui/app/js/**/*.js",
 		"ui/app/sass/*.scss",
