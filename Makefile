@@ -15,13 +15,15 @@ DIST_TARGETS              := $(foreach os,$(DIST_OS),$(foreach arch,$(DIST_ARCH)
 GO_BUILD                  := $(GO) build -v -ldflags $(LDFLAGS)
 REPO_USER                 := joshuarubin
 UI_DIR                    := ui
-WEBPACK_TARGETS           := $(UI_DIR)/public/js/bundle.js $(UI_DIR)/public/css/style.css
+WEBPACK_TARGETS           := $(UI_DIR)/public/bundle.js $(UI_DIR)/public/style.css
 APISERVER_GENERATE_TARGET := apiserver/bindata_assetfs.go
 WEBPACK_CONFIG            := $(UI_DIR)/webpack.config.js
 INDEX_FILE                := $(UI_DIR)/public/index.html
 JSX_FILES                 := $(call find-files-with-extension,$(UI_DIR)/app/js,js)
-SCSS_FILES                := $(wildcard $(UI_DIR)/app/sass/*.scss)
-WEBPACK_DEPS              := $(WEBPACK_CONFIG) $(JSX_FILES) $(SCSS_FILES)
+SCSS_FILES                := $(call find-files-with-extension,$(UI_DIR)/app/sass,scss)
+LESS_FILES                := $(call find-files-with-extension,$(UI_DIR)/app/less,less)
+FONT_FILES                := $(wildcard $(UI_DIR)/app/fonts/*)
+WEBPACK_DEPS              := $(WEBPACK_CONFIG) $(JSX_FILES) $(SCSS_FILES) $(LESS_FILES) $(FONT_FILES)
 
 GHR ?= ghr
 
