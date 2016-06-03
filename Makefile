@@ -15,13 +15,15 @@ DIST_TARGETS              := $(foreach os,$(DIST_OS),$(foreach arch,$(DIST_ARCH)
 GO_BUILD                  := $(GO) build -v -ldflags $(LDFLAGS)
 REPO_USER                 := joshuarubin
 UI_DIR                    := ui
-WEBPACK_TARGETS           := $(UI_DIR)/public/js/bundle.js $(UI_DIR)/public/css/style.css
+WEBPACK_TARGETS           := $(UI_DIR)/public/bundle.js $(UI_DIR)/public/style.css
 APISERVER_GENERATE_TARGET := apiserver/bindata_assetfs.go
 WEBPACK_CONFIG            := $(UI_DIR)/webpack.config.js
 INDEX_FILE                := $(UI_DIR)/public/index.html
 JSX_FILES                 := $(call find-files-with-extension,$(UI_DIR)/app/js,js)
-SCSS_FILES                := $(wildcard $(UI_DIR)/app/sass/*.scss)
-WEBPACK_DEPS              := $(WEBPACK_CONFIG) $(JSX_FILES) $(SCSS_FILES)
+SCSS_FILES                := $(call find-files-with-extension,$(UI_DIR)/app/sass,scss)
+LESS_FILES                := $(call find-files-with-extension,$(UI_DIR)/app/less,less)
+FONT_FILES                := $(wildcard $(UI_DIR)/app/fonts/*)
+WEBPACK_DEPS              := $(WEBPACK_CONFIG) $(JSX_FILES) $(SCSS_FILES) $(LESS_FILES) $(FONT_FILES)
 
 GHR ?= ghr
 
@@ -49,7 +51,6 @@ fix-circle:: touch
 touch:
 	$(TOUCH) \
 		.npm-install-stamp \
-		.bower-install-stamp \
 		$(WEBPACK_TARGETS) \
 		.webpack-stamp \
 		$(APISERVER_GENERATE_TARGET) \
@@ -71,7 +72,7 @@ webpack: .webpack-stamp
 .webpack-stamp: $(WEBPACK_TARGETS)
 	@$(TOUCH) .webpack-stamp
 
-$(WEBPACK_TARGETS): .npm-install-stamp .bower-install-stamp $(WEBPACK_DEPS)
+$(WEBPACK_TARGETS): .npm-install-stamp $(WEBPACK_DEPS)
 	(cd $(UI_DIR) && npm run build)
 
 $(APISERVER_GENERATE_TARGET): .webpack-stamp $(INDEX_FILE)
@@ -88,13 +89,7 @@ npm-install: .npm-install-stamp
 	(cd $(UI_DIR) && npm install)
 	@$(TOUCH) .npm-install-stamp
 
-bower-install: .bower-install-stamp
-
-.bower-install-stamp: $(UI_DIR)/bower.json $(UI_DIR)/.bowerrc
-	(cd $(UI_DIR) && bower install)
-	@$(TOUCH) .bower-install-stamp
-
 watch:
 	godo start --watch
 
-.PHONY: all build image clean dist github-release deploy generate npm-install bower-install webpack watch touch
+.PHONY: all build image clean dist github-release deploy generate npm-install webpack watch touch

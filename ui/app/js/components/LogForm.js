@@ -4,27 +4,38 @@ import { levelToString } from "../lib"
 class LogForm extends Component {
     render() {
         let opts = []
-        for (let i=5; i >= 0; i--) {
-            opts.push(i)
+        for (let i=5; i > 1; i--) {
+            opts.push({
+                level: i,
+                name: levelToString(i),
+                active: i === this.props.logLevel
+            })
         }
 
         return (
-            <form className="row" onSubmit={ev => ev.preventDefault()}>
-                <div className="five columns">&nbsp;</div>
-                <div className="two columns">
-                    <label htmlFor="levelSelector">Log Level</label>
-                    <select
-                        className="u-full-width"
-                        id="levelSelector"
-                        value={this.props.logLevel}
-                        onChange={this.props.onLevelChange}
-                    >
-                        {opts.map((value, idx) =>
-                            <option key={idx} value={value}>{levelToString(value)}</option>
-                        )}
-                    </select>
+            <nav className="navbar navbar-fixed-top navbar-default">
+                <div className="container-fluid">
+                    <span className="navbar-brand">blamedns</span>
+                    <div className="navbar-right">
+                        <p className="navbar-text">Log Level</p>
+                        <div className="navbar-form btn-group" data-toggle="buttons">
+                            {opts.map((value, idx) =>
+                                <label key={idx} className={"btn btn-default"+(value.active ? " active" : "")}>
+                                    <input
+                                        type="radio"
+                                        name="log-level"
+                                        autocomplete="off"
+                                        value={value.level}
+                                        defaultChecked={value.active}
+                                        onChange={this.props.onLevelChange}
+                                    />
+                                    {value.name}
+                                </label>
+                            )}
+                        </div>
+                    </div>
                 </div>
-            </form>
+            </nav>
         );
     }
 }

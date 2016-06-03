@@ -9,13 +9,14 @@ import (
 func tasks(p *do.Project) {
 	watch := []string{
 		"ui/package.json",
-		"ui/bower.json",
-		"ui/.bowerrc",
 		"ui/webpack.config.js",
 		"ui/app/js/**/*.js",
-		"ui/app/sass/*.scss",
+		"ui/app/fonts/*",
+		"ui/app/sass/**/*.scss",
+		"ui/app/less/**/*.less",
 		"ui/public/index.html",
 		"**/*.go",
+		"!apiserver/bindata.go",
 		"!apiserver/bindata_assetfs.go",
 	}
 
