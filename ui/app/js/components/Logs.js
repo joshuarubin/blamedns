@@ -5,9 +5,17 @@ import Log from './Log'
 class Logs extends Component {
     render() {
         return (
-            <div className="log-messages">
-                {this.props.entries.map((entry, idx) => <Log key={idx} entry={entry} />)}
-            </div>
+            <table className="table table-hover log-messages table-condensed">
+                <thead><tr>
+                    <th>Level</th>
+                    <th>Time</th>
+                    <th>Message</th>
+                    <th>Data</th>
+                </tr></thead>
+                <tbody>
+                    {this.props.entries.map((entry, idx) => <Log key={idx} entry={entry} />)}
+                </tbody>
+            </table>
         )
     }
 }

@@ -1,27 +1,25 @@
-.log-time,
-.log-data,
-.log-data-pair,
-.log-data-key,
-.log-data-value {
-  display: inline-block;
-}
-
-.log-data-value::before {
-  content: '=';
-}
-
-.log-entry .label,
-.log-data-pair {
+.log-data {
   margin-right: .5em;
+
+  :last-child::before {
+    content: '=';
+  }
 }
 
-.log-time,
-.log-message,
-.log-data-key,
-.log-data-value {
+.log-entry td :not(.label) {
   font-family: monospace;
 }
 
-.log-messages {
-  margin-top: 71px;
+.navbar-fixed-top + * {
+  margin-top: 141px;
+}
+
+@media (min-width: 768px) {
+  .navbar-fixed-top + * {
+    margin-top: 71px;
+  }
+}
+
+.log-entry td:not(:last-child) {
+  white-space: nowrap;
 }
