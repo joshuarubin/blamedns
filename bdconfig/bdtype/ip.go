@@ -57,3 +57,7 @@ func (i *IP) UnmarshalText(text []byte) error {
 	*i = IP(net.ParseIP(string(text)))
 	return nil
 }
+
+func ParseIP(ip string) IP {
+	return IP(net.ParseIP(ip))
+}

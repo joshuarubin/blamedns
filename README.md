@@ -4,7 +4,6 @@
 
 ## TODO
 
-1. dns override list (e.g. specific host that always responds with a particular ip)
 1. api server
     * clear cache
     * add to whitelist
@@ -13,6 +12,7 @@
 1. documentation
 1. profiling
 1. fuzzing
+1. blamedns.com website
 
 sudo setcap cap_net_bind_service=+ep /usr/local/bin/blamedns
 sudo adduser --system blamedns --home /var/cache/blamedns --shell /usr/sbin/nologin --disabled-password --disabled-login --group --no-create-home

@@ -13,10 +13,16 @@ import (
 	"github.com/miekg/dns"
 )
 
+type Overrider interface {
+	Override(string) []net.IP
+}
+
 type DNSServer struct {
 	Listen            []string
 	servers           []*dns.Server
 	Block             Block
+	Override          Overrider
+	OverrideTTL       time.Duration
 	Logger            *logrus.Logger
 	ClientTimeout     time.Duration
 	ServerTimeout     time.Duration

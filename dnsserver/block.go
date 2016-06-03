@@ -32,6 +32,15 @@ func unfqdn(s string) string {
 	return s
 }
 
+func newHdr(name string, qtype uint16, ttl uint32) dns.RR_Header {
+	return dns.RR_Header{
+		Name:   name,
+		Rrtype: qtype,
+		Class:  dns.ClassINET,
+		Ttl:    ttl,
+	}
+}
+
 func (b Block) Should(req *dns.Msg) bool {
 	q := req.Question[0]
 
@@ -57,19 +66,22 @@ func (b Block) Should(req *dns.Msg) bool {
 
 func (b Block) NewReply(req *dns.Msg) *dns.Msg {
 	q := req.Question[0]
-	qType := q.Qtype
-	hdr := newHdr(q.Name, qType, uint32(b.TTL.Seconds()))
+	hdr := newHdr(q.Name, q.Qtype, uint32(b.TTL.Seconds()))
 
-	var msg *dns.Msg
-	switch qType {
+	var rr dns.RR
+	switch q.Qtype {
 	case dns.TypeA:
-		msg = newA(b.IPv4, hdr)
+		rr = &dns.A{Hdr: hdr, A: b.IPv4}
 	case dns.TypeAAAA:
-		msg = newAAAA(b.IPv6, hdr)
+		rr = &dns.AAAA{Hdr: hdr, AAAA: b.IPv6}
 	default:
 		b.Logger.WithFields(logrus.Fields{
-			"type": dns.TypeToString[qType],
+			"type": dns.TypeToString[q.Qtype],
 		}).Panic("unexpected question type")
+	}
+
+	msg := &dns.Msg{
+		Answer: []dns.RR{rr},
 	}
 
 	return msg.SetReply(req)

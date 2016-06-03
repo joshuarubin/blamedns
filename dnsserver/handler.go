@@ -2,7 +2,9 @@ package dnsserver
 
 import (
 	"fmt"
+	"net"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/net/context"
@@ -99,12 +101,67 @@ type hresp struct {
 	cache   cacheStatus
 }
 
+func (d *DNSServer) getOverride(req *dns.Msg) []net.IP {
+	if d.Override == nil {
+		return nil
+	}
+
+	q := req.Question[0]
+
+	if q.Qtype != dns.TypeA && q.Qtype != dns.TypeAAAA {
+		return nil
+	}
+
+	host := strings.ToLower(unfqdn(q.Name))
+	return d.Override.Override(host)
+}
+
+func (d *DNSServer) overrideReply(req *dns.Msg, ips []net.IP) *dns.Msg {
+	q := req.Question[0]
+	ttl := uint32(d.OverrideTTL / time.Second)
+	resp := &dns.Msg{}
+	resp.SetReply(req)
+
+	for _, ip := range ips {
+		var rr dns.RR
+
+		if ip4 := ip.To4(); ip4 != nil {
+			if q.Qtype == dns.TypeA {
+				hdr := newHdr(q.Name, dns.TypeA, ttl)
+				rr = &dns.A{Hdr: hdr, A: ip4}
+			}
+		} else if ip6 := ip.To16(); ip6 != nil {
+			if q.Qtype == dns.TypeAAAA {
+				hdr := newHdr(q.Name, dns.TypeAAAA, ttl)
+				rr = &dns.AAAA{Hdr: hdr, AAAA: ip6}
+			}
+		}
+
+		if rr != nil {
+			resp.Answer = append(resp.Answer, rr)
+		}
+	}
+
+	return resp
+}
+
 func (d *DNSServer) bgHandler(ctx context.Context, net string, addr []string, req *dns.Msg, respCh chan<- *hresp) {
 	// refuse "any" and "rrsig" requests
 	switch req.Question[0].Qtype {
 	case dns.TypeANY, dns.TypeRRSIG:
 		respCh <- refused(req)
 		return
+	}
+
+	if ips := d.getOverride(req); len(ips) > 0 {
+		if resp := d.overrideReply(req, ips); len(resp.Answer) > 0 {
+			respCh <- &hresp{
+				resp:    resp,
+				blocked: false,
+				cache:   cacheHit,
+			}
+			return
+		}
 	}
 
 	if d.Block.Should(req) {

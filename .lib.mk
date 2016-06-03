@@ -25,8 +25,9 @@ XARGS     ?= xargs
 SED       ?= sed
 AWK       ?= awk
 
+REPO_NAME ?= $(notdir $(CURDIR))
+
 METALINT           := gometalinter --cyclo-over=10 --deadline=10s -t
-REPO_NAME          := $(notdir $(CURDIR))
 SRC_DIR            := $(realpath $(CURDIR)/../..)
 BASE_PKG           := jrubin.io/$(REPO_NAME)
 EXCLUDE_DIRS       := ./vendor ./Godeps ./.git ./Gododir

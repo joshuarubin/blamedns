@@ -3,6 +3,7 @@ package bdconfig
 import (
 	"jrubin.io/blamedns/bdconfig/bdtype"
 	"jrubin.io/blamedns/dnsserver"
+	"jrubin.io/blamedns/override"
 )
 
 type DNSZoneConfig struct {
@@ -21,6 +22,8 @@ type DNSConfig struct {
 	Cache          DNSCacheConfig       `toml:"cache"`
 	Forward        []string             `toml:"forward" cli:",default dns server(s) to forward requests to"`
 	Zone           []DNSZoneConfig      `toml:"zone" cli:"-"`
+	Override       map[string][]string  `toml:"override" cli:"-"` // this should be map[string][]bdtype.IP, but that doesn't work with the toml decoder :(
+	OverrideTTL    bdtype.Duration      `toml:"override_ttl" cli:",ttl to return for overridden hosts"`
 }
 
 var defaultDNSConfig = DNSConfig{
@@ -57,6 +60,8 @@ func (cfg *DNSConfig) Init(root *Config, onStart func()) error {
 		Zones: map[string][]string{
 			".": cfg.Forward,
 		},
+		OverrideTTL: cfg.OverrideTTL.Duration(),
+		Override:    override.New(override.Parse(cfg.Override)),
 	}
 
 	for _, zone := range cfg.Zone {

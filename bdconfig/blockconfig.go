@@ -35,7 +35,7 @@ func (b BlockConfig) Block(root *Config) dnsserver.Block {
 		IPv6:    b.IPv6.IP(),
 		TTL:     b.TTL.Duration(),
 		Blocker: b.blocker,
-		Passer:  whitelist.New(b.Whitelist),
+		Passer:  whitelist.New(b.Whitelist...),
 		Logger:  root.Logger,
 	}
 }

@@ -1,20 +1,32 @@
 package whitelist
 
-import "jrubin.io/blamedns/dnsserver"
+import (
+	"github.com/armon/go-radix"
+	"jrubin.io/blamedns/dnsserver"
+	"jrubin.io/blamedns/parser"
+)
 
 var _ dnsserver.Passer = &WhiteList{}
 
-type WhiteList map[string]struct{}
-
-func (w WhiteList) Pass(host string) bool {
-	_, found := w[host]
-	return found
+type WhiteList struct {
+	data *radix.Tree
 }
 
-func New(domains []string) WhiteList {
-	ret := WhiteList{}
-	for _, domain := range domains {
-		ret[domain] = struct{}{}
+func (w WhiteList) Pass(host string) bool {
+	key := parser.ReverseHostName(host)
+	_, ok := w.data.Get(key)
+	return ok
+}
+
+func New(domains ...string) WhiteList {
+	ret := WhiteList{
+		data: radix.New(),
 	}
+
+	for _, domain := range domains {
+		key := parser.ReverseHostName(domain)
+		ret.data.Insert(key, nil)
+	}
+
 	return ret
 }

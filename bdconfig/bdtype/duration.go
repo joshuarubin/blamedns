@@ -16,6 +16,7 @@ const (
 	defaultDNSLookupInterval  = 200 * time.Millisecond
 	defaultCachePruneInterval = 1 * time.Hour
 	defaultDialTimeout        = 2 * time.Second
+	defaultDNSOverrideTTL     = 1 * time.Hour
 )
 
 type Duration time.Duration
@@ -43,6 +44,8 @@ func (d Duration) Default(name string) interface{} {
 		return defaultCachePruneInterval
 	case "dns-dial-timeout":
 		return defaultDialTimeout
+	case "dns-override-ttl":
+		return defaultDNSOverrideTTL
 	}
 	panic(fmt.Errorf("bdtype.Duration.Default unknown name: %s", name))
 }
