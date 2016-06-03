@@ -45,16 +45,9 @@ class LogsApp extends Component {
         let logLevel = stringToLevel(this.props.params.logLevel)
 
         return (
-            <div>
-                <div className="log-form">
-                    <LogForm logLevel={logLevel} onLevelChange={this.onLevelChange.bind(this)} />
-                </div>
-
-                <div className="log-messages-container">
-                    <div className="log-messages">
-                        <Logs logLevel={logLevel} />
-                    </div>
-                </div>
+            <div className="logs-app">
+                <LogForm logLevel={logLevel} onLevelChange={this.onLevelChange.bind(this)} />
+                <Logs logLevel={logLevel} />
             </div>
         );
     }

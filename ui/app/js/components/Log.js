@@ -12,26 +12,46 @@ class Log extends Component {
             }
         }
 
+        let level = levelToString(msg.Level)
+        let labelClass = "label"
+
+        switch (level) {
+        case "INFO":
+            labelClass += " label-info"
+            break
+        case "WARN":
+            labelClass += " label-warning"
+            break
+        case "ERROR":
+        case "FATAL":
+        case "PANIC":
+            labelClass += " label-danger"
+        default:
+            labelClass += " label-default"
+        }
+
         return (
-            <div className={"row log-entry log-level-"+msg.Level}>
-                <div className="two columns log-time">
-                    {moment(msg.Time).format("MMM D h:mm:ssa")}
+            <div className="row log-entry">
+                <div className="col-sm-1">
+                    <div className="log-time">
+                        {moment(msg.Time).format("MMM D h:mm:ssa")}
+                    </div>
+                    <span className={"log-level "+labelClass}>{level}</span>
                 </div>
-                <div className={"one column log-level log-level-"+msg.Level}>
-                    {levelToString(msg.Level)}
-                </div>
-                <div className="two columns log-message">
+                <div className="col-sm-2 log-message">
                     {msg.Message}
                 </div>
-                <div className="seven columns log-data">
-                    {data.map(function(d, idx) {
-                        return (
-                            <div className="log-data-pair" key={idx}>
-                                <div className="log-data-key">{d.key}</div>
-                                <div className="log-data-value">{d.value}</div>
-                            </div>
-                        )
-                    })}
+                <div className="col-sm-9">
+                    <div className="log-data">
+                        {data.map(function(d, idx) {
+                            return (
+                                <div className="log-data-pair" key={idx}>
+                                    <span className={"log-data-key label-pill "+labelClass}>{d.key}</span>
+                                    <div className="log-data-value">{d.value}</div>
+                                </div>
+                            )
+                        })}
+                    </div>
                 </div>
             </div>
         )

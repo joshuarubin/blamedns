@@ -4,12 +4,12 @@ import { levelToString } from "../lib"
 class LogForm extends Component {
     render() {
         let opts = []
-        for (let i=5; i >= 0; i--) {
+        for (let i=5; i > 1; i--) {
             opts.push(i)
         }
 
         return (
-            <form className="row" onSubmit={ev => ev.preventDefault()}>
+            <form className="log-form row" onSubmit={ev => ev.preventDefault()}>
                 <div className="five columns">&nbsp;</div>
                 <div className="two columns">
                     <label htmlFor="levelSelector">Log Level</label>

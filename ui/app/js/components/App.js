@@ -2,11 +2,9 @@ import React from 'react';
 import { Link } from 'react-router'
 
 const App = () => (
-    <div>
-        <ul>
-            <li><Link to="/ui/logs">logs</Link></li>
-        </ul>
-    </div>
+    <nav className="nav">
+        <Link className="nav-link" to="/ui/logs">logs</Link>
+    </nav>
 )
 
 export default App

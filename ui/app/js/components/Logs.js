@@ -5,7 +5,7 @@ import Log from './Log'
 class Logs extends Component {
     render() {
         return (
-            <div>
+            <div className="log-messages">
                 {this.props.entries.map((entry, idx) => <Log key={idx} entry={entry} />)}
             </div>
         )

@@ -1,69 +1,79 @@
-.container {
-  max-width: 100%;
-  width: 98%;
-}
+// .container {
+//   max-width: 100%;
+//   width: 98%;
+// }
+//
+// .log-form {
+//   background: #fff;
+//   border-bottom: 1px solid #eee;
+//   display: block;
+//   left: 0;
+//   position: fixed;
+//   top: 0;
+//   width: 100%;
+// }
+//
+// .log-messages {
+//   margin-top: 12rem;
+// }
 
-.log-form {
-  background: #fff;
-  border-bottom: 1px solid #eee;
-  display: block;
-  left: 0;
-  position: fixed;
-  top: 0;
-  width: 100%;
-}
-
-.log-messages {
-  margin-top: 12rem;
-}
-
+.log-time,
+.log-data,
 .log-data-pair,
 .log-data-key,
 .log-data-value {
   display: inline-block;
 }
 
-.log-data-key {
-  color: #2e6da4;
+// .log-data-key {
+//   color: #2e6da4;
+// }
+//
+// .log-data-value::before {
+//   content: '=';
+// }
+
+.log-time,
+.log-data-pair {
+  margin-right: 1rem;
 }
 
-.log-entry {
+.log-entry .label {
+  margin-right: .1rem;
+}
+
+.log-time,
+.log-message,
+.log-data-value {
   font-family: monospace;
+  font-size: .75rem;
 }
 
-.log-level-0 {
-  // panic
-  background-color: #f2dede;
-}
-
-.log-level-1 {
-  // fatal
-  background-color: #f2dede;
-}
-
-.log-level-2 {
-  // error
-  background-color: #f2dede;
-}
-
-.log-level-3 {
-  // warn
-  background-color: #fcf8e3;
-}
-
-.log-level-4 {
-  // info
-}
-
-.log-level-5 {
-  // debug
-  background-color: #f5f5f5;
-}
-
-.log-data-value::before {
-  content: '=';
-}
-
-.log-data-value::after {
-  content: '\00a0';
-}
+// .log-level-0 {
+//   // panic
+//   background-color: #f2dede;
+// }
+//
+// .log-level-1 {
+//   // fatal
+//   background-color: #f2dede;
+// }
+//
+// .log-level-2 {
+//   // error
+//   background-color: #f2dede;
+// }
+//
+// .log-level-3 {
+//   // warn
+//   background-color: #fcf8e3;
+// }
+//
+// .log-level-4 {
+//   // info
+// }
+//
+// .log-level-5 {
+//   // debug
+//   background-color: #f5f5f5;
+// }
