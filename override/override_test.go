@@ -33,12 +33,10 @@ func TestOverride(t *testing.T) {
 		o := New(list)
 		So(o, ShouldNotBeNil)
 
-		v, ok := o.Override("www.example.com")
-		So(ok, ShouldBeFalse)
+		v := o.Override("www.example.com")
 		So(v, ShouldBeNil)
 
-		v, ok = o.Override("example.com")
-		So(ok, ShouldBeTrue)
+		v = o.Override("example.com")
 		So(ipsEqual(v, "127.0.0.1", "127.0.0.2"), ShouldBeTrue)
 	})
 }
