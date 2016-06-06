@@ -49,7 +49,7 @@
 		},
 		{
 			"ImportPath": "github.com/golang/protobuf/proto",
-			"Rev": "9e6977f30c91c78396e719e164e57f9287fff42c"
+			"Rev": "3b06fc7a4cad73efce5fe6217ab6c33e7231ab4a"
 		},
 		{
 			"ImportPath": "github.com/gopherjs/gopherjs/js",
@@ -136,15 +136,15 @@
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
-			"Rev": "30db96677b74e24b967e23f911eb3364fc61a011"
+			"Rev": "c4c3ea71919de159c9e246d7be66deb7f0a39a58"
 		},
 		{
 			"ImportPath": "golang.org/x/net/netutil",
-			"Rev": "30db96677b74e24b967e23f911eb3364fc61a011"
+			"Rev": "c4c3ea71919de159c9e246d7be66deb7f0a39a58"
 		},
 		{
 			"ImportPath": "golang.org/x/net/websocket",
-			"Rev": "30db96677b74e24b967e23f911eb3364fc61a011"
+			"Rev": "c4c3ea71919de159c9e246d7be66deb7f0a39a58"
 		},
 		{
 			"ImportPath": "golang.org/x/sys/unix",
@@ -161,19 +161,15 @@
 		},
 		{
 			"ImportPath": "jrubin.io/slog",
-			"Rev": "e5a9f2f0a1087311ce7ab4cdfb5f06491b9ddb64"
-		},
-		{
-			"ImportPath": "jrubin.io/slog/handlers/auto",
-			"Rev": "e5a9f2f0a1087311ce7ab4cdfb5f06491b9ddb64"
+			"Rev": "c7e413df216d0277ac10af640ac50a19caeb6f1d"
 		},
 		{
 			"ImportPath": "jrubin.io/slog/handlers/json",
-			"Rev": "e5a9f2f0a1087311ce7ab4cdfb5f06491b9ddb64"
+			"Rev": "c7e413df216d0277ac10af640ac50a19caeb6f1d"
 		},
 		{
 			"ImportPath": "jrubin.io/slog/handlers/text",
-			"Rev": "e5a9f2f0a1087311ce7ab4cdfb5f06491b9ddb64"
+			"Rev": "c7e413df216d0277ac10af640ac50a19caeb6f1d"
 		}
 	]
 }
