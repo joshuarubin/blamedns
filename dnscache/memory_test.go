@@ -8,9 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"jrubin.io/slog"
+	"jrubin.io/slog/handlers/text"
+
 	"golang.org/x/net/context"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -155,12 +157,8 @@ var (
 		},
 	}
 
-	logger = logrus.New()
+	logger = text.Logger(slog.DebugLevel)
 )
-
-func init() {
-	logger.Level = logrus.DebugLevel
-}
 
 func TestMemoryCache(t *testing.T) {
 	Convey("dns memory cache should work", t, func() {

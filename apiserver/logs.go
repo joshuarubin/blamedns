@@ -6,36 +6,37 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"jrubin.io/slog"
+
 	"golang.org/x/net/websocket"
 )
 
 // A Leveler is used to determine from an http.Request the logLevel that should
 // be used for the websocket.
 type Leveler interface {
-	Level(req *http.Request) logrus.Level
+	Level(req *http.Request) slog.Level
 }
 
 // LevelerFunc is a convenience wrapper to create a Leveler.
-type LevelerFunc func(*http.Request) logrus.Level
+type LevelerFunc func(*http.Request) slog.Level
 
 // Level implements the Leveler interface.
-func (f LevelerFunc) Level(req *http.Request) logrus.Level {
+func (f LevelerFunc) Level(req *http.Request) slog.Level {
 	return f(req)
 }
 
 // LogsHandler returns an http.Handler that will push JSON formatted log
 // messages to the client. Handler should only be called once per logger. By
-// default, each request is configured to receive logs at logger.Level or
+// default, each request is configured to receive logs at defaultLevel or
 // higher. If you would like to be able to set a custom logLevel per websocket
 // connection, use the Leveler interface to determine what level the request
 // should use.
-func LogsHandler(logger *logrus.Logger, leveler Leveler) http.Handler {
+func LogsHandler(logger *slog.Logger, defaultLevel slog.Level, leveler Leveler) http.Handler {
 	wsLogger := newWSLogHook(logger)
-	logger.Hooks.Add(wsLogger)
+	logger.RegisterHandler(slog.DebugLevel, wsLogger)
 
 	return websocket.Handler(func(ws *websocket.Conn) {
-		level := logger.Level
+		level := defaultLevel
 		if leveler != nil {
 			level = leveler.Level(ws.Request())
 		}
@@ -46,28 +47,28 @@ func LogsHandler(logger *logrus.Logger, leveler Leveler) http.Handler {
 
 type chanLevel struct {
 	ch    chan struct{}
-	level logrus.Level
+	level slog.Level
 }
 
-type wsLogHook struct {
+type wsLogHandler struct {
 	sync.Mutex
 	data   map[*websocket.Conn]chanLevel
-	logger *logrus.Logger
+	logger slog.Interface
 }
 
-func newWSLogHook(logger *logrus.Logger) *wsLogHook {
-	return &wsLogHook{
+func newWSLogHook(logger slog.Interface) *wsLogHandler {
+	return &wsLogHandler{
 		logger: logger,
 		data:   map[*websocket.Conn]chanLevel{},
 	}
 }
 
-func (hook *wsLogHook) addConn(ws *websocket.Conn, level logrus.Level) <-chan struct{} {
-	hook.Lock()
-	defer hook.Unlock()
+func (h *wsLogHandler) addConn(ws *websocket.Conn, level slog.Level) <-chan struct{} {
+	h.Lock()
+	defer h.Unlock()
 
 	ch := make(chan struct{})
-	hook.data[ws] = chanLevel{
+	h.data[ws] = chanLevel{
 		ch:    ch,
 		level: level,
 	}
@@ -75,24 +76,13 @@ func (hook *wsLogHook) addConn(ws *websocket.Conn, level logrus.Level) <-chan st
 	return ch
 }
 
-func (hook *wsLogHook) Levels() []logrus.Level {
-	ret := make([]logrus.Level, logrus.DebugLevel+1)
-
-	// add all levels
-	for i := logrus.PanicLevel; i <= logrus.DebugLevel; i++ {
-		ret[i] = i
-	}
-
-	return ret
-}
-
-func (hook *wsLogHook) deleteConnNoLock(ws *websocket.Conn) {
-	cl, ok := hook.data[ws]
+func (h *wsLogHandler) deleteConnNoLock(ws *websocket.Conn) {
+	cl, ok := h.data[ws]
 	if !ok {
 		return
 	}
 
-	delete(hook.data, ws)
+	delete(h.data, ws)
 
 	// let the handler return
 	select {
@@ -102,35 +92,35 @@ func (hook *wsLogHook) deleteConnNoLock(ws *websocket.Conn) {
 }
 
 type wsMessage struct {
-	Data    map[string]string
+	Fields  map[string]string
 	Time    time.Time
-	Level   logrus.Level
+	Level   int
 	Message string
 }
 
-func newWSMessage(entry *logrus.Entry) *wsMessage {
-	data := make(map[string]string, len(entry.Data))
-	for key, value := range entry.Data {
-		data[key] = fmt.Sprintf("%v", value)
+func newWSMessage(entry *slog.Entry) *wsMessage {
+	fields := make(map[string]string, len(entry.Fields))
+	for key, value := range entry.Fields {
+		fields[key] = fmt.Sprintf("%v", value)
 	}
 	return &wsMessage{
-		Data:    data,
+		Fields:  fields,
 		Time:    entry.Time,
-		Level:   entry.Level,
+		Level:   int(entry.Level),
 		Message: entry.Message,
 	}
 }
 
-func (hook *wsLogHook) Fire(entry *logrus.Entry) error {
+func (h *wsLogHandler) HandleLog(entry *slog.Entry) error {
 	go func() {
-		hook.Lock()
-		defer hook.Unlock()
+		h.Lock()
+		defer h.Unlock()
 
 		msg := newWSMessage(entry)
 
-		for ws, cl := range hook.data {
+		for ws, cl := range h.data {
 			if ws == nil {
-				hook.deleteConnNoLock(ws)
+				h.deleteConnNoLock(ws)
 				continue
 			}
 
@@ -139,7 +129,7 @@ func (hook *wsLogHook) Fire(entry *logrus.Entry) error {
 			}
 
 			if err := websocket.JSON.Send(ws, msg); err != nil {
-				hook.deleteConnNoLock(ws)
+				h.deleteConnNoLock(ws)
 			}
 		}
 	}()

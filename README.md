@@ -4,6 +4,7 @@
 
 ## TODO
 
+1. verify dl files are updated on interval
 1. api server
     * clear cache
     * add to whitelist

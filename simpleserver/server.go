@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"jrubin.io/slog"
+
 	"gopkg.in/tylerb/graceful.v1"
 )
 
@@ -14,7 +15,7 @@ import (
 // Addr is required (unless Serve(l) is used directly). Name is recommended.
 type Server struct {
 	Name        string
-	Logger      *logrus.Logger
+	Logger      *slog.Logger
 	Addr        string
 	Handler     http.Handler
 	StopTimeout time.Duration
@@ -76,15 +77,15 @@ func (s *Server) Serve(l net.Listener) error {
 	var debugLogger, errorLogger *log.Logger
 
 	if s.Logger != nil {
-		s.Logger.WithFields(logrus.Fields{
+		s.Logger.WithFields(slog.Fields{
 			"server": s.ServerName(),
 			"addr":   s.ServerAddr(),
 		}).Info("starting")
 
-		w := s.Logger.WriterLevel(logrus.DebugLevel)
+		w := s.Logger.Writer(slog.DebugLevel)
 		debugLogger = log.New(w, "", 0)
 
-		w = s.Logger.WriterLevel(logrus.ErrorLevel)
+		w = s.Logger.Writer(slog.ErrorLevel)
 		errorLogger = log.New(w, "", 0)
 	}
 
@@ -127,7 +128,7 @@ func (s *Server) Start() error {
 
 	go func() {
 		if err := s.Serve(s.ln); err != nil && s.Logger != nil {
-			s.Logger.WithError(err).WithFields(logrus.Fields{
+			s.Logger.WithError(err).WithFields(slog.Fields{
 				"server": s.ServerName(),
 				"addr":   s.ServerAddr(),
 			}).Warn("serve error")
@@ -144,7 +145,7 @@ func (s *Server) Close() error {
 	}
 
 	if s.Logger != nil {
-		s.Logger.WithFields(logrus.Fields{
+		s.Logger.WithFields(slog.Fields{
 			"server": s.ServerName(),
 			"addr":   s.ServerAddr(),
 		}).Info("stopping")

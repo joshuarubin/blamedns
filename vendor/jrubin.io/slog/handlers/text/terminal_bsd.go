@@ -1,9 +1,10 @@
 // +build darwin freebsd openbsd netbsd dragonfly
 
-package logrus
+package text
 
 import "syscall"
 
 const ioctlReadTermios = syscall.TIOCGETA
 
+// Termios is syscall.Termios
 type Termios syscall.Termios

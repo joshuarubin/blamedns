@@ -11,6 +11,7 @@
 		"jrubin.io/blamedns/dl",
 		"jrubin.io/blamedns/dnscache",
 		"jrubin.io/blamedns/dnsserver",
+		"jrubin.io/blamedns/override",
 		"jrubin.io/blamedns/parser",
 		"jrubin.io/blamedns/pixelserv",
 		"jrubin.io/blamedns/simpleserver",
@@ -23,11 +24,6 @@
 			"ImportPath": "github.com/BurntSushi/toml",
 			"Comment": "v0.2.0-9-gf0aeabc",
 			"Rev": "f0aeabca5a127c4078abb8c8d64298b147264b55"
-		},
-		{
-			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.10.0-14-g081307d",
-			"Rev": "081307d9bc1364753142d5962fc1d795c742baaf"
 		},
 		{
 			"ImportPath": "github.com/armon/go-radix",
@@ -162,6 +158,22 @@
 		{
 			"ImportPath": "jrubin.io/cliconfig",
 			"Rev": "347e142a12be0245a11f1428ce78b0cb85f600b6"
+		},
+		{
+			"ImportPath": "jrubin.io/slog",
+			"Rev": "e5a9f2f0a1087311ce7ab4cdfb5f06491b9ddb64"
+		},
+		{
+			"ImportPath": "jrubin.io/slog/handlers/auto",
+			"Rev": "e5a9f2f0a1087311ce7ab4cdfb5f06491b9ddb64"
+		},
+		{
+			"ImportPath": "jrubin.io/slog/handlers/json",
+			"Rev": "e5a9f2f0a1087311ce7ab4cdfb5f06491b9ddb64"
+		},
+		{
+			"ImportPath": "jrubin.io/slog/handlers/text",
+			"Rev": "e5a9f2f0a1087311ce7ab4cdfb5f06491b9ddb64"
 		}
 	]
 }

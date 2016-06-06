@@ -6,9 +6,9 @@ class Log extends Component {
     render() {
         let msg = this.props.entry
         let data = []
-        for (let key in msg.Data) {
-            if (msg.Data.hasOwnProperty(key)) {
-                data.push({key: key, value: msg.Data[key]})
+        for (let key in msg.Fields) {
+            if (msg.Fields.hasOwnProperty(key)) {
+                data.push({key: key, value: msg.Fields[key]})
             }
         }
 
@@ -63,7 +63,7 @@ class Log extends Component {
 
 Log.propTypes = {
     entry: PropTypes.shape({
-        Data: PropTypes.object,
+        Fields: PropTypes.object,
         Level: PropTypes.number.isRequired,
         Time: PropTypes.string.isRequired,
         Message: PropTypes.string.isRequired

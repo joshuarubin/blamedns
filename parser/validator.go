@@ -3,15 +3,15 @@ package parser
 import (
 	"strings"
 
-	"github.com/Sirupsen/logrus"
+	"jrubin.io/slog"
 )
 
-func ValidateHost(logger *logrus.Logger, fileName string, ln int, text string) bool {
+func ValidateHost(logger slog.Interface, fileName string, ln int, text string) bool {
 	if len(text) == 0 {
 		return false
 	}
 
-	ctxLog := logger.WithFields(logrus.Fields{
+	ctxLog := logger.WithFields(slog.Fields{
 		"file": fileName,
 		"line": ln,
 		"host": text,

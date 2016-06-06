@@ -36,7 +36,7 @@ func init() {
 
 func main() {
 	if err := app.Run(os.Args); err != nil {
-		logger.Fatal(err)
+		logger.WithError(err).Fatal("application error")
 	}
 }
 

@@ -6,8 +6,9 @@ import (
 	"strconv"
 	"syscall"
 
+	"jrubin.io/slog"
+
 	"github.com/BurntSushi/toml"
-	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 )
 
@@ -62,7 +63,7 @@ func parseConfigFile(c *cli.Context) {
 	}
 
 	if undecoded := md.Undecoded(); len(undecoded) > 0 {
-		lf := logrus.Fields{}
+		lf := slog.Fields{}
 		for i, k := range undecoded {
 			lf["key_"+strconv.Itoa(i)] = k.String()
 		}

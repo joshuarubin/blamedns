@@ -1,4 +1,4 @@
-package logrus
+package slog
 
 import (
 	"bufio"
@@ -6,14 +6,21 @@ import (
 	"runtime"
 )
 
-func (logger *Logger) Writer() *io.PipeWriter {
-	return logger.WriterLevel(InfoLevel)
-}
-
-func (logger *Logger) WriterLevel(level Level) *io.PipeWriter {
+// Writer returns an io.Pipe where each line written to that writer will be
+// printed using the handlers for the given Level. It is the caller's
+// responsibility to close it.
+func (logger *Logger) Writer(level Level) *io.PipeWriter {
 	reader, writer := io.Pipe()
 
-	var printFunc func(args ...interface{})
+	if level < PanicLevel {
+		level = PanicLevel
+	}
+
+	if level > DebugLevel {
+		level = DebugLevel
+	}
+
+	var printFunc func(msg string)
 	switch level {
 	case DebugLevel:
 		printFunc = logger.Debug
@@ -27,8 +34,6 @@ func (logger *Logger) WriterLevel(level Level) *io.PipeWriter {
 		printFunc = logger.Fatal
 	case PanicLevel:
 		printFunc = logger.Panic
-	default:
-		printFunc = logger.Print
 	}
 
 	go logger.writerScanner(reader, printFunc)
@@ -37,17 +42,19 @@ func (logger *Logger) WriterLevel(level Level) *io.PipeWriter {
 	return writer
 }
 
-func (logger *Logger) writerScanner(reader *io.PipeReader, printFunc func(args ...interface{})) {
+func (logger *Logger) writerScanner(reader io.ReadCloser, printFunc func(msg string)) {
 	scanner := bufio.NewScanner(reader)
 	for scanner.Scan() {
 		printFunc(scanner.Text())
 	}
+
 	if err := scanner.Err(); err != nil {
-		logger.Errorf("Error while reading from Writer: %s", err)
+		logger.WithError(err).Error("Error while reading from Writer")
 	}
-	reader.Close()
+
+	_ = reader.Close()
 }
 
 func writerFinalizer(writer *io.PipeWriter) {
-	writer.Close()
+	_ = writer.Close()
 }

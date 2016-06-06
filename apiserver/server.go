@@ -4,10 +4,9 @@ import (
 	"net/http"
 	"net/http/pprof"
 
-	"jrubin.io/blamedns/bdconfig/bdtype"
 	"jrubin.io/blamedns/simpleserver"
+	"jrubin.io/slog"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -19,20 +18,20 @@ type Server struct {
 const name = "apiserver"
 
 // New allocates a new apiserver Server.
-func New(addr string, logger *logrus.Logger) *Server {
+func New(addr string, logger *slog.Logger, defaultLogLevel slog.Level) *Server {
 	return &Server{
 		Server: simpleserver.Server{
 			Name:    name,
 			Logger:  logger,
 			Addr:    addr,
-			Handler: Handler(logger),
+			Handler: Handler(logger, defaultLogLevel),
 		},
 	}
 }
 
 // Handler returns an http.Handler that responds properly to all apiserver
 // routes.
-func Handler(logger *logrus.Logger) http.Handler {
+func Handler(logger *slog.Logger, defaultLogLevel slog.Level) http.Handler {
 	ret := http.NewServeMux()
 
 	ret.HandleFunc("/debug/vars", expvarHandler)
@@ -44,7 +43,7 @@ func Handler(logger *logrus.Logger) http.Handler {
 
 	ret.Handle("/metrics", prometheus.Handler())
 
-	ret.Handle("/logs/", LogsHandler(logger, reqLeveler("/logs/")))
+	ret.Handle("/logs/", LogsHandler(logger, defaultLogLevel, reqLeveler("/logs/", defaultLogLevel)))
 
 	ret.Handle("/ui/", uiHandler("/ui"))
 	ret.Handle("/", http.RedirectHandler("/ui/", http.StatusFound))
@@ -52,9 +51,9 @@ func Handler(logger *logrus.Logger) http.Handler {
 	return ret
 }
 
-func reqLeveler(prefix string) LevelerFunc {
-	return func(req *http.Request) logrus.Level {
-		return bdtype.ParseLogLevel(req.URL.Path[len(prefix):]).Level()
+func reqLeveler(prefix string, defaultLogLevel slog.Level) LevelerFunc {
+	return func(req *http.Request) slog.Level {
+		return slog.ParseLevel(req.URL.Path[len(prefix):], defaultLogLevel)
 	}
 }
 

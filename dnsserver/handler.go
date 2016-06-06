@@ -7,9 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"jrubin.io/slog"
+
 	"golang.org/x/net/context"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 	prom "github.com/prometheus/client_golang/prometheus"
 )
@@ -40,7 +41,7 @@ func (d *DNSServer) respond(net string, w dns.ResponseWriter, req *dns.Msg, dur 
 
 	r.resp.RecursionAvailable = true
 
-	ctxLog := d.Logger.WithFields(logrus.Fields{
+	ctxLog := d.Logger.WithFields(slog.Fields{
 		"name":     req.Question[0].Name,
 		"type":     dns.TypeToString[req.Question[0].Qtype],
 		"net":      net,

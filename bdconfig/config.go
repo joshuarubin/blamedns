@@ -7,8 +7,7 @@ import (
 
 	"jrubin.io/blamedns/apiserver"
 	"jrubin.io/blamedns/pixelserv"
-
-	"github.com/Sirupsen/logrus"
+	"jrubin.io/slog"
 )
 
 func defaultCacheDir(name string) string {
@@ -28,21 +27,21 @@ type server interface {
 }
 
 type Config struct {
-	CacheDir        string         `toml:"cache_dir" cli:",directory in which to store cached data"`
-	Log             LogConfig      `toml:"log"`
-	DL              DLConfig       `toml:"dl"`
-	DNS             DNSConfig      `toml:"dns"`
-	ListenPixelserv string         `toml:"listen_pixelserv" cli:",address to run the pixel server on"`
-	ListenAPIServer string         `toml:"listen_apiserver" cli:",address to run the api server on"`
-	Logger          *logrus.Logger `toml:"-" cli:"-"`
-	AppName         string         `toml:"-" cli:"-"`
-	AppVersion      string         `toml:"-" cli:"-"`
+	CacheDir        string       `toml:"cache_dir" cli:",directory in which to store cached data"`
+	Log             LogConfig    `toml:"log"`
+	DL              DLConfig     `toml:"dl"`
+	DNS             DNSConfig    `toml:"dns"`
+	ListenPixelserv string       `toml:"listen_pixelserv" cli:",address to run the pixel server on"`
+	ListenAPIServer string       `toml:"listen_apiserver" cli:",address to run the api server on"`
+	Logger          *slog.Logger `toml:"-" cli:"-"`
+	AppName         string       `toml:"-" cli:"-"`
+	AppVersion      string       `toml:"-" cli:"-"`
 	servers         []server
 }
 
 func New(appName, appVersion string) *Config {
 	return &Config{
-		Logger:     logrus.New(),
+		Logger:     slog.New(),
 		AppName:    appName,
 		AppVersion: appVersion,
 	}
@@ -64,7 +63,7 @@ func (m *Config) Init() error {
 
 	m.servers = []server{
 		pixelserv.New(m.ListenPixelserv, m.Logger),
-		apiserver.New(m.ListenAPIServer, m.Logger),
+		apiserver.New(m.ListenAPIServer, m.Logger, m.Log.Level.Level()),
 	}
 
 	for _, server := range m.servers {

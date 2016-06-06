@@ -11,7 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"jrubin.io/slog"
+	"jrubin.io/slog/handlers/text"
 )
 
 type Doer interface {
@@ -23,7 +24,7 @@ type DL struct {
 	BaseDir        string
 	UpdateInterval time.Duration
 	Client         Doer
-	Logger         *logrus.Logger
+	Logger         *slog.Logger
 	fileName       string
 	mu             sync.RWMutex
 	stopCh         chan struct{}
@@ -69,7 +70,7 @@ func (d *DL) Init() error {
 	}
 
 	if d.Logger == nil {
-		d.Logger = logrus.New()
+		d.Logger = text.Logger(slog.InfoLevel)
 	}
 
 	if d.Client == nil {
@@ -123,7 +124,7 @@ func (d *DL) Update() (updated bool, err error) {
 		return false, err
 	}
 
-	ctxLog := d.Logger.WithFields(logrus.Fields{
+	ctxLog := d.Logger.WithFields(slog.Fields{
 		"fileName": d.fileName,
 		"URL":      d.URL,
 		"interval": d.UpdateInterval,
@@ -196,7 +197,7 @@ func (d *DL) Stop() {
 	<-d.stopCh
 	d.stopCh = nil
 
-	d.Logger.WithFields(logrus.Fields{
+	d.Logger.WithFields(slog.Fields{
 		"fileName": d.fileName,
 		"URL":      d.URL,
 	}).Debug("stopped file downloader")

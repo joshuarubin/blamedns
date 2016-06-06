@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"jrubin.io/slog"
 )
 
 type wrappedWriter struct {
@@ -38,13 +38,14 @@ func (s Server) logHandler() http.Handler {
 		ww := &wrappedWriter{ResponseWriter: w, status: 200}
 		s.Handler.ServeHTTP(ww, r)
 
-		s.Logger.WithFields(logrus.Fields{
+		s.Logger.WithFields(slog.Fields{
 			"status":     ww.status,
 			"method":     r.Method,
 			"path":       r.URL.Path,
 			"ip":         clientIP(r),
 			"latency":    time.Since(begin),
 			"user-agent": r.UserAgent(),
-		}).Debugf("%s request", s.ServerName())
+			"server":     s.ServerName(),
+		}).Debug("http request")
 	})
 }

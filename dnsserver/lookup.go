@@ -3,9 +3,10 @@ package dnsserver
 import (
 	"time"
 
+	"jrubin.io/slog"
+
 	"golang.org/x/net/context"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 )
 
@@ -66,7 +67,7 @@ func (d *DNSServer) lookup(net, nameserver string, req *dns.Msg, respCh chan<- *
 		}
 	}
 
-	ctxLog := d.Logger.WithFields(logrus.Fields{
+	ctxLog := d.Logger.WithFields(slog.Fields{
 		"name":       req.Question[0].Name,
 		"type":       dns.TypeToString[req.Question[0].Qtype],
 		"net":        net,

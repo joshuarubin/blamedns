@@ -8,22 +8,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/fsnotify/fsnotify"
 	"jrubin.io/blamedns/parser"
+	"jrubin.io/slog"
+	"jrubin.io/slog/handlers/text"
 )
 
 type Watcher struct {
 	Dir        []string
 	Parser     parser.Parser
-	Logger     *logrus.Logger
+	Logger     slog.Interface
 	watcher    *fsnotify.Watcher
 	stopCh     chan struct{}
 	parseTimer map[string]*time.Timer
 	mu         sync.Mutex
 }
 
-func New(l *logrus.Logger, p parser.Parser, dir ...string) (*Watcher, error) {
+func New(l slog.Interface, p parser.Parser, dir ...string) (*Watcher, error) {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
@@ -40,7 +41,7 @@ func New(l *logrus.Logger, p parser.Parser, dir ...string) (*Watcher, error) {
 	}
 
 	if l == nil {
-		l = logrus.New()
+		l = text.Logger(slog.InfoLevel)
 	}
 
 	l.WithField("directories", strings.Join(dir, ", ")).Debug("watching directories")
@@ -83,7 +84,7 @@ func (w *Watcher) parse(file string) {
 		return
 	}
 
-	w.Logger.WithFields(logrus.Fields{
+	w.Logger.WithFields(slog.Fields{
 		"file": file,
 		"num":  n,
 	}).Debug("parsed")

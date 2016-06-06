@@ -2,13 +2,12 @@ package parser
 
 import (
 	"jrubin.io/blamedns/textmodifier"
-
-	"github.com/Sirupsen/logrus"
+	"jrubin.io/slog"
 )
 
 type HostsFileParser struct {
 	HostAdder HostAdder
-	Logger    *logrus.Logger
+	Logger    slog.Interface
 }
 
 func (h HostsFileParser) Reset(fileName string) {

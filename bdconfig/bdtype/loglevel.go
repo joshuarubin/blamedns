@@ -2,18 +2,14 @@ package bdtype
 
 import (
 	"encoding"
-	"strconv"
-	"unicode"
-	"unicode/utf8"
 
 	"jrubin.io/cliconfig"
-
-	"github.com/Sirupsen/logrus"
+	"jrubin.io/slog"
 )
 
-const DefaultLogLevel = LogLevel(logrus.WarnLevel)
+const DefaultLogLevel = LogLevel(slog.WarnLevel)
 
-type LogLevel logrus.Level
+type LogLevel slog.Level
 
 var (
 	tmpLvl                          = LogLevel(0)
@@ -32,13 +28,13 @@ func (l LogLevel) UnmarshalCLIConfig(text string) (interface{}, error) {
 
 func (l LogLevel) Equal(val interface{}) bool {
 	if sval, ok := val.(string); ok {
-		return l == ParseLogLevel(sval)
+		return l.Level() == slog.ParseLevel(sval, DefaultLogLevel.Level())
 	}
 	return false
 }
 
-func (l LogLevel) Level() logrus.Level {
-	return logrus.Level(l)
+func (l LogLevel) Level() slog.Level {
+	return slog.Level(l)
 }
 
 func (l LogLevel) String() string {
@@ -46,48 +42,18 @@ func (l LogLevel) String() string {
 }
 
 func (l LogLevel) MarshalText() ([]byte, error) {
-	return []byte(l.String()), nil
+	return l.Level().MarshalJSON()
 }
 
 func (l *LogLevel) UnmarshalText(text []byte) error {
-	*l = ParseLogLevel(string(text))
+	var t slog.Level
+	if err := t.UnmarshalText(text); err != nil {
+		return err
+	}
+	*l = LogLevel(t)
 	return nil
 }
 
 func (l LogLevel) Default(name string) interface{} {
 	return DefaultLogLevel.String()
-}
-
-func ParseLogLevel(level string) LogLevel {
-	ret := DefaultLogLevel
-
-	if len(level) > 0 {
-		if i, err := strconv.Atoi(level); err == nil {
-			if i >= 0 && i <= int(logrus.DebugLevel) {
-				return LogLevel(i)
-			}
-
-			return DefaultLogLevel
-		}
-
-		r, _ := utf8.DecodeRuneInString(level)
-		r = unicode.ToLower(r)
-
-		switch r {
-		case 'd':
-			return LogLevel(logrus.DebugLevel)
-		case 'i':
-			return LogLevel(logrus.InfoLevel)
-		case 'w':
-			return LogLevel(logrus.WarnLevel)
-		case 'e':
-			return LogLevel(logrus.ErrorLevel)
-		case 'f':
-			return LogLevel(logrus.FatalLevel)
-		case 'p':
-			return LogLevel(logrus.PanicLevel)
-		}
-	}
-
-	return ret
 }

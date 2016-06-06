@@ -10,7 +10,7 @@ class Logs extends Component {
                     <th>Level</th>
                     <th>Time</th>
                     <th>Message</th>
-                    <th>Data</th>
+                    <th>Fields</th>
                 </tr></thead>
                 <tbody>
                     {this.props.entries.map((entry, idx) => <Log key={idx} entry={entry} />)}
@@ -22,7 +22,7 @@ class Logs extends Component {
 
 Logs.propTypes = {
     entries: PropTypes.arrayOf(PropTypes.shape({
-        Data: PropTypes.object,
+        Fields: PropTypes.object,
         Level: PropTypes.number.isRequired,
         Time: PropTypes.string.isRequired,
         Message: PropTypes.string.isRequired

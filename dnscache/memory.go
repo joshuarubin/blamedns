@@ -4,9 +4,11 @@ import (
 	"sync"
 	"time"
 
+	"jrubin.io/slog"
+	"jrubin.io/slog/handlers/text"
+
 	"golang.org/x/net/context"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/hashicorp/golang-lru"
 	"github.com/miekg/dns"
 )
@@ -26,14 +28,14 @@ type lrui interface {
 
 type Memory struct {
 	mu     sync.Mutex
-	Logger *logrus.Logger
+	Logger slog.Interface
 	cache  lrui
 	stopCh chan struct{}
 }
 
-func NewMemory(size int, logger *logrus.Logger) *Memory {
+func NewMemory(size int, logger slog.Interface) *Memory {
 	if logger == nil {
-		logger = logrus.New()
+		logger = text.Logger(slog.InfoLevel)
 	}
 
 	cache, err := lru.NewARC(size)

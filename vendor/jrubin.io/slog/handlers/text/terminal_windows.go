@@ -5,7 +5,7 @@
 
 // +build windows
 
-package logrus
+package text
 
 import (
 	"syscall"

@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"jrubin.io/blamedns/dnscache"
+	"jrubin.io/slog"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 )
 
@@ -23,7 +23,7 @@ type DNSServer struct {
 	Block             Block
 	Override          Overrider
 	OverrideTTL       time.Duration
-	Logger            *logrus.Logger
+	Logger            slog.Interface
 	ClientTimeout     time.Duration
 	ServerTimeout     time.Duration
 	DialTimeout       time.Duration
@@ -74,7 +74,7 @@ func (d *DNSServer) parseDNSServer(val string, startCh chan<- struct{}) (*dns.Se
 
 		mux.Handle(pattern, d.Handler(u.Scheme, addr))
 
-		d.Logger.WithFields(logrus.Fields{
+		d.Logger.WithFields(slog.Fields{
 			"zone": pattern,
 			"addr": strings.Join(addr, ","),
 			"net":  u.Scheme,
@@ -135,7 +135,7 @@ func (d *DNSServer) ListenAndServe() error {
 
 	for _, server := range d.servers {
 		go func(server *dns.Server) {
-			d.Logger.WithFields(logrus.Fields{
+			d.Logger.WithFields(slog.Fields{
 				"net":  server.Net,
 				"addr": server.Addr,
 			}).Info("starting dns server")
@@ -151,7 +151,7 @@ func (d *DNSServer) ListenAndServe() error {
 				if nerr.Op == "accept" && nerr.Net == "tcp" && nerr.Err.Error() == "use of closed network connection" {
 					// shutdown sometimes causes this... (particularly with
 					// NotifyStartedFunc errors)
-					d.Logger.Warn(err)
+					d.Logger.WithError(err).Warn("ignoring error")
 					return nil
 				}
 			}
@@ -164,7 +164,7 @@ func (d *DNSServer) ListenAndServe() error {
 
 func (d *DNSServer) Shutdown() {
 	for _, server := range d.servers {
-		ctxLog := d.Logger.WithFields(logrus.Fields{
+		ctxLog := d.Logger.WithFields(slog.Fields{
 			"net":  server.Net,
 			"addr": server.Addr,
 		})

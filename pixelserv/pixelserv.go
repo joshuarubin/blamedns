@@ -5,8 +5,8 @@ import (
 	"net/http"
 
 	"jrubin.io/blamedns/simpleserver"
-
-	"github.com/Sirupsen/logrus"
+	"jrubin.io/slog"
+	"jrubin.io/slog/handlers/text"
 )
 
 // PixelGIF is a single pixel transparent GIF image.
@@ -23,7 +23,7 @@ type Server struct {
 const name = "pixelserv"
 
 // New allocates a new pixelserv Server.
-func New(addr string, logger *logrus.Logger) *Server {
+func New(addr string, logger *slog.Logger) *Server {
 	return &Server{
 		Server: simpleserver.Server{
 			Name:    name,
@@ -35,11 +35,11 @@ func New(addr string, logger *logrus.Logger) *Server {
 }
 
 // DefaultServer is the default Server used by Serve.
-var DefaultServer = New(DefaultAddr, logrus.New())
+var DefaultServer = New(DefaultAddr, text.Logger(slog.InfoLevel))
 
 // Handler returns an http.Handler that will simply respond with a pixel for any
 // request.
-func Handler(logger *logrus.Logger) http.Handler {
+func Handler(logger slog.Interface) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "image/gif")
 		if _, err := w.Write(PixelGIF); err != nil && logger != nil {

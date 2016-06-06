@@ -6,7 +6,7 @@ import (
 	"net/http/httputil"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
+	"jrubin.io/slog"
 )
 
 type debugHTTPFn func(interface{}, bool) ([]byte, error)
@@ -34,11 +34,11 @@ func (d *DL) debugHTTP(data interface{}, fn debugHTTPFn, prefix string, b bool) 
 
 	dump, err := fn(data, b)
 	if err != nil {
-		d.Logger.Error(err)
+		d.Logger.WithError(err).Error("error debugging http")
 		return
 	}
 
-	debugWriter := d.Logger.WriterLevel(logrus.DebugLevel)
+	debugWriter := d.Logger.Writer(slog.DebugLevel)
 	defer func() { _ = debugWriter.Close() }()
 
 	for _, line := range strings.Split(string(dump), "\n") {

@@ -5,7 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"jrubin.io/slog"
+
 	"github.com/miekg/dns"
 )
 
@@ -22,7 +23,7 @@ type Block struct {
 	TTL        time.Duration
 	Blocker    Blocker
 	Passer     Passer
-	Logger     *logrus.Logger
+	Logger     slog.Interface
 }
 
 func unfqdn(s string) string {
@@ -75,7 +76,7 @@ func (b Block) NewReply(req *dns.Msg) *dns.Msg {
 	case dns.TypeAAAA:
 		rr = &dns.AAAA{Hdr: hdr, AAAA: b.IPv6}
 	default:
-		b.Logger.WithFields(logrus.Fields{
+		b.Logger.WithFields(slog.Fields{
 			"type": dns.TypeToString[q.Qtype],
 		}).Panic("unexpected question type")
 	}

@@ -3,10 +3,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package logrus
+package text
 
 import "syscall"
 
 const ioctlReadTermios = syscall.TCGETS
 
+// Termios is syscall.Termios
 type Termios syscall.Termios

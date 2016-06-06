@@ -1,6 +1,6 @@
 // +build solaris
 
-package logrus
+package text
 
 import (
 	"os"
