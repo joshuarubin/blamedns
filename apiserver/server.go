@@ -34,7 +34,6 @@ func New(addr string, logger *slog.Logger, defaultLogLevel slog.Level) *Server {
 func Handler(logger *slog.Logger, defaultLogLevel slog.Level) http.Handler {
 	ret := http.NewServeMux()
 
-	ret.HandleFunc("/debug/vars", expvarHandler)
 	ret.HandleFunc("/debug/pprof/", pprof.Index)
 	ret.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
 	ret.HandleFunc("/debug/pprof/profile", pprof.Profile)
