@@ -12,8 +12,8 @@ import (
 	"jrubin.io/slog/handlers/text"
 
 	"github.com/BurntSushi/toml"
-	"github.com/joshuarubin/cli"
-	"github.com/joshuarubin/cli/altsrc"
+	"github.com/urfave/cli"
+	"github.com/urfave/cli/altsrc"
 )
 
 func InputSource(dflt, key string) func(*cli.Context) (altsrc.InputSourceContext, error) {

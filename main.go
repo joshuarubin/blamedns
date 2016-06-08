@@ -7,7 +7,7 @@ import (
 
 	"jrubin.io/blamedns/config"
 
-	"github.com/joshuarubin/cli"
+	"github.com/urfave/cli"
 )
 
 var (

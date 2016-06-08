@@ -6,8 +6,8 @@ import (
 	"jrubin.io/blamedns/dnsserver"
 	"jrubin.io/blamedns/override"
 
-	"github.com/joshuarubin/cli"
-	"github.com/joshuarubin/cli/altsrc"
+	"github.com/urfave/cli"
+	"github.com/urfave/cli/altsrc"
 )
 
 var (

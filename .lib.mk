@@ -1,33 +1,33 @@
 SHELL := $(SHELL) -e
 
-TOUCH     ?= touch
-GO        ?= go
-GIT       ?= git
-DATE      ?= date
-FIND      ?= find
-ECHO      ?= echo
-CAT       ?= cat
-GREP      ?= grep
-EGREP     ?= egrep
-TRUE      ?= true
-CURL      ?= curl
-MKDIR     ?= mkdir
-RM        ?= rm -f
-MV        ?= mv
-LN        ?= ln
-DOCKER    ?= docker
-GOVERALLS ?= goveralls
-GODEP     ?= godep
-TAR       ?= tar
-WHICH     ?= which
-JQ        ?= jq
-XARGS     ?= xargs
-SED       ?= sed
-AWK       ?= awk
+TOUCH        ?= touch
+GO           ?= go
+GIT          ?= git
+DATE         ?= date
+FIND         ?= find
+ECHO         ?= echo
+CAT          ?= cat
+GREP         ?= grep
+EGREP        ?= egrep
+TRUE         ?= true
+CURL         ?= curl
+MKDIR        ?= mkdir
+RM           ?= rm -f
+MV           ?= mv
+LN           ?= ln
+DOCKER       ?= docker
+GOVERALLS    ?= goveralls
+GODEP        ?= godep
+TAR          ?= tar
+WHICH        ?= which
+JQ           ?= jq
+XARGS        ?= xargs
+SED          ?= sed
+AWK          ?= awk
+GOMETALINTER ?= gometalinter --cyclo-over=10 --deadline=10s -t
 
 REPO_NAME ?= $(notdir $(CURDIR))
 
-METALINT           := gometalinter --cyclo-over=10 --deadline=10s -t
 SRC_DIR            := $(realpath $(CURDIR)/../..)
 BASE_PKG           := jrubin.io/$(REPO_NAME)
 EXCLUDE_DIRS       := ./vendor ./Godeps ./.git ./Gododir
@@ -143,7 +143,7 @@ lint:
 	$(foreach pkg, $(GO_PKGS), $(foreach cmd, $(GO_LINTERS), $(subst \_, , $(cmd)) $(pkg) | $(EGREP) -v '\.pb\.go:|/bindata\.go:|/bindata_assetfs\.go:' || $(TRUE)${\n}))
 
 metalint:
-	$(foreach pkg, $(GO_PKGS), $(METALINT) $(SRC_DIR)/$(pkg) | $(EGREP) -v '\.pb\.go:|/bindata\.go:|/bindata_assetfs\.go:' || $(TRUE)${\n})
+	$(foreach pkg, $(GO_PKGS), $(GOMETALINTER) $(SRC_DIR)/$(pkg) | $(EGREP) -v '\.pb\.go:|/bindata\.go:|/bindata_assetfs\.go:' || $(TRUE)${\n})
 
 test:
 	$(GOTEST) -race $(GO_PKGS)

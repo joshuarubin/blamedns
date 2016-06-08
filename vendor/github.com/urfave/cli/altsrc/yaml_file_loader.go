@@ -12,7 +12,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/joshuarubin/cli"
+	"github.com/urfave/cli"
 
 	"gopkg.in/yaml.v2"
 )

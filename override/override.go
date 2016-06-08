@@ -4,11 +4,8 @@ import (
 	"net"
 
 	"github.com/armon/go-radix"
-	"jrubin.io/blamedns/dnsserver"
 	"jrubin.io/blamedns/parser"
 )
-
-var _ dnsserver.Overrider = Override{}
 
 type Override struct {
 	data *radix.Tree

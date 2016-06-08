@@ -11,8 +11,8 @@ import (
 	"jrubin.io/blamedns/watcher"
 	"jrubin.io/blamedns/whitelist"
 
-	"github.com/joshuarubin/cli"
-	"github.com/joshuarubin/cli/altsrc"
+	"github.com/urfave/cli"
+	"github.com/urfave/cli/altsrc"
 )
 
 var (

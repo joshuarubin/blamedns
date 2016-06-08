@@ -7,8 +7,8 @@ import (
 	"jrubin.io/blamedns/config"
 
 	"github.com/BurntSushi/toml"
-	"github.com/joshuarubin/cli"
-	"github.com/joshuarubin/cli/altsrc"
+	"github.com/urfave/cli"
+	"github.com/urfave/cli/altsrc"
 )
 
 const defaultConfigFile = "/etc/blamedns/config.toml"

@@ -7,8 +7,8 @@ import (
 	"jrubin.io/slog/handlers/json"
 	"jrubin.io/slog/handlers/text"
 
-	"github.com/joshuarubin/cli"
-	"github.com/joshuarubin/cli/altsrc"
+	"github.com/urfave/cli"
+	"github.com/urfave/cli/altsrc"
 )
 
 var defaultLogLevel = slog.WarnLevel

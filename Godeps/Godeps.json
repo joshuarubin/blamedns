@@ -59,16 +59,6 @@
 			"Rev": "a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4"
 		},
 		{
-			"ImportPath": "github.com/joshuarubin/cli",
-			"Comment": "v1.17.0-59-gac59b08",
-			"Rev": "ac59b08f8fb5e7edb6aedb87e2a4646dcedb95c5"
-		},
-		{
-			"ImportPath": "github.com/joshuarubin/cli/altsrc",
-			"Comment": "v1.17.0-59-gac59b08",
-			"Rev": "ac59b08f8fb5e7edb6aedb87e2a4646dcedb95c5"
-		},
-		{
 			"ImportPath": "github.com/jtolds/gls",
 			"Comment": "v4.2.0",
 			"Rev": "8ddce2a84170772b95dd5d576c48d517b22cac63"
@@ -137,6 +127,16 @@
 			"ImportPath": "github.com/smartystreets/goconvey/convey/reporting",
 			"Comment": "1.6.1-20-gcc5d85f",
 			"Rev": "cc5d85f4f15bd2163abf0fe6e6753356dde72aa2"
+		},
+		{
+			"ImportPath": "github.com/urfave/cli",
+			"Comment": "v1.17.0-63-gfa949b4",
+			"Rev": "fa949b48f384d8916e1ca94880d665deaa1105c2"
+		},
+		{
+			"ImportPath": "github.com/urfave/cli/altsrc",
+			"Comment": "v1.17.0-63-gfa949b4",
+			"Rev": "fa949b48f384d8916e1ca94880d665deaa1105c2"
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
