@@ -105,7 +105,7 @@ func (c *Config) Get(name string) (interface{}, bool) {
 func (c *Config) Parse(ctx *cli.Context) error {
 	c.CacheDir = ctx.String("cache-dir")
 	c.ListenPixelserv = ctx.String("listen-pixelserv")
-	c.ListenPixelserv = ctx.String("listen-apiserver")
+	c.ListenAPIServer = ctx.String("listen-apiserver")
 
 	c.Log.Parse(ctx)
 
