@@ -52,7 +52,7 @@ func configSetup(c *cli.Context) error {
 
 func setupWriteConfig(c *cli.Context) error {
 	var err error
-	configOut, err = os.Create(c.String("config-out"))
+	configOut, err = config.ParseFileFlag(c.String("config-out"))
 	return err
 }
 
