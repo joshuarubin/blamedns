@@ -5,20 +5,16 @@ import (
 	"os/signal"
 	"syscall"
 
-	"jrubin.io/blamedns/bdconfig"
-	"jrubin.io/cliconfig"
+	"jrubin.io/blamedns/config"
 
-	"github.com/codegangsta/cli"
+	"github.com/joshuarubin/cli"
 )
 
 var (
 	name, version string
 
-	cfg = bdconfig.New(name, version)
-	cc  = cliconfig.New(bdconfig.Default(name, version))
+	cfg = config.New(name, version)
 	app = cli.NewApp()
-
-	logger = cfg.Logger
 )
 
 func init() {
@@ -29,20 +25,15 @@ func init() {
 		Name:  "Joshua Rubin",
 		Email: "joshua@rubixconsulting.com",
 	}}
-	app.Before = setup
+	app.Before = configSetup
 	app.Action = run
-	app.Flags = append(configFileFlags, cc.Flags()...)
+	app.Flags = append(configFileFlags, config.Flags(cfg)...)
 }
 
 func main() {
 	if err := app.Run(os.Args); err != nil {
-		logger.WithError(err).Fatal("application error")
+		cfg.Logger.WithError(err).Fatal("application error")
 	}
-}
-
-func setup(c *cli.Context) error {
-	parseConfigFile(c)
-	return cc.Parse(c, cfg)
 }
 
 func run(c *cli.Context) error {
@@ -63,7 +54,7 @@ func run(c *cli.Context) error {
 				return err
 			}
 		case sig := <-sigs:
-			logger.WithField("signal", sig).Debug("received signal")
+			cfg.Logger.WithField("signal", sig).Debug("received signal")
 			switch sig {
 			case syscall.SIGUSR1:
 				cfg.SIGUSR1()

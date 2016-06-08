@@ -3,13 +3,12 @@ package main
 import (
 	"io"
 	"os"
-	"strconv"
-	"syscall"
 
-	"jrubin.io/slog"
+	"jrubin.io/blamedns/config"
 
 	"github.com/BurntSushi/toml"
-	"github.com/codegangsta/cli"
+	"github.com/joshuarubin/cli"
+	"github.com/joshuarubin/cli/altsrc"
 )
 
 const defaultConfigFile = "/etc/blamedns/config.toml"
@@ -35,55 +34,26 @@ func init() {
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:   "config-out",
-				EnvVar: "BLAMEDNS_CONFIG_OUT",
+				EnvVar: "CONFIG_OUT",
 				Usage:  "file to write config to",
-				Value:  "stdout",
+				Value:  os.Stdout.Name(),
 			},
 		},
 	})
 }
 
-func parseConfigFile(c *cli.Context) {
-	file := c.String("config")
-
-	if len(file) == 0 {
-		return
+func configSetup(c *cli.Context) error {
+	if err := altsrc.InitInputSourceWithContext(app.Flags, config.InputSource(defaultConfigFile, "config"))(c); err != nil {
+		return err
 	}
 
-	md, err := toml.DecodeFile(file, &cfg)
-	if err != nil {
-		perr, ok := err.(*os.PathError)
-		if ok && perr.Err == syscall.ENOENT && file == defaultConfigFile {
-			// ignore file not found error if the config file was the default one
-			return
-		}
-
-		logger.WithError(err).Warn("error reading config file")
-		return
-	}
-
-	if undecoded := md.Undecoded(); len(undecoded) > 0 {
-		lf := slog.Fields{}
-		for i, k := range undecoded {
-			lf["key_"+strconv.Itoa(i)] = k.String()
-		}
-		logger.WithFields(lf).Warn("undecoded keys")
-	}
+	return cfg.Parse(c)
 }
 
 func setupWriteConfig(c *cli.Context) error {
-	switch file := c.String("config-out"); file {
-	case "stdout", "STDOUT":
-		configOut = os.Stdout
-	case "stderr", "STDERR":
-		configOut = os.Stderr
-	default:
-		var err error
-		if configOut, err = os.Create(file); err != nil {
-			return err
-		}
-	}
-	return nil
+	var err error
+	configOut, err = os.Create(c.String("config-out"))
+	return err
 }
 
 func writeConfig(c *cli.Context) error {

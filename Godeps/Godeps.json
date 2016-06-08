@@ -5,9 +5,8 @@
 	"Packages": [
 		"jrubin.io/blamedns",
 		"jrubin.io/blamedns/apiserver",
-		"jrubin.io/blamedns/bdconfig",
-		"jrubin.io/blamedns/bdconfig/bdtype",
 		"jrubin.io/blamedns/blocker",
+		"jrubin.io/blamedns/config",
 		"jrubin.io/blamedns/dl",
 		"jrubin.io/blamedns/dnscache",
 		"jrubin.io/blamedns/dnsserver",
@@ -34,11 +33,6 @@
 			"Rev": "3ac7bf7a47d159a033b107610db8a1b6575507a4"
 		},
 		{
-			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "v1.17.0-42-g595ba45",
-			"Rev": "595ba45e735c1e9c1f9ddc9e2ef21997fca893f2"
-		},
-		{
 			"ImportPath": "github.com/elazarl/go-bindata-assetfs",
 			"Rev": "57eb5e1fc594ad4b0b1dbea7b286d299e0cb43c2"
 		},
@@ -63,6 +57,16 @@
 		{
 			"ImportPath": "github.com/hashicorp/golang-lru/simplelru",
 			"Rev": "a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4"
+		},
+		{
+			"ImportPath": "github.com/joshuarubin/cli",
+			"Comment": "v1.17.0-59-gac59b08",
+			"Rev": "ac59b08f8fb5e7edb6aedb87e2a4646dcedb95c5"
+		},
+		{
+			"ImportPath": "github.com/joshuarubin/cli/altsrc",
+			"Comment": "v1.17.0-59-gac59b08",
+			"Rev": "ac59b08f8fb5e7edb6aedb87e2a4646dcedb95c5"
 		},
 		{
 			"ImportPath": "github.com/jtolds/gls",
@@ -148,7 +152,7 @@
 		},
 		{
 			"ImportPath": "golang.org/x/sys/unix",
-			"Rev": "d4feaf1a7e61e1d9e79e6c4e76c6349e9cab0a03"
+			"Rev": "076b546753157f758b316e59bcb51e6807c04057"
 		},
 		{
 			"ImportPath": "gopkg.in/tylerb/graceful.v1",
@@ -156,8 +160,8 @@
 			"Rev": "9a3d4236b03bb5d26f7951134d248f9d5510d599"
 		},
 		{
-			"ImportPath": "jrubin.io/cliconfig",
-			"Rev": "347e142a12be0245a11f1428ce78b0cb85f600b6"
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "a83829b6f1293c91addabc89d0571c246397bbf4"
 		},
 		{
 			"ImportPath": "jrubin.io/slog",

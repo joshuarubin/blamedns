@@ -4,6 +4,9 @@
 
 ## TODO
 
+1. defined exit codes
+1. shell autocomplete
+1. stop using defer to unlock mutexes
 1. verify dl files are updated on interval
 1. api server
     * clear cache
