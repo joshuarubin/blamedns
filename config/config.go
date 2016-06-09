@@ -25,9 +25,9 @@ type Config struct {
 	CacheDir        string       `toml:"cache_dir"`
 	ListenPixelserv string       `toml:"listen_pixelserv"`
 	ListenAPIServer string       `toml:"listen_apiserver"`
-	Log             LogConfig    `toml:"log"`
-	DL              DLConfig     `toml:"dl"`
-	DNS             DNSConfig    `toml:"dns"`
+	Log             *LogConfig   `toml:"log"`
+	DL              *DLConfig    `toml:"dl"`
+	DNS             *DNSConfig   `toml:"dns"`
 	Logger          *slog.Logger `toml:"-"`
 	AppName         string       `toml:"-"`
 	AppVersion      string       `toml:"-"`
@@ -44,35 +44,42 @@ func defaultCacheDir(name string) string {
 
 func New(appName, appVersion string) *Config {
 	return &Config{
+		CacheDir:   defaultCacheDir("blamedns"),
+		Log:        NewLogConfig(),
+		DL:         NewDLConfig(),
+		DNS:        NewDNSConfig(),
 		Logger:     slog.New(),
 		AppName:    appName,
 		AppVersion: appVersion,
 	}
 }
 
-func Flags(c *Config) []cli.Flag {
+func (c *Config) Flags() []cli.Flag {
 	ret := []cli.Flag{
 		altsrc.NewStringFlag(cli.StringFlag{
-			Name:   "cache-dir",
-			EnvVar: "CACHE_DIR",
-			Value:  defaultCacheDir("blamedns"),
-			Usage:  "directory in which to store cached data",
+			Name:        "cache-dir",
+			EnvVar:      "CACHE_DIR",
+			Value:       c.CacheDir,
+			Destination: &c.CacheDir,
+			Usage:       "directory in which to store cached data",
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
-			Name:   "listen-pixelserv",
-			EnvVar: "LISTEN_PIXELSERV",
-			Usage:  "address to run the pixel server on",
+			Name:        "listen-pixelserv",
+			EnvVar:      "LISTEN_PIXELSERV",
+			Usage:       "address to run the pixel server on",
+			Destination: &c.ListenPixelserv,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
-			Name:   "listen-apiserver",
-			EnvVar: "LISTEN_APISERVER",
-			Usage:  "address to run the api server on",
+			Name:        "listen-apiserver",
+			EnvVar:      "LISTEN_APISERVER",
+			Usage:       "address to run the api server on",
+			Destination: &c.ListenAPIServer,
 		}),
 	}
 
-	ret = append(ret, LogFlags()...)
-	ret = append(ret, DLFlags()...)
-	ret = append(ret, DNSFlags(&c.DNS)...)
+	ret = append(ret, c.Log.Flags()...)
+	ret = append(ret, c.DL.Flags()...)
+	ret = append(ret, c.DNS.Flags()...)
 
 	return ret
 }
@@ -100,20 +107,6 @@ func (c *Config) Get(name string) (interface{}, bool) {
 	}
 
 	panic(fmt.Errorf("could not find config value for key %s", name))
-}
-
-func (c *Config) Parse(ctx *cli.Context) error {
-	c.CacheDir = ctx.String("cache-dir")
-	c.ListenPixelserv = ctx.String("listen-pixelserv")
-	c.ListenAPIServer = ctx.String("listen-apiserver")
-
-	c.Log.Parse(ctx)
-
-	if err := c.DL.Parse(ctx); err != nil {
-		return err
-	}
-
-	return c.DNS.Parse(ctx)
 }
 
 func (c *Config) Init() error {

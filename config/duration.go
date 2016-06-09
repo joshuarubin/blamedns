@@ -25,6 +25,6 @@ func (d *Duration) UnmarshalText(text []byte) error {
 	return nil
 }
 
-func ParseDuration(val time.Duration) Duration {
-	return Duration(val)
+func (d *Duration) Set(value string) error {
+	return d.UnmarshalText([]byte(value))
 }

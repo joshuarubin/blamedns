@@ -1,7 +1,6 @@
 package config
 
 import (
-	"net"
 	"path"
 	"time"
 
@@ -26,40 +25,54 @@ var (
 )
 
 type BlockConfig struct {
-	IPv4      net.IP   `toml:"ipv4"`
-	IPv6      net.IP   `toml:"ipv6"`
-	TTL       Duration `toml:"ttl"`
-	WhiteList []string `toml:"whitelist"`
+	IPv4      IP              `toml:"ipv4"`
+	IPv6      IP              `toml:"ipv6"`
+	TTL       Duration        `toml:"ttl"`
+	WhiteList cli.StringSlice `toml:"whitelist"`
 	blocker   blocker.Blocker
 	watchers  []*watcher.Watcher
 }
 
-func BlockFlags() []cli.Flag {
+func NewBlockConfig() *BlockConfig {
+	ret := &BlockConfig{
+		IPv4:      ParseIP("127.0.0.1"),
+		IPv6:      ParseIP("::1"),
+		TTL:       Duration(1 * time.Hour),
+		WhiteList: make(cli.StringSlice, len(defaultDNSBlockWhiteList)),
+	}
+
+	copy(ret.WhiteList, defaultDNSBlockWhiteList)
+
+	return ret
+}
+
+func (c *BlockConfig) Flags() []cli.Flag {
 	return []cli.Flag{
-		altsrc.NewStringFlag(cli.StringFlag{
+		altsrc.NewGenericFlag(cli.GenericFlag{
 			Name:   "dns-block-ipv4",
 			EnvVar: "DNS_BLOCK_IPV4",
-			Value:  "127.0.0.1",
 			Usage:  "ipv4 address to return to clients for blocked a requests",
+			Value:  &c.IPv4,
 		}),
-		altsrc.NewStringFlag(cli.StringFlag{
+		altsrc.NewGenericFlag(cli.GenericFlag{
 			Name:   "dns-block-ipv6",
 			EnvVar: "DNS_BLOCK_IPV6",
-			Value:  "::1",
 			Usage:  "ipv6 address to return to clients for blocked aaaa requests",
+			Value:  &c.IPv6,
 		}),
-		altsrc.NewDurationFlag(cli.DurationFlag{
+		altsrc.NewGenericFlag(cli.GenericFlag{
 			Name:   "dns-block-ttl",
 			EnvVar: "DNS_BLOCK_TTL",
-			Value:  1 * time.Hour,
 			Usage:  "ttl to return for blocked requests",
+			Value:  &c.TTL,
 		}),
-		altsrc.NewStringSliceFlag(cli.StringSliceFlag{
-			Name:   "dns-block-whitelist",
-			EnvVar: "DNS_BLOCK_WHITELIST",
-			Value:  &defaultDNSBlockWhiteList,
-			Usage:  "domains to never block",
-		}),
+		&StringSliceFlag{
+			Name:        "dns-block-whitelist",
+			EnvVar:      "DNS_BLOCK_WHITELIST",
+			Usage:       "domains to never block",
+			Value:       c.WhiteList,
+			Destination: &c.WhiteList,
+		},
 	}
 }
 
@@ -75,21 +88,6 @@ func (c *BlockConfig) Get(name string) (interface{}, bool) {
 		return c.WhiteList, true
 	}
 	return nil, false
-}
-
-func (c *BlockConfig) Parse(ctx *cli.Context) error {
-	c.IPv4 = net.ParseIP(ctx.String("dns-block-ipv4"))
-	c.IPv6 = net.ParseIP(ctx.String("dns-block-ipv6"))
-
-	if err := c.TTL.UnmarshalText([]byte(ctx.String("dns-block-ttl"))); err != nil {
-		return err
-	}
-
-	if c.WhiteList = ctx.StringSlice("dns-block-whitelist"); len(c.WhiteList) > numDefaultDNSBlockWhiteList {
-		c.WhiteList = c.WhiteList[numDefaultDNSBlockWhiteList:]
-	}
-
-	return nil
 }
 
 func (c *BlockConfig) Init(root *Config) error {
@@ -128,8 +126,8 @@ func (c *BlockConfig) Init(root *Config) error {
 
 func (c BlockConfig) Block(root *Config) dnsserver.Block {
 	return dnsserver.Block{
-		IPv4:    c.IPv4,
-		IPv6:    c.IPv6,
+		IPv4:    c.IPv4.IP(),
+		IPv6:    c.IPv6.IP(),
 		TTL:     c.TTL.Duration(),
 		Blocker: c.blocker,
 		Passer:  whitelist.New(c.WhiteList...),

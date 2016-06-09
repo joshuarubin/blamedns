@@ -16,24 +16,33 @@ type DNSCacheConfig struct {
 	Cache         *dnscache.Memory `toml:"-"`
 }
 
-func DNSCacheFlags() []cli.Flag {
+func NewDNSCacheConfig() *DNSCacheConfig {
+	return &DNSCacheConfig{
+		PruneInterval: Duration(1 * time.Hour),
+		Size:          131072, // 2^17
+	}
+}
+
+func (c *DNSCacheConfig) Flags() []cli.Flag {
 	return []cli.Flag{
-		altsrc.NewDurationFlag(cli.DurationFlag{
+		altsrc.NewGenericFlag(cli.GenericFlag{
 			Name:   "dns-cache-prune-interval",
 			EnvVar: "DNS_CACHE_PRUNE_INTERVAL",
-			Value:  1 * time.Hour,
+			Value:  &c.PruneInterval,
 			Usage:  "how often to run cache expiration",
 		}),
 		altsrc.NewBoolFlag(cli.BoolFlag{
-			Name:   "dns-cache-disable",
-			EnvVar: "DNS_CACHE_DISABLE",
-			Usage:  "maximum number of dns records to cache",
+			Name:        "dns-cache-disable",
+			EnvVar:      "DNS_CACHE_DISABLE",
+			Usage:       "maximum number of dns records to cache",
+			Destination: &c.Disable,
 		}),
 		altsrc.NewIntFlag(cli.IntFlag{
-			Name:   "dns-cache-size",
-			EnvVar: "DNS_CACHE_SIZE",
-			Value:  131072, // 2^17
-			Usage:  "maximum number of dns records to cache",
+			Name:        "dns-cache-size",
+			EnvVar:      "DNS_CACHE_SIZE",
+			Usage:       "maximum number of dns records to cache",
+			Value:       c.Size,
+			Destination: &c.Size,
 		}),
 	}
 }
@@ -48,17 +57,6 @@ func (c *DNSCacheConfig) Get(name string) (interface{}, bool) {
 		return c.Size, true
 	}
 	return nil, false
-}
-
-func (c *DNSCacheConfig) Parse(ctx *cli.Context) error {
-	if err := c.PruneInterval.UnmarshalText([]byte(ctx.String("dns-cache-prune-interval"))); err != nil {
-		return err
-	}
-
-	c.Disable = ctx.Bool("dns-cache-disable")
-	c.Size = ctx.Int("dns-cache-size")
-
-	return nil
 }
 
 func (c *DNSCacheConfig) Init(root *Config) {

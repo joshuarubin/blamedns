@@ -19,8 +19,8 @@ import (
 func InputSource(dflt, key string) func(*cli.Context) (altsrc.InputSourceContext, error) {
 	return func(c *cli.Context) (altsrc.InputSourceContext, error) {
 		file := c.String(key)
-		logger := text.Logger(slog.WarnLevel)
-		ret := &Config{}
+		logger := text.Logger(slog.WarnLevel).WithField("config_file", file)
+		ret := New("", "")
 
 		md, err := toml.DecodeFile(file, ret)
 		if err != nil {
@@ -30,7 +30,7 @@ func InputSource(dflt, key string) func(*cli.Context) (altsrc.InputSourceContext
 				return ret, nil
 			}
 
-			logger.WithError(err).WithField("file", file).Warn("error loading toml config")
+			logger.WithError(err).Warn("error loading toml config")
 			return ret, nil
 		}
 
@@ -117,6 +117,10 @@ func (c *Config) StringSlice(name string) ([]string, error) {
 	}
 
 	if ret, ok := val.([]string); ok {
+		return ret, nil
+	}
+
+	if ret, ok := val.(cli.StringSlice); ok {
 		return ret, nil
 	}
 

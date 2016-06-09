@@ -22,24 +22,34 @@ type LogConfig struct {
 	file  *os.File
 }
 
-func LogFlags() []cli.Flag {
+func NewLogConfig() *LogConfig {
+	return &LogConfig{
+		File:  os.Stderr.Name(),
+		Level: defaultLogLevel.String(),
+	}
+}
+
+func (c *LogConfig) Flags() []cli.Flag {
 	return []cli.Flag{
 		altsrc.NewStringFlag(cli.StringFlag{
-			Name:   "log-file",
-			EnvVar: "LOG_FILE",
-			Value:  os.Stderr.Name(),
-			Usage:  "log file name",
+			Name:        "log-file",
+			EnvVar:      "LOG_FILE",
+			Usage:       "log file name",
+			Value:       c.File,
+			Destination: &c.File,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
-			Name:   "log-level",
-			EnvVar: "LOG_LEVEL",
-			Value:  defaultLogLevel.String(),
-			Usage:  "set log level (debug, info, warn, error)",
+			Name:        "log-level",
+			EnvVar:      "LOG_LEVEL",
+			Usage:       "set log level (debug, info, warn, error)",
+			Value:       c.Level,
+			Destination: &c.Level,
 		}),
 		altsrc.NewBoolFlag(cli.BoolFlag{
-			Name:   "log-json",
-			EnvVar: "LOG_JSON",
-			Usage:  "use json formatting when logging",
+			Name:        "log-json",
+			EnvVar:      "LOG_JSON",
+			Usage:       "use json formatting when logging",
+			Destination: &c.JSON,
 		}),
 	}
 }
@@ -55,12 +65,6 @@ func (c *LogConfig) Get(name string) (interface{}, bool) {
 	}
 
 	return nil, false
-}
-
-func (c *LogConfig) Parse(ctx *cli.Context) {
-	c.File = ctx.String("log-file")
-	c.Level = ctx.String("log-level")
-	c.JSON = ctx.Bool("log-json")
 }
 
 func ParseFileFlag(name string) (*os.File, error) {

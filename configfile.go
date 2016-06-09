@@ -8,7 +8,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/urfave/cli"
-	"github.com/urfave/cli/altsrc"
 )
 
 const defaultConfigFile = "/etc/blamedns/config.toml"
@@ -40,14 +39,6 @@ func init() {
 			},
 		},
 	})
-}
-
-func configSetup(c *cli.Context) error {
-	if err := altsrc.InitInputSourceWithContext(app.Flags, config.InputSource(defaultConfigFile, "config"))(c); err != nil {
-		return err
-	}
-
-	return cfg.Parse(c)
 }
 
 func setupWriteConfig(c *cli.Context) error {

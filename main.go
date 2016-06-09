@@ -8,6 +8,7 @@ import (
 	"jrubin.io/blamedns/config"
 
 	"github.com/urfave/cli"
+	"github.com/urfave/cli/altsrc"
 )
 
 var (
@@ -25,9 +26,12 @@ func init() {
 		Name:  "Joshua Rubin",
 		Email: "joshua@rubixconsulting.com",
 	}}
-	app.Before = configSetup
+	app.Flags = append(configFileFlags, cfg.Flags()...)
+	app.Before = altsrc.InitInputSourceWithContext(
+		app.Flags,
+		config.InputSource(defaultConfigFile, "config"),
+	)
 	app.Action = run
-	app.Flags = append(configFileFlags, config.Flags(cfg)...)
 }
 
 func main() {

@@ -31,37 +31,53 @@ var (
 )
 
 type DLConfig struct {
-	UpdateInterval Duration `toml:"update_interval"`
-	Hosts          []string `toml:"hosts"`
-	Domains        []string `toml:"domains"`
-	DebugHTTP      bool     `toml:"debug_http"`
+	UpdateInterval Duration        `toml:"update_interval"`
+	Hosts          cli.StringSlice `toml:"hosts"`
+	Domains        cli.StringSlice `toml:"domains"`
+	DebugHTTP      bool            `toml:"debug_http"`
 	dl             []*dl.DL
 }
 
-func DLFlags() []cli.Flag {
+func NewDLConfig() *DLConfig {
+	ret := &DLConfig{
+		UpdateInterval: Duration(24 * time.Hour),
+		Hosts:          make(cli.StringSlice, len(defaultDLHosts)),
+		Domains:        make(cli.StringSlice, len(defaultDLDomains)),
+	}
+
+	copy(ret.Hosts, defaultDLHosts)
+	copy(ret.Domains, defaultDLDomains)
+
+	return ret
+}
+
+func (c *DLConfig) Flags() []cli.Flag {
 	return []cli.Flag{
-		altsrc.NewDurationFlag(cli.DurationFlag{
+		altsrc.NewGenericFlag(cli.GenericFlag{
 			Name:   "dl-update-interval",
 			EnvVar: "DL_UPDATE_INTERVAL",
-			Value:  24 * time.Hour,
 			Usage:  "update the downloaded files at this interval",
+			Value:  &c.UpdateInterval,
 		}),
-		altsrc.NewStringSliceFlag(cli.StringSliceFlag{
-			Name:   "dl-hosts",
-			EnvVar: "DL_HOSTS",
-			Value:  &defaultDLHosts,
-			Usage:  "files to download in \"/etc/hosts\" format from which to derive blocked hostnames",
-		}),
-		altsrc.NewStringSliceFlag(cli.StringSliceFlag{
-			Name:   "dl-domains",
-			EnvVar: "DL_DOMAINS",
-			Value:  &defaultDLDomains,
-			Usage:  "files to download with one domain per line to block",
-		}),
+		&StringSliceFlag{
+			Name:        "dl-hosts",
+			EnvVar:      "DL_HOSTS",
+			Value:       c.Hosts,
+			Destination: &c.Hosts,
+			Usage:       "files to download in \"/etc/hosts\" format from which to derive blocked hostnames",
+		},
+		&StringSliceFlag{
+			Name:        "dl-domains",
+			EnvVar:      "DL_DOMAINS",
+			Value:       c.Domains,
+			Destination: &c.Domains,
+			Usage:       "files to download with one domain per line to block",
+		},
 		altsrc.NewBoolFlag(cli.BoolFlag{
-			Name:   "dl-debug-http",
-			EnvVar: "DL_DEBUG_HTTP",
-			Usage:  "log http headers",
+			Name:        "dl-debug-http",
+			EnvVar:      "DL_DEBUG_HTTP",
+			Usage:       "log http headers",
+			Destination: &c.DebugHTTP,
 		}),
 	}
 }
@@ -79,24 +95,6 @@ func (c *DLConfig) Get(name string) (interface{}, bool) {
 	}
 
 	return nil, false
-}
-
-func (c *DLConfig) Parse(ctx *cli.Context) error {
-	if err := c.UpdateInterval.UnmarshalText([]byte(ctx.String("dl-update-interval"))); err != nil {
-		return err
-	}
-
-	if c.Hosts = ctx.StringSlice("dl-hosts"); len(c.Hosts) > numDefaultDLHosts {
-		c.Hosts = c.Hosts[numDefaultDLHosts:]
-	}
-
-	if c.Domains = ctx.StringSlice("dl-domains"); len(c.Domains) > numDefaultDLDomains {
-		c.Domains = c.Domains[numDefaultDLDomains:]
-	}
-
-	c.DebugHTTP = ctx.Bool("dl-debug-http")
-
-	return nil
 }
 
 func (c *DLConfig) Init(root *Config) error {
