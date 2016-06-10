@@ -18,5 +18,7 @@
 1. fuzzing
 1. blamedns.com website
 
+```sh
 sudo setcap cap_net_bind_service=+ep /usr/local/bin/blamedns
 sudo adduser --system blamedns --home /var/cache/blamedns --shell /usr/sbin/nologin --disabled-password --disabled-login --group --no-create-home
+```
