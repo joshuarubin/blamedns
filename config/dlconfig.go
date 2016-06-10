@@ -46,46 +46,31 @@ func NewDLConfig() *DLConfig {
 	return ret
 }
 
-func (c *DLConfig) Flags() []cli.Flag {
+func (c *DLConfig) Flags(prefix string) []cli.Flag {
 	return []cli.Flag{
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dl-update-interval",
-			EnvVar: "DL_UPDATE_INTERVAL",
+			Name:   flagName(prefix, "update-interval"),
+			EnvVar: envName(prefix, "UPDATE_INTERVAL"),
 			Usage:  "update the downloaded files at this interval",
 			Value:  &c.UpdateInterval,
 		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dl-hosts",
-			EnvVar: "DL_HOSTS",
+			Name:   flagName(prefix, "hosts"),
+			EnvVar: envName(prefix, "HOSTS"),
 			Value:  &c.Hosts,
 			Usage:  "files to download in \"/etc/hosts\" format from which to derive blocked hostnames",
 		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dl-domains",
-			EnvVar: "DL_DOMAINS",
+			Name:   flagName(prefix, "domains"),
+			EnvVar: envName(prefix, "DOMAINS"),
 			Value:  &c.Domains,
 			Usage:  "files to download with one domain per line to block",
 		}),
 		altsrc.NewBoolFlag(cli.BoolFlag{
-			Name:        "dl-debug-http",
-			EnvVar:      "DL_DEBUG_HTTP",
+			Name:        flagName(prefix, "debug-http"),
+			EnvVar:      envName(prefix, "DEBUG_HTTP"),
 			Usage:       "log http headers",
 			Destination: &c.DebugHTTP,
 		}),
 	}
-}
-
-func (c *DLConfig) Get(name string) (interface{}, bool) {
-	switch name {
-	case "dl-update-interval":
-		return c.UpdateInterval, true
-	case "dl-hosts":
-		return c.Hosts, true
-	case "dl-domains":
-		return c.Domains, true
-	case "dl-debug-http":
-		return c.DebugHTTP, true
-	}
-
-	return nil, false
 }

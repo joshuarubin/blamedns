@@ -1,6 +1,10 @@
 package config
 
-import "time"
+import (
+	"time"
+
+	"github.com/urfave/cli"
+)
 
 type Duration time.Duration
 
@@ -27,4 +31,8 @@ func (d *Duration) Set(value string) error {
 	}
 	*d = Duration(tmp)
 	return nil
+}
+
+func (d Duration) Generic() cli.Generic {
+	return &d
 }

@@ -1,6 +1,10 @@
 package config
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/urfave/cli"
+)
 
 // StringSlice is an opaque type for []string to satisfy flag.Value
 type StringSlice []string
@@ -23,4 +27,8 @@ func (f *StringSlice) Set(value string) error {
 		*f = append(*f, s)
 	}
 	return nil
+}
+
+func (f StringSlice) Generic() cli.Generic {
+	return &f
 }

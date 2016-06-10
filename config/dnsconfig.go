@@ -21,23 +21,35 @@ var (
 	numDefaultDNSListen = len(defaultDNSListen)
 )
 
-type DNSZoneConfig struct {
+type DNSZone struct {
 	Name string   `toml:"name" json:"name"`
 	Addr []string `toml:"addr" json:"addr"`
 }
 
+type DNSZones []DNSZone
+
+func (z DNSZones) Generic() cli.Generic {
+	return JSON{Data: &z}
+}
+
+type StringMapStringSlice map[string][]string
+
+func (m StringMapStringSlice) Generic() cli.Generic {
+	return JSON{Data: &m}
+}
+
 type DNSConfig struct {
-	Listen         StringSlice         `toml:"listen"`
-	Block          *BlockConfig        `toml:"block"`
-	ClientTimeout  Duration            `toml:"client_timeout"`
-	ServerTimeout  Duration            `toml:"server_timeout"`
-	DialTimeout    Duration            `toml:"dial_timeout"`
-	LookupInterval Duration            `toml:"lookup_interval"`
-	Cache          *DNSCacheConfig     `toml:"cache"`
-	Forward        StringSlice         `toml:"forward"`
-	Zone           []DNSZoneConfig     `toml:"zone"`
-	Override       map[string][]string `toml:"override"`
-	OverrideTTL    Duration            `toml:"override_ttl"`
+	Listen         StringSlice          `toml:"listen"`
+	Block          *BlockConfig         `toml:"block"`
+	ClientTimeout  Duration             `toml:"client_timeout"`
+	ServerTimeout  Duration             `toml:"server_timeout"`
+	DialTimeout    Duration             `toml:"dial_timeout"`
+	LookupInterval Duration             `toml:"lookup_interval"`
+	Cache          *DNSCacheConfig      `toml:"cache"`
+	Forward        StringSlice          `toml:"forward"`
+	Zone           DNSZones             `toml:"zone"`
+	Override       StringMapStringSlice `toml:"override"`
+	OverrideTTL    Duration             `toml:"override_ttl"`
 }
 
 func NewDNSConfig() *DNSConfig {
@@ -59,97 +71,64 @@ func NewDNSConfig() *DNSConfig {
 	return ret
 }
 
-func (c *DNSConfig) Flags() []cli.Flag {
+func (c *DNSConfig) Flags(prefix string) []cli.Flag {
 	ret := []cli.Flag{
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dns-listen",
-			EnvVar: "DNS_LISTEN",
+			Name:   flagName(prefix, "listen"),
+			EnvVar: envName(prefix, "LISTEN"),
 			Usage:  "url(s) to listen for dns requests on",
 			Value:  &c.Listen,
 		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dns-client-timeout",
-			EnvVar: "DNS_CLIENT_TIMEOUT",
+			Name:   flagName(prefix, "client-timeout"),
+			EnvVar: envName(prefix, "CLIENT_TIMEOUT"),
 			Value:  &c.ClientTimeout,
 			Usage:  "time to wait for remote servers to respond to queries",
 		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dns-server-timeout",
-			EnvVar: "DNS_SERVER_TIMEOUT",
+			Name:   flagName(prefix, "server-timeout"),
+			EnvVar: envName(prefix, "SERVER_TIMEOUT"),
 			Value:  &c.ServerTimeout,
 			Usage:  "time for server to wait for remote clients to respond to queries",
 		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dns-dial-timeout",
-			EnvVar: "DNS_DIAL_TIMEOUT",
+			Name:   flagName(prefix, "dial-timeout"),
+			EnvVar: envName(prefix, "DIAL_TIMEOUT"),
 			Value:  &c.DialTimeout,
 			Usage:  "time to wait to establish connection to remote server",
 		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dns-lookup-interval",
-			EnvVar: "DNS_LOOKUP_INTERVAL",
+			Name:   flagName(prefix, "lookup-interval"),
+			EnvVar: envName(prefix, "LOOKUP_INTERVAL"),
 			Value:  &c.LookupInterval,
 			Usage:  "concurrency interval for lookups in miliseconds",
 		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dns-forward",
-			EnvVar: "DNS_FORWARD",
+			Name:   flagName(prefix, "forward"),
+			EnvVar: envName(prefix, "FORWARD"),
 			Value:  &c.Forward,
 			Usage:  "default dns server(s) to forward requests to",
 		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dns-override-ttl",
-			EnvVar: "DNS_OVERRIDE_TTL",
+			Name:   flagName(prefix, "override-ttl"),
+			EnvVar: envName(prefix, "OVERRIDE_TTL"),
 			Value:  &c.OverrideTTL,
 			Usage:  "ttl to return for overridden hosts",
 		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dns-zone",
-			Value:  JSON{&c.Zone},
+			Name:   flagName(prefix, "zone"),
+			Value:  JSON{Data: &c.Zone},
 			Hidden: true,
 		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dns-override",
-			Value:  JSON{&c.Override},
+			Name:   flagName(prefix, "override"),
+			Value:  JSON{Data: &c.Override},
 			Hidden: true,
 		}),
 	}
 
-	ret = append(ret, c.Block.Flags()...)
-	ret = append(ret, c.Cache.Flags()...)
+	ret = append(ret, c.Block.Flags(flagName(prefix, "block"))...)
+	ret = append(ret, c.Cache.Flags(flagName(prefix, "cache"))...)
 
 	return ret
-}
-
-func (c *DNSConfig) Get(name string) (interface{}, bool) {
-	switch name {
-	case "dns-listen":
-		return c.Listen, true
-	case "dns-client-timeout":
-		return c.ClientTimeout, true
-	case "dns-server-timeout":
-		return c.ServerTimeout, true
-	case "dns-dial-timeout":
-		return c.DialTimeout, true
-	case "dns-lookup-interval":
-		return c.LookupInterval, true
-	case "dns-forward":
-		return c.Forward, true
-	case "dns-override-ttl":
-		return c.OverrideTTL, true
-	case "dns-zone":
-		return c.Zone, true
-	case "dns-override":
-		return c.Override, true
-	}
-
-	if ret, ok := c.Block.Get(name); ok {
-		return ret, ok
-	}
-
-	if ret, ok := c.Cache.Get(name); ok {
-		return ret, ok
-	}
-
-	return nil, false
 }

@@ -20,38 +20,26 @@ func NewDNSCacheConfig() *DNSCacheConfig {
 	}
 }
 
-func (c *DNSCacheConfig) Flags() []cli.Flag {
+func (c *DNSCacheConfig) Flags(prefix string) []cli.Flag {
 	return []cli.Flag{
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dns-cache-prune-interval",
-			EnvVar: "DNS_CACHE_PRUNE_INTERVAL",
+			Name:   flagName(prefix, "prune-interval"),
+			EnvVar: envName(prefix, "PRUNE_INTERVAL"),
 			Value:  &c.PruneInterval,
 			Usage:  "how often to run cache expiration",
 		}),
 		altsrc.NewBoolFlag(cli.BoolFlag{
-			Name:        "dns-cache-disable",
-			EnvVar:      "DNS_CACHE_DISABLE",
+			Name:        flagName(prefix, "disable"),
+			EnvVar:      envName(prefix, "DISABLE"),
 			Usage:       "maximum number of dns records to cache",
 			Destination: &c.Disable,
 		}),
 		altsrc.NewIntFlag(cli.IntFlag{
-			Name:        "dns-cache-size",
-			EnvVar:      "DNS_CACHE_SIZE",
+			Name:        flagName(prefix, "size"),
+			EnvVar:      envName(prefix, "SIZE"),
 			Usage:       "maximum number of dns records to cache",
 			Value:       c.Size,
 			Destination: &c.Size,
 		}),
 	}
-}
-
-func (c *DNSCacheConfig) Get(name string) (interface{}, bool) {
-	switch name {
-	case "dns-cache-prune-interval":
-		return c.PruneInterval, true
-	case "dns-cache-disable":
-		return c.Disable, true
-	case "dns-cache-size":
-		return c.Size, true
-	}
-	return nil, false
 }

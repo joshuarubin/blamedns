@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/urfave/cli"
 	"github.com/urfave/cli/altsrc"
@@ -48,44 +49,29 @@ func (c *Config) Flags() []cli.Flag {
 			Name:        "listen-pixelserv",
 			EnvVar:      "LISTEN_PIXELSERV",
 			Usage:       "address to run the pixel server on",
+			Value:       c.ListenPixelserv,
 			Destination: &c.ListenPixelserv,
 		}),
 		altsrc.NewStringFlag(cli.StringFlag{
 			Name:        "listen-apiserver",
 			EnvVar:      "LISTEN_APISERVER",
 			Usage:       "address to run the api server on",
+			Value:       c.ListenAPIServer,
 			Destination: &c.ListenAPIServer,
 		}),
 	}
 
-	ret = append(ret, c.Log.Flags()...)
-	ret = append(ret, c.DL.Flags()...)
-	ret = append(ret, c.DNS.Flags()...)
+	ret = append(ret, c.Log.Flags("log")...)
+	ret = append(ret, c.DL.Flags("dl")...)
+	ret = append(ret, c.DNS.Flags("dns")...)
 
 	return ret
 }
 
-func (c *Config) Get(name string) (interface{}, bool) {
-	switch name {
-	case "cache-dir":
-		return c.CacheDir, true
-	case "listen-pixelserv":
-		return c.ListenPixelserv, true
-	case "listen-apiserver":
-		return c.ListenAPIServer, true
-	}
+func flagName(prefix, name string) string {
+	return fmt.Sprintf("%s-%s", strings.ToLower(prefix), strings.ToLower(name))
+}
 
-	if ret, ok := c.Log.Get(name); ok {
-		return ret, ok
-	}
-
-	if ret, ok := c.DL.Get(name); ok {
-		return ret, ok
-	}
-
-	if ret, ok := c.DNS.Get(name); ok {
-		return ret, ok
-	}
-
-	panic(fmt.Errorf("could not find config value for key %s", name))
+func envName(prefix, name string) string {
+	return fmt.Sprintf("%s_%s", strings.ToUpper(prefix), strings.ToUpper(name))
 }

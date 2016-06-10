@@ -37,45 +37,31 @@ func NewBlockConfig() *BlockConfig {
 	return ret
 }
 
-func (c *BlockConfig) Flags() []cli.Flag {
+func (c *BlockConfig) Flags(prefix string) []cli.Flag {
 	return []cli.Flag{
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dns-block-ipv4",
-			EnvVar: "DNS_BLOCK_IPV4",
+			Name:   flagName(prefix, "ipv4"),
+			EnvVar: envName(prefix, "IPV4"),
 			Usage:  "ipv4 address to return to clients for blocked a requests",
 			Value:  &c.IPv4,
 		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dns-block-ipv6",
-			EnvVar: "DNS_BLOCK_IPV6",
+			Name:   flagName(prefix, "ipv6"),
+			EnvVar: envName(prefix, "IPV6"),
 			Usage:  "ipv6 address to return to clients for blocked aaaa requests",
 			Value:  &c.IPv6,
 		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dns-block-ttl",
-			EnvVar: "DNS_BLOCK_TTL",
+			Name:   flagName(prefix, "ttl"),
+			EnvVar: envName(prefix, "TTL"),
 			Usage:  "ttl to return for blocked requests",
 			Value:  &c.TTL,
 		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
-			Name:   "dns-block-whitelist",
-			EnvVar: "DNS_BLOCK_WHITELIST",
+			Name:   flagName(prefix, "whitelist"),
+			EnvVar: envName(prefix, "WHITELIST"),
 			Usage:  "domains to never block",
 			Value:  &c.WhiteList,
 		}),
 	}
-}
-
-func (c *BlockConfig) Get(name string) (interface{}, bool) {
-	switch name {
-	case "dns-block-ipv4":
-		return c.IPv4, true
-	case "dns-block-ipv6":
-		return c.IPv6, true
-	case "dns-block-ttl":
-		return c.TTL, true
-	case "dns-block-whitelist":
-		return c.WhiteList, true
-	}
-	return nil, false
 }

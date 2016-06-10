@@ -47,7 +47,7 @@ func init() {
 	)
 	app.Before = altsrc.InitInputSourceWithContext(
 		app.Flags,
-		config.InputSource(defaultConfigFile, "config"),
+		config.TOMLSource(defaultConfigFile, "config"),
 	)
 	app.Action = run
 	app.Commands = append(app.Commands, cli.Command{

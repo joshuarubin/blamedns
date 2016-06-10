@@ -1,6 +1,10 @@
 package config
 
-import "net"
+import (
+	"net"
+
+	"github.com/urfave/cli"
+)
 
 type IP net.IP
 
@@ -32,4 +36,8 @@ func ParseIP(value string) IP {
 
 func (i *IP) Set(value string) error {
 	return i.UnmarshalText([]byte(value))
+}
+
+func (i IP) Generic() cli.Generic {
+	return &i
 }
