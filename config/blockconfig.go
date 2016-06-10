@@ -18,10 +18,10 @@ var (
 )
 
 type BlockConfig struct {
-	IPv4      IP              `toml:"ipv4"`
-	IPv6      IP              `toml:"ipv6"`
-	TTL       Duration        `toml:"ttl"`
-	WhiteList cli.StringSlice `toml:"whitelist"`
+	IPv4      IP          `toml:"ipv4"`
+	IPv6      IP          `toml:"ipv6"`
+	TTL       Duration    `toml:"ttl"`
+	WhiteList StringSlice `toml:"whitelist"`
 }
 
 func NewBlockConfig() *BlockConfig {
@@ -29,7 +29,7 @@ func NewBlockConfig() *BlockConfig {
 		IPv4:      ParseIP("127.0.0.1"),
 		IPv6:      ParseIP("::1"),
 		TTL:       Duration(1 * time.Hour),
-		WhiteList: make(cli.StringSlice, len(defaultDNSBlockWhiteList)),
+		WhiteList: make(StringSlice, len(defaultDNSBlockWhiteList)),
 	}
 
 	copy(ret.WhiteList, defaultDNSBlockWhiteList)
@@ -57,13 +57,12 @@ func (c *BlockConfig) Flags() []cli.Flag {
 			Usage:  "ttl to return for blocked requests",
 			Value:  &c.TTL,
 		}),
-		&StringSliceFlag{
-			Name:        "dns-block-whitelist",
-			EnvVar:      "DNS_BLOCK_WHITELIST",
-			Usage:       "domains to never block",
-			Value:       c.WhiteList,
-			Destination: &c.WhiteList,
-		},
+		altsrc.NewGenericFlag(cli.GenericFlag{
+			Name:   "dns-block-whitelist",
+			EnvVar: "DNS_BLOCK_WHITELIST",
+			Usage:  "domains to never block",
+			Value:  &c.WhiteList,
+		}),
 	}
 }
 

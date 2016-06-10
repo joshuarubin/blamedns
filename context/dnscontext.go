@@ -27,10 +27,10 @@ func NewDNSContext(logger *slog.Logger, cfg *config.Config, onStart func()) (*DN
 	ctx.Server = &dnsserver.DNSServer{
 		Listen:         cfg.DNS.Listen,
 		Block:          blockContext.Block,
-		ClientTimeout:  cfg.DNS.ClientTimeout.Duration(),
-		ServerTimeout:  cfg.DNS.ServerTimeout.Duration(),
-		DialTimeout:    cfg.DNS.DialTimeout.Duration(),
-		LookupInterval: cfg.DNS.LookupInterval.Duration(),
+		ClientTimeout:  cfg.DNS.ClientTimeout.Value(),
+		ServerTimeout:  cfg.DNS.ServerTimeout.Value(),
+		DialTimeout:    cfg.DNS.DialTimeout.Value(),
+		LookupInterval: cfg.DNS.LookupInterval.Value(),
 		Logger:         logger.WithField("system", "dns"),
 		NotifyStartedFunc: func() error {
 			ctx.Cache.Start()
@@ -43,7 +43,7 @@ func NewDNSContext(logger *slog.Logger, cfg *config.Config, onStart func()) (*DN
 		Zones: map[string][]string{
 			".": cfg.DNS.Forward,
 		},
-		OverrideTTL: cfg.DNS.OverrideTTL.Duration(),
+		OverrideTTL: cfg.DNS.OverrideTTL.Value(),
 		Override:    override.New(override.Parse(cfg.DNS.Override)),
 	}
 

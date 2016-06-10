@@ -25,9 +25,9 @@ func NewBlockContext(logger *slog.Logger, cfg *config.Config) (*BlockContext, er
 
 	ctx := &BlockContext{
 		Block: dnsserver.Block{
-			IPv4:    cfg.DNS.Block.IPv4.IP(),
-			IPv6:    cfg.DNS.Block.IPv6.IP(),
-			TTL:     cfg.DNS.Block.TTL.Duration(),
+			IPv4:    cfg.DNS.Block.IPv4.Value(),
+			IPv6:    cfg.DNS.Block.IPv6.Value(),
+			TTL:     cfg.DNS.Block.TTL.Value(),
 			Blocker: blocker,
 			Passer:  whitelist.New(cfg.DNS.Block.WhiteList...),
 			Logger:  logger,

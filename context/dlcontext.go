@@ -36,7 +36,7 @@ func NewDLContext(rootCtx *Context, cfg *config.Config) (*DLContext, error) {
 			d := &dl.DL{
 				URL:            p,
 				BaseDir:        t.BaseDir,
-				UpdateInterval: cfg.DL.UpdateInterval.Duration(),
+				UpdateInterval: cfg.DL.UpdateInterval.Value(),
 				Logger:         rootCtx.Log.Logger,
 				AppName:        rootCtx.AppName,
 				AppVersion:     rootCtx.AppVersion,

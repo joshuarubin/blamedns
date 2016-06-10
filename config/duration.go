@@ -4,12 +4,12 @@ import "time"
 
 type Duration time.Duration
 
-func (d Duration) Duration() time.Duration {
+func (d Duration) Value() time.Duration {
 	return time.Duration(d)
 }
 
 func (d Duration) String() string {
-	return d.Duration().String()
+	return d.Value().String()
 }
 
 func (d Duration) MarshalText() ([]byte, error) {
@@ -17,14 +17,14 @@ func (d Duration) MarshalText() ([]byte, error) {
 }
 
 func (d *Duration) UnmarshalText(text []byte) error {
-	tmp, err := time.ParseDuration(string(text))
+	return d.Set(string(text))
+}
+
+func (d *Duration) Set(value string) error {
+	tmp, err := time.ParseDuration(value)
 	if err != nil {
 		return err
 	}
 	*d = Duration(tmp)
 	return nil
-}
-
-func (d *Duration) Set(value string) error {
-	return d.UnmarshalText([]byte(value))
 }

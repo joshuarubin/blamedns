@@ -15,7 +15,7 @@ type DNSCacheContext struct {
 
 func NewDNSCacheContext(logger slog.Interface, cfg *config.DNSCacheConfig) *DNSCacheContext {
 	ctx := &DNSCacheContext{
-		PruneInterval: cfg.PruneInterval.Duration(),
+		PruneInterval: cfg.PruneInterval.Value(),
 	}
 	if !cfg.Disable {
 		ctx.Cache = dnscache.NewMemory(cfg.Size, logger)

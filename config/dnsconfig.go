@@ -8,13 +8,13 @@ import (
 )
 
 var (
-	defaultDNSForward = cli.StringSlice{
+	defaultDNSForward = StringSlice{
 		"8.8.8.8",
 		"8.8.4.4",
 	}
 	numDefaultDNSForward = len(defaultDNSForward)
 
-	defaultDNSListen = cli.StringSlice{
+	defaultDNSListen = StringSlice{
 		"udp://[::]:53",
 		"tcp://[::]:53",
 	}
@@ -27,14 +27,14 @@ type DNSZoneConfig struct {
 }
 
 type DNSConfig struct {
-	Listen         cli.StringSlice     `toml:"listen"`
+	Listen         StringSlice         `toml:"listen"`
 	Block          *BlockConfig        `toml:"block"`
 	ClientTimeout  Duration            `toml:"client_timeout"`
 	ServerTimeout  Duration            `toml:"server_timeout"`
 	DialTimeout    Duration            `toml:"dial_timeout"`
 	LookupInterval Duration            `toml:"lookup_interval"`
 	Cache          *DNSCacheConfig     `toml:"cache"`
-	Forward        cli.StringSlice     `toml:"forward"`
+	Forward        StringSlice         `toml:"forward"`
 	Zone           []DNSZoneConfig     `toml:"zone"`
 	Override       map[string][]string `toml:"override"`
 	OverrideTTL    Duration            `toml:"override_ttl"`
@@ -42,14 +42,14 @@ type DNSConfig struct {
 
 func NewDNSConfig() *DNSConfig {
 	ret := &DNSConfig{
-		Listen:         make(cli.StringSlice, len(defaultDNSListen)),
+		Listen:         make(StringSlice, len(defaultDNSListen)),
 		Block:          NewBlockConfig(),
 		ClientTimeout:  Duration(5 * time.Second),
 		ServerTimeout:  Duration(2 * time.Second),
 		DialTimeout:    Duration(2 * time.Second),
 		LookupInterval: Duration(200 * time.Millisecond),
 		Cache:          NewDNSCacheConfig(),
-		Forward:        make(cli.StringSlice, len(defaultDNSForward)),
+		Forward:        make(StringSlice, len(defaultDNSForward)),
 		OverrideTTL:    Duration(1 * time.Hour),
 	}
 
@@ -61,13 +61,12 @@ func NewDNSConfig() *DNSConfig {
 
 func (c *DNSConfig) Flags() []cli.Flag {
 	ret := []cli.Flag{
-		&StringSliceFlag{
-			Name:        "dns-listen",
-			EnvVar:      "DNS_LISTEN",
-			Usage:       "url(s) to listen for dns requests on",
-			Value:       c.Listen,
-			Destination: &c.Listen,
-		},
+		altsrc.NewGenericFlag(cli.GenericFlag{
+			Name:   "dns-listen",
+			EnvVar: "DNS_LISTEN",
+			Usage:  "url(s) to listen for dns requests on",
+			Value:  &c.Listen,
+		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
 			Name:   "dns-client-timeout",
 			EnvVar: "DNS_CLIENT_TIMEOUT",
@@ -92,13 +91,12 @@ func (c *DNSConfig) Flags() []cli.Flag {
 			Value:  &c.LookupInterval,
 			Usage:  "concurrency interval for lookups in miliseconds",
 		}),
-		&StringSliceFlag{
-			Name:        "dns-forward",
-			EnvVar:      "DNS_FORWARD",
-			Value:       c.Forward,
-			Destination: &c.Forward,
-			Usage:       "default dns server(s) to forward requests to",
-		},
+		altsrc.NewGenericFlag(cli.GenericFlag{
+			Name:   "dns-forward",
+			EnvVar: "DNS_FORWARD",
+			Value:  &c.Forward,
+			Usage:  "default dns server(s) to forward requests to",
+		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
 			Name:   "dns-override-ttl",
 			EnvVar: "DNS_OVERRIDE_TTL",

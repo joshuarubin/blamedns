@@ -70,7 +70,7 @@ func (c *Config) Duration(name string) (time.Duration, error) {
 	}
 
 	if ret, ok := val.(Duration); ok {
-		return ret.Duration(), nil
+		return ret.Value(), nil
 	}
 
 	return 0, fmt.Errorf("could not convert %T{%v} to time.Duration for %s", val, val, name)
@@ -120,10 +120,6 @@ func (c *Config) StringSlice(name string) ([]string, error) {
 		return ret, nil
 	}
 
-	if ret, ok := val.(cli.StringSlice); ok {
-		return ret, nil
-	}
-
 	return nil, fmt.Errorf("could not convert %T{%v} to []string for %s", val, val, name)
 }
 
@@ -150,7 +146,27 @@ func (c *Config) Generic(name string) (cli.Generic, error) {
 		return ret, nil
 	}
 
-	return JSON{&val}, nil
+	if ret, ok := val.(StringSlice); ok {
+		return &ret, nil
+	}
+
+	if ret, ok := val.(Duration); ok {
+		return &ret, nil
+	}
+
+	if ret, ok := val.(IP); ok {
+		return &ret, nil
+	}
+
+	if ret, ok := val.([]DNSZoneConfig); ok {
+		return JSON{&ret}, nil
+	}
+
+	if ret, ok := val.(map[string][]string); ok {
+		return JSON{&ret}, nil
+	}
+
+	return nil, fmt.Errorf("could not convert %T{%v} to cli.Generic for %s", val, val, name)
 }
 
 func (c *Config) Bool(name string) (bool, error) {

@@ -4,16 +4,16 @@ import "net"
 
 type IP net.IP
 
-func (i IP) IP() net.IP {
+func (i IP) Value() net.IP {
 	return net.IP(i)
 }
 
 func (i IP) String() string {
-	return i.IP().String()
+	return i.Value().String()
 }
 
 func (i IP) MarshalText() ([]byte, error) {
-	return i.IP().MarshalText()
+	return i.Value().MarshalText()
 }
 
 func (i *IP) UnmarshalText(text []byte) error {
