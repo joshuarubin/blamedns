@@ -1,24 +1,42 @@
 package config
 
-import "encoding/json"
+import (
+	"encoding/json"
 
-type JSON struct {
-	Data interface{}
+	"github.com/urfave/cli"
+)
+
+type DNSZone struct {
+	Name string   `toml:"name" json:"name"`
+	Addr []string `toml:"addr" json:"addr"`
 }
 
-func (f JSON) Set(value string) error {
-	return f.UnmarshalJSON([]byte(value))
+type DNSZones []DNSZone
+
+func (z *DNSZones) Set(value string) error {
+	return json.Unmarshal([]byte(value), z)
 }
 
-func (f JSON) String() string {
-	b, _ := f.MarshalJSON()
+func (z DNSZones) String() string {
+	b, _ := json.Marshal(z)
 	return string(b)
 }
 
-func (f JSON) MarshalJSON() ([]byte, error) {
-	return json.Marshal(f.Data)
+func (z DNSZones) Generic() cli.Generic {
+	return &z
 }
 
-func (f JSON) UnmarshalJSON(b []byte) error {
-	return json.Unmarshal(b, &f.Data)
+type StringMapStringSlice map[string][]string
+
+func (m *StringMapStringSlice) Set(value string) error {
+	return json.Unmarshal([]byte(value), m)
+}
+
+func (m StringMapStringSlice) String() string {
+	b, _ := json.Marshal(m)
+	return string(b)
+}
+
+func (m StringMapStringSlice) Generic() cli.Generic {
+	return &m
 }

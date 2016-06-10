@@ -19,23 +19,6 @@ var (
 	}
 )
 
-type DNSZone struct {
-	Name string   `toml:"name" json:"name"`
-	Addr []string `toml:"addr" json:"addr"`
-}
-
-type DNSZones []DNSZone
-
-func (z DNSZones) Generic() cli.Generic {
-	return JSON{Data: &z}
-}
-
-type StringMapStringSlice map[string][]string
-
-func (m StringMapStringSlice) Generic() cli.Generic {
-	return JSON{Data: &m}
-}
-
 type DNSConfig struct {
 	Listen         StringSlice          `toml:"listen"`
 	Block          *BlockConfig         `toml:"block"`
@@ -115,12 +98,12 @@ func (c *DNSConfig) Flags(prefix string) []cli.Flag {
 		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
 			Name:   flagName(prefix, "zone"),
-			Value:  JSON{Data: &c.Zone},
+			Value:  &c.Zone,
 			Hidden: true,
 		}),
 		altsrc.NewGenericFlag(cli.GenericFlag{
 			Name:   flagName(prefix, "override"),
-			Value:  JSON{Data: &c.Override},
+			Value:  &c.Override,
 			Hidden: true,
 		}),
 	}
