@@ -13,7 +13,7 @@ type DNSContext struct {
 	Cache  *DNSCacheContext
 }
 
-func NewDNSContext(logger *slog.Logger, cfg *config.Config, onStart func()) (*DNSContext, error) {
+func NewDNSContext(logger slog.Interface, cfg *config.Config, onStart func()) (*DNSContext, error) {
 	blockContext, err := NewBlockContext(logger, cfg)
 	if err != nil {
 		return nil, err

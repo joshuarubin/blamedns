@@ -14,7 +14,6 @@ var (
 		"https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
 		"http://sysctl.org/cameleon/hosts",
 	}
-	numDefaultDLHosts = len(defaultDLHosts)
 
 	defaultDLDomains = StringSlice{
 		"http://mirror1.malwaredomains.com/files/justdomains",
@@ -23,7 +22,6 @@ var (
 		"https://s3.amazonaws.com/lists.disconnect.me/simple_ad.txt",
 		"https://raw.githubusercontent.com/quidsup/notrack/master/trackers.txt",
 	}
-	numDefaultDLDomains = len(defaultDLDomains)
 )
 
 type DLConfig struct {

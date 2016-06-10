@@ -12,13 +12,11 @@ var (
 		"8.8.8.8",
 		"8.8.4.4",
 	}
-	numDefaultDNSForward = len(defaultDNSForward)
 
 	defaultDNSListen = StringSlice{
 		"udp://[::]:53",
 		"tcp://[::]:53",
 	}
-	numDefaultDNSListen = len(defaultDNSListen)
 )
 
 type DNSZone struct {

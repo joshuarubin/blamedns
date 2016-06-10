@@ -14,7 +14,6 @@ var (
 		"broadcasthost",
 		"local",
 	}
-	numDefaultDNSBlockWhiteList = len(defaultDNSBlockWhiteList)
 )
 
 type BlockConfig struct {

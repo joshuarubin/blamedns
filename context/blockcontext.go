@@ -17,7 +17,7 @@ type BlockContext struct {
 	Block    dnsserver.Block
 }
 
-func NewBlockContext(logger *slog.Logger, cfg *config.Config) (*BlockContext, error) {
+func NewBlockContext(logger slog.Interface, cfg *config.Config) (*BlockContext, error) {
 	hostsDir := path.Join(cfg.CacheDir, "hosts")
 	domainsDir := path.Join(cfg.CacheDir, "domains")
 
