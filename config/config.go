@@ -5,33 +5,17 @@ import (
 	"os"
 	"runtime"
 
-	"jrubin.io/blamedns/apiserver"
-	"jrubin.io/blamedns/pixelserv"
-	"jrubin.io/slog"
-
 	"github.com/urfave/cli"
 	"github.com/urfave/cli/altsrc"
 )
 
-type server interface {
-	ServerName() string
-	ServerAddr() string
-	Init() error
-	Start() error
-	Close() error
-}
-
 type Config struct {
-	CacheDir        string       `toml:"cache_dir"`
-	ListenPixelserv string       `toml:"listen_pixelserv"`
-	ListenAPIServer string       `toml:"listen_apiserver"`
-	Log             *LogConfig   `toml:"log"`
-	DL              *DLConfig    `toml:"dl"`
-	DNS             *DNSConfig   `toml:"dns"`
-	Logger          *slog.Logger `toml:"-"`
-	AppName         string       `toml:"-"`
-	AppVersion      string       `toml:"-"`
-	servers         []server
+	CacheDir        string     `toml:"cache_dir"`
+	ListenPixelserv string     `toml:"listen_pixelserv"`
+	ListenAPIServer string     `toml:"listen_apiserver"`
+	Log             *LogConfig `toml:"log"`
+	DL              *DLConfig  `toml:"dl"`
+	DNS             *DNSConfig `toml:"dns"`
 }
 
 func defaultCacheDir(name string) string {
@@ -42,15 +26,12 @@ func defaultCacheDir(name string) string {
 	return fmt.Sprintf("%s/.cache/%s", os.Getenv("HOME"), name)
 }
 
-func New(appName, appVersion string) *Config {
+func New() *Config {
 	return &Config{
-		CacheDir:   defaultCacheDir("blamedns"),
-		Log:        NewLogConfig(),
-		DL:         NewDLConfig(),
-		DNS:        NewDNSConfig(),
-		Logger:     slog.New(),
-		AppName:    appName,
-		AppVersion: appVersion,
+		CacheDir: defaultCacheDir("blamedns"),
+		Log:      NewLogConfig(),
+		DL:       NewDLConfig(),
+		DNS:      NewDNSConfig(),
 	}
 }
 
@@ -107,50 +88,4 @@ func (c *Config) Get(name string) (interface{}, bool) {
 	}
 
 	panic(fmt.Errorf("could not find config value for key %s", name))
-}
-
-func (c *Config) Init() error {
-	if err := c.Log.Init(c); err != nil {
-		return err
-	}
-
-	c.servers = []server{
-		pixelserv.New(c.ListenPixelserv, c.Logger),
-		apiserver.New(c.ListenAPIServer, c.Logger, c.Log.level),
-	}
-
-	for _, server := range c.servers {
-		if err := server.Init(); err != nil {
-			return err
-		}
-	}
-
-	if err := c.DL.Init(c); err != nil {
-		return err
-	}
-
-	return c.DNS.Init(c, c.DL.Start)
-}
-
-func (c *Config) Start() error {
-	for _, server := range c.servers {
-		_ = server.Start()
-	}
-
-	return c.DNS.Start()
-}
-
-func (c *Config) SIGUSR1() {
-	c.DNS.SIGUSR1()
-}
-
-func (c *Config) Shutdown() {
-	c.DL.Shutdown()
-
-	for _, server := range c.servers {
-		_ = server.Close()
-	}
-
-	c.DNS.Shutdown()
-	c.Log.Shutdown()
 }

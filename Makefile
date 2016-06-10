@@ -9,7 +9,7 @@ include .lib.mk
 
 EXECUTABLE                ?= $(REPO_NAME)
 DOCKER_EXECUTABLE         := $(DOCKER_DIR)/$(EXECUTABLE)
-LDFLAGS                   := '-X main.name=$(EXECUTABLE) -X main.version=$(VERSION)'
+LDFLAGS                   := '-X main.version=$(VERSION)'
 DIST_DIR                  := dist
 DIST_TARGETS              := $(foreach os,$(DIST_OS),$(foreach arch,$(DIST_ARCH),$(DIST_DIR)/$(EXECUTABLE)_$(os)_$(arch)))
 GO_BUILD                  := $(GO) build -v -ldflags $(LDFLAGS)

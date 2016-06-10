@@ -3,9 +3,6 @@ package config
 import (
 	"time"
 
-	"jrubin.io/blamedns/dnsserver"
-	"jrubin.io/blamedns/override"
-
 	"github.com/urfave/cli"
 	"github.com/urfave/cli/altsrc"
 )
@@ -30,18 +27,17 @@ type DNSZoneConfig struct {
 }
 
 type DNSConfig struct {
-	Listen         cli.StringSlice      `toml:"listen"`
-	Block          *BlockConfig         `toml:"block"`
-	ClientTimeout  Duration             `toml:"client_timeout"`
-	ServerTimeout  Duration             `toml:"server_timeout"`
-	DialTimeout    Duration             `toml:"dial_timeout"`
-	LookupInterval Duration             `toml:"lookup_interval"`
-	Cache          *DNSCacheConfig      `toml:"cache"`
-	Forward        cli.StringSlice      `toml:"forward"`
-	Zone           []DNSZoneConfig      `toml:"zone"`
-	Override       map[string][]string  `toml:"override"`
-	OverrideTTL    Duration             `toml:"override_ttl"`
-	Server         *dnsserver.DNSServer `toml:"-"`
+	Listen         cli.StringSlice     `toml:"listen"`
+	Block          *BlockConfig        `toml:"block"`
+	ClientTimeout  Duration            `toml:"client_timeout"`
+	ServerTimeout  Duration            `toml:"server_timeout"`
+	DialTimeout    Duration            `toml:"dial_timeout"`
+	LookupInterval Duration            `toml:"lookup_interval"`
+	Cache          *DNSCacheConfig     `toml:"cache"`
+	Forward        cli.StringSlice     `toml:"forward"`
+	Zone           []DNSZoneConfig     `toml:"zone"`
+	Override       map[string][]string `toml:"override"`
+	OverrideTTL    Duration            `toml:"override_ttl"`
 }
 
 func NewDNSConfig() *DNSConfig {
@@ -158,54 +154,4 @@ func (c *DNSConfig) Get(name string) (interface{}, bool) {
 	}
 
 	return nil, false
-}
-
-func (c *DNSConfig) Init(root *Config, onStart func()) error {
-	if err := c.Block.Init(root); err != nil {
-		return err
-	}
-
-	c.Cache.Init(root)
-
-	c.Server = &dnsserver.DNSServer{
-		Listen:         c.Listen,
-		Block:          c.Block.Block(root),
-		ClientTimeout:  c.ClientTimeout.Duration(),
-		ServerTimeout:  c.ServerTimeout.Duration(),
-		DialTimeout:    c.DialTimeout.Duration(),
-		LookupInterval: c.LookupInterval.Duration(),
-		Logger:         root.Logger.WithField("system", "dns"),
-		NotifyStartedFunc: func() error {
-			c.Cache.Start()
-			onStart()
-			return c.Block.Start()
-		},
-		Cache: c.Cache.Cache,
-		Zones: map[string][]string{
-			".": c.Forward,
-		},
-		OverrideTTL: c.OverrideTTL.Duration(),
-		Override:    override.New(override.Parse(c.Override)),
-	}
-
-	for _, zone := range c.Zone {
-		c.Server.Zones[zone.Name] = zone.Addr
-	}
-
-	return nil
-}
-
-func (c DNSConfig) Start() error {
-	// c.Block and c.Cache are started by DNSServer.NotifyStartedFunc
-	return c.Server.ListenAndServe()
-}
-
-func (c DNSConfig) SIGUSR1() {
-	c.Cache.SIGUSR1()
-}
-
-func (c DNSConfig) Shutdown() {
-	c.Cache.Shutdown()
-	c.Block.Shutdown()
-	c.Server.Shutdown()
 }

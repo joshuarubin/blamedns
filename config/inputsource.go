@@ -20,7 +20,7 @@ func InputSource(dflt, key string) func(*cli.Context) (altsrc.InputSourceContext
 	return func(c *cli.Context) (altsrc.InputSourceContext, error) {
 		file := c.String(key)
 		logger := text.Logger(slog.WarnLevel).WithField("config_file", file)
-		ret := New("", "")
+		ret := New()
 
 		md, err := toml.DecodeFile(file, ret)
 		if err != nil {

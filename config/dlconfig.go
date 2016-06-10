@@ -1,11 +1,7 @@
 package config
 
 import (
-	"net/url"
-	"path"
 	"time"
-
-	"jrubin.io/blamedns/dl"
 
 	"github.com/urfave/cli"
 	"github.com/urfave/cli/altsrc"
@@ -35,7 +31,6 @@ type DLConfig struct {
 	Hosts          cli.StringSlice `toml:"hosts"`
 	Domains        cli.StringSlice `toml:"domains"`
 	DebugHTTP      bool            `toml:"debug_http"`
-	dl             []*dl.DL
 }
 
 func NewDLConfig() *DLConfig {
@@ -95,57 +90,4 @@ func (c *DLConfig) Get(name string) (interface{}, bool) {
 	}
 
 	return nil, false
-}
-
-func (c *DLConfig) Init(root *Config) error {
-	hostsDir := path.Join(root.CacheDir, "hosts")
-	domainsDir := path.Join(root.CacheDir, "domains")
-
-	for _, t := range []struct {
-		Values  []string
-		BaseDir string
-	}{{
-		Values:  c.Hosts,
-		BaseDir: hostsDir,
-	}, {
-		Values:  c.Domains,
-		BaseDir: domainsDir,
-	}} {
-		for _, u := range t.Values {
-			p, err := url.Parse(u)
-			if err != nil {
-				return err
-			}
-
-			d := &dl.DL{
-				URL:            p,
-				BaseDir:        t.BaseDir,
-				UpdateInterval: c.UpdateInterval.Duration(),
-				Logger:         root.Logger,
-				AppName:        root.AppName,
-				AppVersion:     root.AppVersion,
-				DebugHTTP:      c.DebugHTTP,
-			}
-
-			if err = d.Init(); err != nil {
-				return err
-			}
-
-			c.dl = append(c.dl, d)
-		}
-	}
-
-	return nil
-}
-
-func (c *DLConfig) Start() {
-	for _, d := range c.dl {
-		d.Start()
-	}
-}
-
-func (c *DLConfig) Shutdown() {
-	for _, d := range c.dl {
-		d.Stop()
-	}
 }

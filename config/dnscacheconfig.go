@@ -3,17 +3,14 @@ package config
 import (
 	"time"
 
-	"jrubin.io/blamedns/dnscache"
-
 	"github.com/urfave/cli"
 	"github.com/urfave/cli/altsrc"
 )
 
 type DNSCacheConfig struct {
-	PruneInterval Duration         `toml:"prune_interval"`
-	Disable       bool             `toml:"disable"`
-	Size          int              `toml:"size"`
-	Cache         *dnscache.Memory `toml:"-"`
+	PruneInterval Duration `toml:"prune_interval"`
+	Disable       bool     `toml:"disable"`
+	Size          int      `toml:"size"`
 }
 
 func NewDNSCacheConfig() *DNSCacheConfig {
@@ -57,28 +54,4 @@ func (c *DNSCacheConfig) Get(name string) (interface{}, bool) {
 		return c.Size, true
 	}
 	return nil, false
-}
-
-func (c *DNSCacheConfig) Init(root *Config) {
-	if !c.Disable {
-		c.Cache = dnscache.NewMemory(c.Size, root.Logger)
-	}
-}
-
-func (c DNSCacheConfig) Start() {
-	if c.Cache != nil {
-		c.Cache.Start(c.PruneInterval.Duration())
-	}
-}
-
-func (c *DNSCacheConfig) SIGUSR1() {
-	if c.Cache != nil {
-		c.Cache.Purge()
-	}
-}
-
-func (c DNSCacheConfig) Shutdown() {
-	if c.Cache != nil {
-		c.Cache.Stop()
-	}
 }
