@@ -141,7 +141,7 @@ func (h *Handler) printColored(e *slog.Entry, fields []field, timestampFormat st
 	}
 
 	for _, f := range fields {
-		fmt.Fprintf(h.Writer, " \033[%dm%s\033[0m=%v", color, f.Name, f.Value)
+		fmt.Fprintf(h.Writer, " \033[%dm%s\033[0m=%+v", color, f.Name, f.Value)
 	}
 }
 

@@ -170,15 +170,15 @@
 		},
 		{
 			"ImportPath": "jrubin.io/slog",
-			"Rev": "c7e413df216d0277ac10af640ac50a19caeb6f1d"
+			"Rev": "f042a6ea04419fe392e16b3a1a62b8427fa469df"
 		},
 		{
 			"ImportPath": "jrubin.io/slog/handlers/json",
-			"Rev": "c7e413df216d0277ac10af640ac50a19caeb6f1d"
+			"Rev": "f042a6ea04419fe392e16b3a1a62b8427fa469df"
 		},
 		{
 			"ImportPath": "jrubin.io/slog/handlers/text",
-			"Rev": "c7e413df216d0277ac10af640ac50a19caeb6f1d"
+			"Rev": "f042a6ea04419fe392e16b3a1a62b8427fa469df"
 		}
 	]
 }
