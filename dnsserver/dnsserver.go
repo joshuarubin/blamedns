@@ -31,6 +31,7 @@ type DNSServer struct {
 	Cache             dnscache.Cache
 	NotifyStartedFunc func() error
 	Zones             map[string][]string
+	HTTP              DNSHTTP
 }
 
 const DefaultPort = 53
@@ -70,6 +71,12 @@ func (d *DNSServer) parseDNSServer(val string, startCh chan<- struct{}) (*dns.Se
 		addr, err := addDefaultPort(addr)
 		if err != nil {
 			return nil, err
+		}
+
+		if len(addr) == 1 && strings.Index(addr[0], "https://") == 0 {
+			if err := d.initHTTPTransport(addr[0]); err != nil {
+				return nil, err
+			}
 		}
 
 		mux.Handle(pattern, d.Handler(u.Scheme, addr))

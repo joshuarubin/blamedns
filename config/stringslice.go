@@ -24,7 +24,9 @@ func (f *StringSlice) Set(value string) error {
 	*f = []string{}
 	for _, s := range strings.Split(value, ",") {
 		s = strings.TrimSpace(s)
-		*f = append(*f, s)
+		if len(s) > 0 {
+			*f = append(*f, s)
+		}
 	}
 	return nil
 }

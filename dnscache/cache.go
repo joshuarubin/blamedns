@@ -1,8 +1,9 @@
 package dnscache
 
 import (
+	"context"
+
 	"github.com/miekg/dns"
-	"golang.org/x/net/context"
 )
 
 type Cache interface {

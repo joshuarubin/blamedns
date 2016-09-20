@@ -1,6 +1,7 @@
 package dnscache
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"math/big"
@@ -10,8 +11,6 @@ import (
 
 	"jrubin.io/slog"
 	"jrubin.io/slog/handlers/text"
-
-	"golang.org/x/net/context"
 
 	"github.com/miekg/dns"
 	. "github.com/smartystreets/goconvey/convey"

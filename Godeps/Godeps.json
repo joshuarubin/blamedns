@@ -1,7 +1,7 @@
 {
 	"ImportPath": "jrubin.io/blamedns",
-	"GoVersion": "go1.6",
-	"GodepVersion": "v62",
+	"GoVersion": "go1.7",
+	"GodepVersion": "v74",
 	"Packages": [
 		"jrubin.io/blamedns",
 		"jrubin.io/blamedns/apiserver",
@@ -22,8 +22,8 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/BurntSushi/toml",
-			"Comment": "v0.2.0-9-gf0aeabc",
-			"Rev": "f0aeabca5a127c4078abb8c8d64298b147264b55"
+			"Comment": "v0.2.0-21-g9906417",
+			"Rev": "99064174e013895bbd9b025c31100bd1d9b590ca"
 		},
 		{
 			"ImportPath": "github.com/armon/go-radix",
@@ -31,33 +31,38 @@
 		},
 		{
 			"ImportPath": "github.com/beorn7/perks/quantile",
-			"Rev": "3ac7bf7a47d159a033b107610db8a1b6575507a4"
+			"Rev": "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9"
+		},
+		{
+			"ImportPath": "github.com/certifi/gocertifi",
+			"Comment": "2016.08.31",
+			"Rev": "ec89d50f00d39494f5b3ec5cf2fe75c53467a937"
 		},
 		{
 			"ImportPath": "github.com/elazarl/go-bindata-assetfs",
-			"Rev": "57eb5e1fc594ad4b0b1dbea7b286d299e0cb43c2"
+			"Rev": "9a6736ed45b44bf3835afeebb3034b57ed329f3e"
 		},
 		{
 			"ImportPath": "github.com/fsnotify/fsnotify",
-			"Comment": "v1.3.0",
-			"Rev": "30411dbcefb7a1da7e84f75530ad3abe4011b4f8"
+			"Comment": "v1.3.1-1-gf12c623",
+			"Rev": "f12c6236fe7b5cf6bcf30e5935d08cb079d78334"
 		},
 		{
 			"ImportPath": "github.com/golang/protobuf/proto",
-			"Rev": "3b06fc7a4cad73efce5fe6217ab6c33e7231ab4a"
+			"Rev": "1f49d83d9aa00e6ce4fc8258c71cc7786aec968a"
 		},
 		{
 			"ImportPath": "github.com/gopherjs/gopherjs/js",
-			"Comment": "go1.5-45-g19e100e",
-			"Rev": "19e100e9652485a76176bc5fd2669f57d3a2743c"
+			"Comment": "go1.5-110-g7600e3d",
+			"Rev": "7600e3d439bd24b1a637bb6b67e9936c7d8736b3"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/golang-lru",
-			"Rev": "a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4"
+			"Rev": "0a025b7e63adc15a622f29b0b2c4c3848243bbf6"
 		},
 		{
 			"ImportPath": "github.com/hashicorp/golang-lru/simplelru",
-			"Rev": "a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4"
+			"Rev": "0a025b7e63adc15a622f29b0b2c4c3848243bbf6"
 		},
 		{
 			"ImportPath": "github.com/jtolds/gls",
@@ -71,12 +76,17 @@
 		},
 		{
 			"ImportPath": "github.com/miekg/dns",
-			"Rev": "48ab6605c66ac797e07f615101c3e9e10e932b66"
+			"Rev": "db96a2b759cdef4f11a34506a42eb8d1290c598e"
+		},
+		{
+			"ImportPath": "github.com/pkg/errors",
+			"Comment": "v0.7.1-1-ga887431",
+			"Rev": "a887431f7f6ef7687b556dbf718d9f351d4858a0"
 		},
 		{
 			"ImportPath": "github.com/prometheus/client_golang/prometheus",
-			"Comment": "0.7.0-78-gd38f1ef",
-			"Rev": "d38f1ef46f0d78136db3e585f7ebe1bcc3476f73"
+			"Comment": "v0.8.0-7-g5636dc6",
+			"Rev": "5636dc67ae776adf5590da7349e70fbb9559972d"
 		},
 		{
 			"ImportPath": "github.com/prometheus/client_model/go",
@@ -85,15 +95,15 @@
 		},
 		{
 			"ImportPath": "github.com/prometheus/common/expfmt",
-			"Rev": "a715f9d07a512e8339f70a275ace0e67c0f9a65f"
+			"Rev": "9a94032291f2192936512bab367bc45e77990d6a"
 		},
 		{
 			"ImportPath": "github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg",
-			"Rev": "a715f9d07a512e8339f70a275ace0e67c0f9a65f"
+			"Rev": "9a94032291f2192936512bab367bc45e77990d6a"
 		},
 		{
 			"ImportPath": "github.com/prometheus/common/model",
-			"Rev": "a715f9d07a512e8339f70a275ace0e67c0f9a65f"
+			"Rev": "9a94032291f2192936512bab367bc45e77990d6a"
 		},
 		{
 			"ImportPath": "github.com/prometheus/procfs",
@@ -101,68 +111,65 @@
 		},
 		{
 			"ImportPath": "github.com/smartystreets/assertions",
-			"Comment": "1.6.0-2-g2d74a41",
-			"Rev": "2d74a419fbe076f8c76ed8b1c7c633a676c5dc63"
+			"Comment": "1.6.0-10-g2063fd1",
+			"Rev": "2063fd1cc7c975db70502811a34b06ad034ccdf2"
 		},
 		{
 			"ImportPath": "github.com/smartystreets/assertions/internal/go-render/render",
-			"Comment": "1.6.0-2-g2d74a41",
-			"Rev": "2d74a419fbe076f8c76ed8b1c7c633a676c5dc63"
+			"Comment": "1.6.0-10-g2063fd1",
+			"Rev": "2063fd1cc7c975db70502811a34b06ad034ccdf2"
 		},
 		{
 			"ImportPath": "github.com/smartystreets/assertions/internal/oglematchers",
-			"Comment": "1.6.0-2-g2d74a41",
-			"Rev": "2d74a419fbe076f8c76ed8b1c7c633a676c5dc63"
+			"Comment": "1.6.0-10-g2063fd1",
+			"Rev": "2063fd1cc7c975db70502811a34b06ad034ccdf2"
 		},
 		{
 			"ImportPath": "github.com/smartystreets/goconvey/convey",
-			"Comment": "1.6.1-20-gcc5d85f",
-			"Rev": "cc5d85f4f15bd2163abf0fe6e6753356dde72aa2"
+			"Comment": "1.6.2-6-g5db88ed",
+			"Rev": "5db88ed452e937f2fd557de6f4f1af7f2eabed0b"
 		},
 		{
 			"ImportPath": "github.com/smartystreets/goconvey/convey/gotest",
-			"Comment": "1.6.1-20-gcc5d85f",
-			"Rev": "cc5d85f4f15bd2163abf0fe6e6753356dde72aa2"
+			"Comment": "1.6.2-6-g5db88ed",
+			"Rev": "5db88ed452e937f2fd557de6f4f1af7f2eabed0b"
 		},
 		{
 			"ImportPath": "github.com/smartystreets/goconvey/convey/reporting",
-			"Comment": "1.6.1-20-gcc5d85f",
-			"Rev": "cc5d85f4f15bd2163abf0fe6e6753356dde72aa2"
+			"Comment": "1.6.2-6-g5db88ed",
+			"Rev": "5db88ed452e937f2fd557de6f4f1af7f2eabed0b"
 		},
 		{
 			"ImportPath": "github.com/urfave/cli",
-			"Comment": "v1.17.0-63-gfa949b4",
-			"Rev": "fa949b48f384d8916e1ca94880d665deaa1105c2"
+			"Comment": "v1.18.0-67-gd53eb99",
+			"Rev": "d53eb991652b1d438abdd34ce4bfa3ef1539108e"
 		},
 		{
 			"ImportPath": "github.com/urfave/cli/altsrc",
-			"Comment": "v1.17.0-63-gfa949b4",
-			"Rev": "fa949b48f384d8916e1ca94880d665deaa1105c2"
-		},
-		{
-			"ImportPath": "golang.org/x/net/context",
-			"Rev": "c4c3ea71919de159c9e246d7be66deb7f0a39a58"
-		},
-		{
-			"ImportPath": "golang.org/x/net/netutil",
-			"Rev": "c4c3ea71919de159c9e246d7be66deb7f0a39a58"
+			"Comment": "v1.18.0-67-gd53eb99",
+			"Rev": "d53eb991652b1d438abdd34ce4bfa3ef1539108e"
 		},
 		{
 			"ImportPath": "golang.org/x/net/websocket",
-			"Rev": "c4c3ea71919de159c9e246d7be66deb7f0a39a58"
+			"Rev": "71a035914f99bb58fe82eac0f1289f10963d876c"
 		},
 		{
 			"ImportPath": "golang.org/x/sys/unix",
-			"Rev": "076b546753157f758b316e59bcb51e6807c04057"
+			"Rev": "8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9"
 		},
 		{
 			"ImportPath": "gopkg.in/tylerb/graceful.v1",
-			"Comment": "v1.2.5",
-			"Rev": "9a3d4236b03bb5d26f7951134d248f9d5510d599"
+			"Comment": "v1.2.13",
+			"Rev": "50a48b6e73fcc75b45e22c05b79629a67c79e938"
+		},
+		{
+			"ImportPath": "gopkg.in/urfave/cli.v1",
+			"Comment": "v1.18.1",
+			"Rev": "a14d7d367bc02b1f57d88de97926727f2d936387"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v2",
-			"Rev": "a83829b6f1293c91addabc89d0571c246397bbf4"
+			"Rev": "31c299268d302dd0aa9a0dcf765a3d58971ac83f"
 		},
 		{
 			"ImportPath": "jrubin.io/inputsource",

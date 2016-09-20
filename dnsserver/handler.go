@@ -1,6 +1,7 @@
 package dnsserver
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"strconv"
@@ -8,8 +9,6 @@ import (
 	"time"
 
 	"jrubin.io/slog"
-
-	"golang.org/x/net/context"
 
 	"github.com/miekg/dns"
 	prom "github.com/prometheus/client_golang/prometheus"
@@ -189,9 +188,16 @@ func (d *DNSServer) bgHandler(ctx context.Context, net string, addr []string, re
 		return
 	}
 
-	respCh <- &hresp{
-		resp:  d.fastLookup(ctx, net, addr, req),
-		cache: cacheMiss,
+	if len(addr) == 1 && strings.Index(addr[0], "https://") == 0 {
+		respCh <- &hresp{
+			resp:  d.fastHTTPSLookup(ctx, addr[0], req),
+			cache: cacheMiss,
+		}
+	} else {
+		respCh <- &hresp{
+			resp:  d.fastLookup(ctx, net, addr, req),
+			cache: cacheMiss,
+		}
 	}
 }
 

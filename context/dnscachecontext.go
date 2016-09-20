@@ -20,6 +20,7 @@ func NewDNSCacheContext(logger slog.Interface, cfg *config.DNSCacheConfig) *DNSC
 	if !cfg.Disable {
 		ctx.Cache = dnscache.NewMemory(cfg.Size, logger)
 	}
+
 	return ctx
 }
 

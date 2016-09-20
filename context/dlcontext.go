@@ -4,6 +4,8 @@ import (
 	"net/url"
 	"path"
 
+	"github.com/pkg/errors"
+
 	"jrubin.io/blamedns/config"
 	"jrubin.io/blamedns/dl"
 )
@@ -30,7 +32,7 @@ func NewDLContext(rootCtx *Context, cfg *config.Config) (*DLContext, error) {
 		for _, u := range t.Values {
 			p, err := url.Parse(u)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "error parsing url for dl file: %s", u)
 			}
 
 			d := &dl.DL{

@@ -62,12 +62,10 @@ func NewBlockContext(logger slog.Interface, cfg *config.Config) (*BlockContext, 
 	return ctx, nil
 }
 
-func (ctx *BlockContext) Start() error {
+func (ctx *BlockContext) Start() {
 	for _, w := range ctx.Watchers {
 		w.Start()
 	}
-
-	return nil
 }
 
 func (ctx *BlockContext) Shutdown() {

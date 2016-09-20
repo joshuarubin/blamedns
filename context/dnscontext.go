@@ -37,14 +37,31 @@ func NewDNSContext(logger slog.Interface, cfg *config.Config, onStart func()) (*
 			if onStart != nil {
 				onStart()
 			}
-			return ctx.Block.Start()
+			ctx.Block.Start()
+			return nil
 		},
-		Cache: ctx.Cache.Cache,
-		Zones: map[string][]string{
-			".": cfg.DNS.Forward,
-		},
+		Zones:       map[string][]string{},
 		OverrideTTL: cfg.DNS.OverrideTTL.Value(),
 		Override:    override.New(override.Parse(cfg.DNS.Override)),
+		HTTP: dnsserver.DNSHTTP{
+			KeepAlive:             cfg.DNS.HTTP.KeepAlive.Value(),
+			MaxIdleConns:          cfg.DNS.HTTP.MaxIdleConns,
+			MaxIdleConnsPerHost:   cfg.DNS.HTTP.MaxIdleConnsPerHost,
+			IdleConnTimeout:       cfg.DNS.HTTP.IdleConnTimeout.Value(),
+			TLSHandshakeTimeout:   cfg.DNS.HTTP.TLSHandshakeTimeout.Value(),
+			ExpectContinueTimeout: cfg.DNS.HTTP.ExpectContinueTimeout.Value(),
+			NoDNSSEC:              cfg.DNS.HTTP.NoDNSSEC,
+			EDNSClientSubnet:      cfg.DNS.HTTP.EDNSClientSubnet,
+			NoRandomPadding:       cfg.DNS.HTTP.NoRandomPadding,
+		},
+	}
+
+	if ctx.Cache.Cache != nil {
+		ctx.Server.Cache = ctx.Cache.Cache
+	}
+
+	if len(cfg.DNS.Forward) > 0 {
+		ctx.Server.Zones["."] = cfg.DNS.Forward
 	}
 
 	for _, zone := range cfg.DNS.Zone {

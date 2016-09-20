@@ -1,9 +1,8 @@
 package dnscache
 
 import (
+	"context"
 	"time"
-
-	"golang.org/x/net/context"
 
 	"github.com/miekg/dns"
 )

@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"jrubin.io/slog"
 
 	"gopkg.in/tylerb/graceful.v1"
@@ -60,9 +62,9 @@ func (s *Server) ListenAndServe() error {
 }
 
 func (s *Server) newListener() error {
-	ln, err := net.Listen("tcp", s.Addr)
+	ln, err := net.Listen("tcp", s.ServerAddr())
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error creating tcp listener for server: %s [%s]", s.ServerName(), s.ServerAddr())
 	}
 	s.ln = ln
 	return nil
@@ -98,7 +100,11 @@ func (s *Server) Serve(l net.Listener) error {
 		Logger:           debugLogger,
 	}
 
-	return s.srv.Serve(l)
+	if err := s.srv.Serve(l); err != nil {
+		return errors.Wrapf(err, "error serving graceful server: %s [%s]", s.ServerName(), s.ServerAddr())
+	}
+
+	return nil
 }
 
 func (s Server) stopTimeout() time.Duration {
@@ -108,7 +114,7 @@ func (s Server) stopTimeout() time.Duration {
 	return DefaultStopTimeout
 }
 
-// Init prepares the Server for Start. If it does not return an error, then
+// Init prepares the Server to Start. If it does not return an error, then
 // Start will not return one either.
 func (s *Server) Init() error {
 	if s.ln == nil {

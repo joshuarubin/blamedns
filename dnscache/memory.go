@@ -1,13 +1,12 @@
 package dnscache
 
 import (
+	"context"
 	"sync"
 	"time"
 
 	"jrubin.io/slog"
 	"jrubin.io/slog/handlers/text"
-
-	"golang.org/x/net/context"
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/miekg/dns"

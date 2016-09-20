@@ -3,6 +3,7 @@ package config
 import (
 	"net"
 
+	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 
@@ -17,14 +18,18 @@ func (i IP) String() string {
 }
 
 func (i IP) MarshalText() ([]byte, error) {
-	return i.Value().MarshalText()
+	data, err := i.Value().MarshalText()
+	if err != nil {
+		return nil, errors.Wrapf(err, "config.IP: error marshaling text: %s", i)
+	}
+	return data, nil
 }
 
 func (i *IP) UnmarshalText(text []byte) error {
 	var tmp net.IP
 	err := tmp.UnmarshalText(text)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "config.IP: error unmarshaling json: %s", string(text))
 	}
 	*i = IP(tmp)
 	return nil

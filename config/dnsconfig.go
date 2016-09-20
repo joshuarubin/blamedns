@@ -9,8 +9,7 @@ import (
 
 var (
 	defaultDNSForward = StringSlice{
-		"8.8.8.8",
-		"8.8.4.4",
+		"https://dns.google.com/resolve",
 	}
 
 	defaultDNSListen = StringSlice{
@@ -18,6 +17,18 @@ var (
 		"tcp://[::]:53",
 	}
 )
+
+type DNSHTTPConfig struct {
+	KeepAlive             Duration `toml:"keep_alive"`
+	MaxIdleConns          int      `toml:"max_idle_conns"`
+	MaxIdleConnsPerHost   int      `toml:"max_idle_conns_per_host"`
+	IdleConnTimeout       Duration `toml:"idle_conn_timeout"`
+	TLSHandshakeTimeout   Duration `toml:"tls_handshake_timeout"`
+	ExpectContinueTimeout Duration `toml:"expect_continue_timeout"`
+	NoDNSSEC              bool     `toml:"no_dnssec"`
+	EDNSClientSubnet      string   `toml:"edns_client_subnet"`
+	NoRandomPadding       bool     `toml:"no_random_padding"`
+}
 
 type DNSConfig struct {
 	Listen         StringSlice          `toml:"listen"`
@@ -31,6 +42,7 @@ type DNSConfig struct {
 	Zone           DNSZones             `toml:"zone"`
 	Override       StringMapStringSlice `toml:"override"`
 	OverrideTTL    Duration             `toml:"override_ttl"`
+	HTTP           DNSHTTPConfig
 }
 
 func NewDNSConfig() *DNSConfig {
@@ -44,6 +56,13 @@ func NewDNSConfig() *DNSConfig {
 		Cache:          NewDNSCacheConfig(),
 		Forward:        make(StringSlice, len(defaultDNSForward)),
 		OverrideTTL:    Duration(1 * time.Hour),
+		HTTP: DNSHTTPConfig{
+			KeepAlive:             Duration(24 * time.Hour),
+			MaxIdleConns:          100,
+			MaxIdleConnsPerHost:   100,
+			TLSHandshakeTimeout:   Duration(10 * time.Second),
+			ExpectContinueTimeout: Duration(1 * time.Second),
+		},
 	}
 
 	copy(ret.Listen, defaultDNSListen)
@@ -105,6 +124,63 @@ func (c *DNSConfig) Flags(prefix string) []cli.Flag {
 			Name:   flagName(prefix, "override"),
 			Value:  &c.Override,
 			Hidden: true,
+		}),
+		altsrc.NewGenericFlag(cli.GenericFlag{
+			Name:   flagName(prefix, "http-keep-alive"),
+			EnvVar: envName(prefix, "HTTP_KEEP_ALIVE"),
+			Value:  &c.HTTP.KeepAlive,
+			Usage:  "keep idle connections alive at least this long",
+		}),
+		altsrc.NewIntFlag(cli.IntFlag{
+			Name:        flagName(prefix, "http-max-idle-conns"),
+			EnvVar:      envName(prefix, "HTTP_MAX_IDLE_CONNS"),
+			Usage:       "maximum number of idle (keep-alive) connections across all hosts. zero means no limit",
+			Value:       c.HTTP.MaxIdleConns,
+			Destination: &c.HTTP.MaxIdleConns,
+		}),
+		altsrc.NewIntFlag(cli.IntFlag{
+			Name:        flagName(prefix, "http-max-idle-conns-per-host"),
+			EnvVar:      envName(prefix, "HTTP_MAX_IDLE_CONNS_PER_HOST"),
+			Usage:       "maximum number of idle (keep-alive) connections per-host. if zero, http.DefaultMaxIdleConnsPerHost is used.",
+			Value:       c.HTTP.MaxIdleConnsPerHost,
+			Destination: &c.HTTP.MaxIdleConnsPerHost,
+		}),
+		altsrc.NewGenericFlag(cli.GenericFlag{
+			Name:   flagName(prefix, "http-idle-conn-timeout"),
+			EnvVar: envName(prefix, "HTTP_IDLE_CONN_TIMEOUT"),
+			Value:  &c.HTTP.IdleConnTimeout,
+			Usage:  "maximum amount of time an idle (keep-alive) connection will remain idle before closing itself. zero means no limit",
+		}),
+		altsrc.NewGenericFlag(cli.GenericFlag{
+			Name:   flagName(prefix, "http-tls-handshake-timeout"),
+			EnvVar: envName(prefix, "HTTP_TLS_HANDSHAKE_TIMEOUT"),
+			Value:  &c.HTTP.TLSHandshakeTimeout,
+			Usage:  "maximum amount of time to wait for a tls handshake. zero means no timeout",
+		}),
+		altsrc.NewGenericFlag(cli.GenericFlag{
+			Name:   flagName(prefix, "http-expect-continue-timeout"),
+			EnvVar: envName(prefix, "HTTP_EXPECT_CONTINUETIMEOUT"),
+			Value:  &c.HTTP.ExpectContinueTimeout,
+			Usage:  "the amount of time to wait for a server's first response headers after fully writing the request headers if the request has an \"expect: 100-continue\" header. zero means no timeout",
+		}),
+		altsrc.NewBoolFlag(cli.BoolFlag{
+			Name:        flagName(prefix, "http-no-dnssec"),
+			EnvVar:      envName(prefix, "HTTP_NO_DNSSEC"),
+			Usage:       "disable dnssec validation",
+			Destination: &c.HTTP.NoDNSSEC,
+		}),
+		altsrc.NewStringFlag(cli.StringFlag{
+			Name:        flagName(prefix, "http-edns-client-subnet"),
+			EnvVar:      envName(prefix, "HTTP_EDNS_CLIENT_SUBNET"),
+			Usage:       "if you are using dns-over-https because of privacy concerns, and do not want any part of your ip address to be sent to authoritative name servers for geographic location accuracy, use 0.0.0.0/0",
+			Value:       c.HTTP.EDNSClientSubnet,
+			Destination: &c.HTTP.EDNSClientSubnet,
+		}),
+		altsrc.NewBoolFlag(cli.BoolFlag{
+			Name:        flagName(prefix, "http-no-random-padding"),
+			EnvVar:      envName(prefix, "HTTP_NO_RANDOM_PADDING"),
+			Usage:       "disable random padding. random padding is used to prevent possible side-channel privacy attacks using the packet sizes of https get requests by making all requests exactly the same size",
+			Destination: &c.HTTP.NoRandomPadding,
 		}),
 	}
 

@@ -3,6 +3,7 @@ package config
 import (
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 
@@ -27,7 +28,7 @@ func (d *Duration) UnmarshalText(text []byte) error {
 func (d *Duration) Set(value string) error {
 	tmp, err := time.ParseDuration(value)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "config.Duration: error parsing duration: %s", value)
 	}
 	*d = Duration(tmp)
 	return nil

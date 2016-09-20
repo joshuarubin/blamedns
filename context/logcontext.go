@@ -4,6 +4,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"jrubin.io/blamedns/config"
 	"jrubin.io/slog"
 	"jrubin.io/slog/handlers/json"
@@ -29,7 +31,12 @@ func ParseFileFlag(name string) (*os.File, error) {
 		return os.Stderr, nil
 	}
 
-	return os.Create(name)
+	f, err := os.Create(name)
+	if err != nil {
+		return nil, errors.Wrapf(err, "error creating log file: %s", name)
+	}
+
+	return f, nil
 }
 
 func NewLogContext(cfg *config.LogConfig) (*LogContext, error) {

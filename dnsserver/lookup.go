@@ -1,11 +1,11 @@
 package dnsserver
 
 import (
+	"context"
+	"net"
 	"time"
 
 	"jrubin.io/slog"
-
-	"golang.org/x/net/context"
 
 	"github.com/miekg/dns"
 )
@@ -20,6 +20,32 @@ func getResult(ctx context.Context, ticker *time.Ticker, respCh <-chan *dns.Msg)
 	}
 
 	return
+}
+
+func (d *DNSServer) easyLookup(ctx context.Context, host string, addr ...string) []net.IP {
+	var ret []net.IP
+
+	for _, t := range []uint16{dns.TypeA, dns.TypeAAAA} {
+		var req dns.Msg
+		req.SetQuestion(host, t)
+		resp := d.fastLookup(ctx, "", addr, &req)
+
+		if resp == nil {
+			return nil
+		}
+
+		for _, ans := range resp.Answer {
+			if rr, ok := ans.(*dns.A); ok {
+				ret = append(ret, rr.A)
+			}
+
+			if rr, ok := ans.(*dns.AAAA); ok {
+				ret = append(ret, rr.AAAA)
+			}
+		}
+	}
+
+	return ret
 }
 
 func (d *DNSServer) fastLookup(ctx context.Context, net string, addr []string, req *dns.Msg) *dns.Msg {

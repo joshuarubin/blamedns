@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 
+	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 
@@ -14,7 +15,10 @@ type DNSZone struct {
 type DNSZones []DNSZone
 
 func (z *DNSZones) Set(value string) error {
-	return json.Unmarshal([]byte(value), z)
+	if err := json.Unmarshal([]byte(value), z); err != nil {
+		return errors.Wrapf(err, "config.DNSZones: error unmarshaling json: %s", value)
+	}
+	return nil
 }
 
 func (z DNSZones) String() string {
@@ -29,7 +33,10 @@ func (z DNSZones) Generic() cli.Generic {
 type StringMapStringSlice map[string][]string
 
 func (m *StringMapStringSlice) Set(value string) error {
-	return json.Unmarshal([]byte(value), m)
+	if err := json.Unmarshal([]byte(value), m); err != nil {
+		return errors.Wrapf(err, "config.StringMapStringSlice: error unmarshaling json: %s", value)
+	}
+	return nil
 }
 
 func (m StringMapStringSlice) String() string {
