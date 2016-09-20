@@ -2,7 +2,7 @@ machine:
   services:
     - docker
   environment:
-    GO_VERSION: 1.6.2
+    GO_VERSION: 1.7.1
     PATH: ${HOME}/.go/go${GO_VERSION}/bin:${PATH}
     GOROOT: ${HOME}/.go/go${GO_VERSION}
     MAKEFLAGS: -j
