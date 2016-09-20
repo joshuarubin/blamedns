@@ -12,8 +12,8 @@ import (
 	"jrubin.io/slog/handlers/text"
 
 	"github.com/BurntSushi/toml"
-	"github.com/urfave/cli"
-	"github.com/urfave/cli/altsrc"
+	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 const defaultConfigFile = "/etc/blamedns/config.toml"

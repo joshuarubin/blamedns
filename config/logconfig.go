@@ -5,8 +5,8 @@ import (
 
 	"jrubin.io/slog"
 
-	"github.com/urfave/cli"
-	"github.com/urfave/cli/altsrc"
+	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 var defaultLogLevel = slog.WarnLevel

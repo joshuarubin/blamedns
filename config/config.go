@@ -6,8 +6,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/urfave/cli"
-	"github.com/urfave/cli/altsrc"
+	"gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1/altsrc"
 )
 
 type Config struct {

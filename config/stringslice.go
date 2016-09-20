@@ -3,7 +3,7 @@ package config
 import (
 	"strings"
 
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 // StringSlice is an opaque type for []string to satisfy flag.Value

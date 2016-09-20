@@ -140,16 +140,6 @@
 			"Rev": "5db88ed452e937f2fd557de6f4f1af7f2eabed0b"
 		},
 		{
-			"ImportPath": "github.com/urfave/cli",
-			"Comment": "v1.18.0-67-gd53eb99",
-			"Rev": "d53eb991652b1d438abdd34ce4bfa3ef1539108e"
-		},
-		{
-			"ImportPath": "github.com/urfave/cli/altsrc",
-			"Comment": "v1.18.0-67-gd53eb99",
-			"Rev": "d53eb991652b1d438abdd34ce4bfa3ef1539108e"
-		},
-		{
 			"ImportPath": "golang.org/x/net/websocket",
 			"Rev": "71a035914f99bb58fe82eac0f1289f10963d876c"
 		},
@@ -164,8 +154,13 @@
 		},
 		{
 			"ImportPath": "gopkg.in/urfave/cli.v1",
-			"Comment": "v1.18.1",
-			"Rev": "a14d7d367bc02b1f57d88de97926727f2d936387"
+			"Comment": "v1.18.1-1-gd757acc",
+			"Rev": "d757acc7f364624e7c8b3d1a168e712dca28af13"
+		},
+		{
+			"ImportPath": "gopkg.in/urfave/cli.v1/altsrc",
+			"Comment": "v1.18.1-1-gd757acc",
+			"Rev": "d757acc7f364624e7c8b3d1a168e712dca28af13"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v2",
@@ -173,7 +168,7 @@
 		},
 		{
 			"ImportPath": "jrubin.io/inputsource",
-			"Rev": "1a7eaa79e645e56a37354b70e0a0527bab0736e2"
+			"Rev": "6e613abd54f817e7807af1a3f68121f4d84f4d76"
 		},
 		{
 			"ImportPath": "jrubin.io/slog",

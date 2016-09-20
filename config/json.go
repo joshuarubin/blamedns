@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
-	"github.com/urfave/cli"
+	"gopkg.in/urfave/cli.v1"
 )
 
 type DNSZone struct {
