@@ -1,4 +1,4 @@
-VERSION    := 0.1.1
+VERSION    := 0.1.2
 BUILD_DEPS := github.com/tcnksm/ghr
 DIST_OS    := linux darwin openbsd
 DIST_ARCH  := amd64 386

@@ -12,7 +12,7 @@ var (
 		"http://someonewhocares.org/hosts/hosts",
 		"http://hosts-file.net/ad_servers.txt",
 		"https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts",
-		"http://sysctl.org/cameleon/hosts",
+		// "http://sysctl.org/cameleon/hosts",
 	}
 
 	defaultDLDomains = StringSlice{
