@@ -41,6 +41,7 @@ func (s Server) logHandler() http.Handler {
 		s.Logger.WithFields(slog.Fields{
 			"status":     ww.status,
 			"method":     r.Method,
+			"host":       r.Host,
 			"path":       r.URL.Path,
 			"ip":         clientIP(r),
 			"latency":    time.Since(begin),
