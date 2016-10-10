@@ -14,6 +14,8 @@ import (
 	"net/url"
 	"time"
 
+	"golang.org/x/net/http2"
+
 	"github.com/certifi/gocertifi"
 	"github.com/miekg/dns"
 	"github.com/pkg/errors"
@@ -121,6 +123,10 @@ func (d *DNSServer) initHTTPTransport(addr string) error {
 			},
 			RootCAs: rootCAs,
 		},
+	}
+
+	if err = http2.ConfigureTransport(&httpTransport); err != nil {
+		return err
 	}
 
 	t := transport{
